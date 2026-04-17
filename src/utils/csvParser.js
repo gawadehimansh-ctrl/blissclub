@@ -4,34 +4,75 @@ import { parseCreativeName, parseCampaignType, parseSaleTag, isBrandKeyword } fr
 // Detect which file type is being uploaded based on column headers
 export function detectFileType(headers) {
   const h = headers.map(x => String(x).toLowerCase().trim())
+
+  // Meta Ads Manager direct exports — "Reporting starts" is the giveaway
+  const isMetaExport = h.includes('reporting starts') || h.includes('reporting ends')
+  if (isMetaExport) {
+    // Hourly = has time of day column
+    if (h.some(x => x.includes('time of day'))) return 'META_HOURLY'
+    // Daily = no time column
+    return 'META_DB'
+  }
+
+  // BlissClub internal DB dump format (has GA columns)
   if (h.includes('fb orders') || h.includes('fb revenue') || h.includes('ga orders')) return 'META_DB'
-  if (h.includes('adset name') && h.includes('ad name') && h.includes('time')) return 'META_HOURLY'
-  if (h.includes('rowlabels') || (h.includes('cost') && h.includes('impr.') && h.includes('campaign id'))) return 'GOOGLE_DUMP'
-  if (h.includes('session campaign') || h.includes('session manual term') || h.includes('ecommerce revenue')) return 'GA4_DUMP'
+
+  // Meta hourly internal format
+  if ((h.includes('adset name') || h.includes('ad set name')) && h.some(x => x.includes('time'))) return 'META_HOURLY'
+
+  // Google dump — has RowLabels or Cost+Impr columns
+  if (h.includes('rowlabels') || (h.includes('cost') && (h.includes('impr.') || h.includes('impressions')) && (h.includes('campaign id') || h.includes('type')))) return 'GOOGLE_DUMP'
+
+  // GA4 dump
+  if (h.includes('session campaign') || h.includes('session manual term') || h.includes('ecommerce revenue') || h.includes('purchase revenue')) return 'GA4_DUMP'
+
   return 'UNKNOWN'
 }
 
-// Parse Meta DB dump (main daily performance file)
+// Parse Meta DB dump — handles BOTH internal DB dump format AND direct Ads Manager exports
 function parseMetaDB(rows) {
   return rows.map(r => {
-    const adName = r['Ad Name'] || r['AD NAME'] || ''
+    // Support both "Ad name" (Ads Manager) and "Ad Name" (internal)
+    const adName = r['Ad name'] || r['Ad Name'] || r['AD NAME'] || ''
+    const adsetName = r['Ad set name'] || r['Ad Set Name'] || r['Adset name'] || ''
     const parsed = parseCreativeName(adName)
+
+    // Date: Ads Manager uses "Reporting starts", internal uses "Date"
+    const dateVal = r['Reporting starts'] || r['Date'] || ''
+
+    // Spend: Ads Manager uses "Amount spent (INR)", internal uses "Spends"
+    const spend = num(r['Amount spent (INR)'] || r['Spends'] || r['Spend'] || 0)
+
+    // Orders: Ads Manager uses "Purchases [1-day click]" for 1DC, "Purchases" for all-window
+    // Internal uses "FB Orders" for reported, "GA Orders" for GA4
+    const fbOrders = num(r['Purchases [1-day click]'] || r['Purchases (1-day click)'] || r['FB Orders'] || r['1DC purchases'] || r['Purchases'] || 0)
+    const fbRevenue = num(r['Purchases conversion value [1-day click]'] || r['Purchases conversion value (1-day click)'] || r['FB Revenue'] || r['1dc Revenue'] || r['1DC Revenue'] || r['Purchases conversion value'] || 0)
+
+    // ROAS: Ads Manager gives "Purchase ROAS (return on ad spend)"
+    const reportedROAS = num(r['Purchase ROAS (return on ad spend)'] || r['ROAS'] || 0)
+
+    // GA4 columns — only in internal DB dump, not in Ads Manager exports
+    const gaOrders = num(r['GA Orders'] || 0)
+    const gaRevenue = num(r['GA Revenue'] || 0)
+    const sessions = num(r['Sessions'] || 0)
+
     return {
-      date: parseDate(r['Date']),
-      adsetName: r['Ad Set Name'] || r['Adset name'] || '',
+      date: parseDate(dateVal),
+      adsetName,
       adName,
-      impressions: num(r['Impressions']),
-      clicks: num(r['Link clicks'] || r['Link Clicks']),
-      spend: num(r['Spends'] || r['Spend']),
-      fbOrders: num(r['FB Orders'] || r['1DC purchases']),
-      fbRevenue: num(r['FB Revenue'] || r['1dc Revenue'] || r['1DC Revenue']),
-      sessions: num(r['Sessions']),
-      gaOrders: num(r['GA Orders']),
-      gaRevenue: num(r['GA Revenue']),
+      impressions: num(r['Impressions'] || 0),
+      clicks: num(r['Link clicks'] || r['Link Clicks'] || 0),
+      spend,
+      fbOrders,
+      fbRevenue,
+      reportedROAS,
+      sessions,
+      gaOrders,
+      gaRevenue,
       week: r['Week'] || '',
       month: r['Month'] || '',
       monthYear: r['Month & Year'] || '',
-      year: num(r['Year']),
+      year: num(r['Year'] || 0),
       creativeName: r['Creative Name'] || adName,
       cohort: r['Cohort'] || parsed.cohort || '',
       format: r['Format'] || parsed.format || '',
@@ -40,7 +81,7 @@ function parseMetaDB(rows) {
       creator: r["Creator's Name (NV for Tactical)"] || parsed.creator || '',
       theme: r['Theme'] || '',
       landingPath: r['Landing Path'] || '',
-      saleTag: r['LP Sale/BAU'] || parseSaleTag(r['Ad Set Name'] || ''),
+      saleTag: r['LP Sale/BAU'] || parseSaleTag(adsetName),
       category: r['Category'] || '',
       os: parsed.os || 'All',
       _source: 'META_DB'
@@ -48,22 +89,27 @@ function parseMetaDB(rows) {
   }).filter(r => r.date)
 }
 
-// Parse Meta hourly dump
+// Parse Meta hourly dump — handles both Ads Manager hourly export and internal format
 function parseMetaHourly(rows) {
   return rows.map(r => {
-    const adName = r['AD NAME'] || r['Ad Name'] || ''
+    const adName = r['Ad name'] || r['AD NAME'] || r['Ad Name'] || ''
+    const adsetName = r['Ad set name'] || r['Adset name'] || r['Ad Set Name'] || ''
     const parsed = parseCreativeName(adName)
+
+    const dateVal = r['Reporting starts'] || r['Date'] || ''
+    const timeSlot = r['Time of day (ad account time zone)'] || r['Time'] || ''
+
     return {
-      date: parseDate(r['Date']),
-      adsetName: r['Adset name'] || '',
+      date: parseDate(dateVal),
+      adsetName,
       adName,
-      timeSlot: r['Time'] || '',
-      impressions: num(r['Impression'] || r['Impressions']),
-      clicks: num(r['Link clicks']),
-      spend: num(r['Spends']),
-      fbOrders: num(r['1DC purchases']),
-      fbRevenue: num(r['1dc Revenue']),
-      cohort: r['cohort'] || parsed.cohort || '',
+      timeSlot,
+      impressions: num(r['Impressions'] || 0),
+      clicks: num(r['Link clicks'] || 0),
+      spend: num(r['Amount spent (INR)'] || r['Spends'] || 0),
+      fbOrders: num(r['Purchases [1-day click]'] || r['Purchases (1-day click)'] || r['1DC purchases'] || r['Purchases'] || 0),
+      fbRevenue: num(r['Purchases conversion value [1-day click]'] || r['Purchases conversion value (1-day click)'] || r['1dc Revenue'] || r['Purchases conversion value'] || 0),
+      cohort: r['cohort'] || r['Cohort'] || parsed.cohort || '',
       product: r['Product'] || parsed.product || '',
       format: r['Format'] || parsed.format || '',
       _source: 'META_HOURLY'
