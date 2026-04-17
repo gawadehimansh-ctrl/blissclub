@@ -1,28 +1,36 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react'
+import { enrichMetaWithGA4 } from '../utils/enricher.js'
 
 const DataContext = createContext(null)
 
 const initialState = {
-  metaDB: [],          // Meta ad-level daily data
-  metaHourly: [],      // Meta hourly data
-  googleDump: [],      // Google campaign-level data
-  ga4Dump: [],         // GA4 sessions + revenue
-  lastUpdated: {},     // { metaDB: Date, google: Date, ga4: Date }
-  uploadLog: [],       // history of uploads
-  clmSpend: 0,         // manual CLM spend input
-  retentionSpend: 0,   // manual retention spend input
-  includeUAC: false,   // toggle UAC in blended CAC
+  metaDB: [],
+  metaHourly: [],
+  googleDump: [],
+  ga4Dump: [],
+  lastUpdated: {},
+  uploadLog: [],
+  clmSpend: 0,
+  retentionSpend: 0,
+  includeUAC: false,
+}
+
+function enrichState(state) {
+  if (!state.ga4Dump.length || !state.metaDB.length) return state
+  return { ...state, metaDB: enrichMetaWithGA4(state.metaDB, state.ga4Dump) }
 }
 
 function reducer(state, action) {
+  let next
   switch (action.type) {
     case 'LOAD_META_DB':
-      return {
+      next = {
         ...state,
-        metaDB: [...state.metaDB.filter(r => !action.replace), ...action.data],
+        metaDB: action.replace ? action.data : [...state.metaDB, ...action.data],
         lastUpdated: { ...state.lastUpdated, metaDB: new Date() },
         uploadLog: [{ type: 'META_DB', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)]
       }
+      return enrichState(next)
     case 'LOAD_META_HOURLY':
       return {
         ...state,
@@ -33,17 +41,18 @@ function reducer(state, action) {
     case 'LOAD_GOOGLE':
       return {
         ...state,
-        googleDump: [...state.googleDump.filter(r => !action.replace), ...action.data],
+        googleDump: action.replace ? action.data : [...state.googleDump, ...action.data],
         lastUpdated: { ...state.lastUpdated, google: new Date() },
         uploadLog: [{ type: 'GOOGLE_DUMP', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)]
       }
     case 'LOAD_GA4':
-      return {
+      next = {
         ...state,
-        ga4Dump: [...state.ga4Dump.filter(r => !action.replace), ...action.data],
+        ga4Dump: action.replace ? action.data : [...state.ga4Dump, ...action.data],
         lastUpdated: { ...state.lastUpdated, ga4: new Date() },
         uploadLog: [{ type: 'GA4_DUMP', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)]
       }
+      return enrichState(next)
     case 'SET_CLM_SPEND':
       return { ...state, clmSpend: action.value }
     case 'SET_RETENTION_SPEND':
