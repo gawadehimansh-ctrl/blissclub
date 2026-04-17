@@ -1,48 +1,57 @@
 // BlissClub creative naming convention:
-// ACQ_IN_Advantage_230125-video_LTC_Flare_INF_Fareheen_Styling_040425
-// [COHORT]_IN_[CampaignInfo]-[format]_[product]_[contentType]_[creator]_[theme]_[date]
+// ACQ_IN_Advantage_230125-Video_LTC_Flare_INF_Fareheen_Styling_040425
+// [COHORT]_IN_[CampaignInfo]-[Format]_[Product]_[SubProduct]_[ContentType]_[Creator]_[Theme]_[date]
 
 export function parseCreativeName(name) {
   if (!name) return {}
   const n = String(name)
 
-  // Cohort: first segment before first underscore
-  const cohortMap = { ACQ: 'ACQ', RET: 'RET', REM: 'REM', ALWAYS_ON: 'ACQ' }
   const cohortMatch = n.match(/^(ACQ|RET|REM|ALWAYS_ON)/i)
   const cohort = cohortMatch ? cohortMatch[1].toUpperCase() : 'ACQ'
 
-  // Format: after dash, first segment
   const afterDash = n.split('-')[1] || ''
-  const fmtMatch = afterDash.match(/^(video|static|carousel|reel|ugc|dpa)/i)
+  const segs = afterDash.split('_').filter(Boolean)
+  const fmtMatch = (segs[0] || '').match(/^(video|static|carousel|reel|ugc|dpa|catalog)/i)
   const format = fmtMatch ? capitalize(fmtMatch[1]) : 'Static'
 
-  // Product: known BlissClub product codes
-  const products = [
-    'LTC_Flare', 'LTC_USP', 'LTC_AMPM', 'LTC_Wide',
-    'BB_Str', 'BB_Fit', 'LTC_LiteFlare',
-    'TravelCollectionMP', 'LTC_Shorts', 'LTC_Tee',
-    'CloudSoft', 'Unstoppable', 'MoveEase', 'FlexShorts'
-  ]
   let product = 'Other'
-  for (const p of products) {
-    if (n.includes(p)) { product = p; break }
+  if (segs.length > 1) {
+    const rawProd = segs[1]
+    const sub = segs[2] || ''
+    if (rawProd === 'LTC') {
+      const ltcSubs = ['Flare', 'USP', 'Wide', 'AMPM', 'TUL', 'Shorts', 'Tee', 'LiteFlare']
+      product = ltcSubs.includes(sub) ? 'LTC ' + sub : 'LTC'
+    } else {
+      const pm = {
+        Men:'Men', MenCol:'Men', BB:'BB', BBCol:'BB',
+        BraTopCol:'Bra Top', MaharaniCol:'Maharani',
+        CloudKoreanPants:'Cloud Korean Pants',
+        EverflowCol:'Everflow', EverflowKnotPants:'Everflow Knot',
+        EverflowTank:'Everflow Tank', EverflowCape:'Everflow Cape',
+        TravelCollectionMP:'Travel Collection', SumTravelCol:'Summer Travel',
+        PetalCol:'Petal', KickFlareLite:'Kick Flare Lite',
+        Blissentials:'Blissentials', Airmelt:'Airmelt',
+        OTG:'OTG', AMPMCollection:'AMPM', IWR:'IWR',
+        RS:'RS', FLP:'FLP', GYM:'Gym', CITY:'City',
+        Shopall:'Shop All', Catalog:'Catalog',
+        '2at1799':'LTC 2@1799', RSCol:'RS',
+        ColorJan26:'Color Jan26', NewLaunches:'New Launches',
+      }
+      product = pm[rawProd] || rawProd
+    }
   }
 
-  // Content type
-  const ctMap = { INF: 'Influencer', CCP: 'CCP', Tactical: 'Tactical', WYLD: 'WYLD', UGC: 'UGC' }
+  const ctMap = { INF:'Influencer', CCP:'CCP', Tactical:'Tactical', WYLD:'WYLD', UGC:'UGC' }
   let contentType = 'Tactical'
   for (const [k, v] of Object.entries(ctMap)) {
-    if (n.includes(`_${k}_`)) { contentType = v; break }
+    if (n.includes('_' + k + '_')) { contentType = v; break }
   }
 
-  // Creator
   const creatorMatch = n.match(/(?:INF|CCP)_([A-Za-z]+)_/)
   const creator = creatorMatch ? creatorMatch[1] : null
 
-  // OS
   const os = n.includes('IOS') || n.includes('iOS') ? 'iOS'
-    : n.includes('Android') ? 'Android'
-    : 'All'
+    : n.includes('Android') ? 'Android' : 'All'
 
   return { cohort, format, product, contentType, creator, os }
 }
@@ -51,14 +60,12 @@ function capitalize(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s
 }
 
-// Tag brand vs non-brand for GA4 / Google keyword data
 export function isBrandKeyword(term) {
   if (!term) return false
   const brandTerms = ['blissclub', 'bliss club', 'bliss_club', 'bc ', 'mybl']
   return brandTerms.some(b => String(term).toLowerCase().includes(b))
 }
 
-// Parse campaign type from Google campaign name
 export function parseCampaignType(name) {
   if (!name) return 'Other'
   const n = String(name).toLowerCase()
@@ -71,7 +78,6 @@ export function parseCampaignType(name) {
   return 'Other'
 }
 
-// Parse BAU vs Sale from campaign/adset name
 export function parseSaleTag(name) {
   if (!name) return 'BAU'
   const n = String(name).toLowerCase()
