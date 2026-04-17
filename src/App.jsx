@@ -5,6 +5,7 @@ import { DataProvider, useData } from './data/store.jsx'
 import Weekly from './pages/Weekly.jsx'
 import MetaCampaigns from './pages/MetaCampaigns.jsx'
 import MetaCreative from './pages/MetaCreative.jsx'
+import MetaCohortMatrix from './pages/MetaCohortMatrix.jsx'
 import GoogleCampaigns from './pages/GoogleCampaigns.jsx'
 import GoogleKeywords from './pages/GoogleKeywords.jsx'
 import Hourly from './pages/Hourly.jsx'
@@ -17,6 +18,7 @@ const NAV = [
   { path: '/hourly', label: 'Hourly pulse', icon: '⏱', group: 'Meta' },
   { path: '/meta/campaigns', label: 'Campaigns', icon: '▤', group: 'Meta' },
   { path: '/meta/creative', label: 'Creative lookback', icon: '◧', group: 'Meta' },
+  { path: '/meta/cohort', label: 'Cohort matrix', icon: '⊞', group: 'Meta' },
   { path: '/google/campaigns', label: 'Campaigns', icon: '▤', group: 'Google' },
   { path: '/google/keywords', label: 'Brand vs NB', icon: '⌕', group: 'Google' },
   { path: '/upload', label: 'Upload data', icon: '⬆', group: 'Data' },
@@ -117,6 +119,7 @@ function Layout() {
           <Route path="/hourly" element={<Hourly />} />
           <Route path="/meta/campaigns" element={<MetaCampaigns />} />
           <Route path="/meta/creative" element={<MetaCreative />} />
+          <Route path="/meta/cohort" element={<MetaCohortMatrix />} />
           <Route path="/google/campaigns" element={<GoogleCampaigns />} />
           <Route path="/google/keywords" element={<GoogleKeywords />} />
           <Route path="/upload" element={<Upload />} />
