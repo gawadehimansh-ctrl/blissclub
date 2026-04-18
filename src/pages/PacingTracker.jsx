@@ -1,6 +1,5 @@
-import { useState, useMemo } from "react";
-import { DataContext } from "../data/store.jsx";
-import { useContext } from "react";
+import { useState, useMemo, useContext } from "react";
+import { useStore } from "../data/store.jsx";
 import { CATEGORY_TARGETS, ACCOUNT_TOTALS, BREAKPOINT_TOLERANCE } from "../data/targets.js";
 
 // Inline formatters — avoids any mismatch with formatters.js exports
@@ -246,13 +245,9 @@ function CategoryRow({ cat, actual, expanded, onToggle }) {
 }
 
 export default function PacingTracker() {
-  // Try both common store patterns
-  let metaData = null, ga4Data = null;
-  try {
-    const ctx = useContext(DataContext);
-    metaData = ctx?.metaData ?? ctx?.meta ?? null;
-    ga4Data = ctx?.ga4Data ?? ctx?.ga4 ?? null;
-  } catch {}
+  const store = useStore();
+  const metaData = store?.metaData ?? store?.meta ?? null;
+  const ga4Data = store?.ga4Data ?? store?.ga4 ?? null;
 
   const [expanded, setExpanded] = useState({});
   const toggleCat = (id) => setExpanded(p => ({ ...p, [id]: !p[id] }));
