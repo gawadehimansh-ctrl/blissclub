@@ -1,385 +1,626 @@
-import { useState, useMemo, useContext } from "react";
-import { useStore } from "../data/store.jsx";
-import { CATEGORY_TARGETS, ACCOUNT_TOTALS, BREAKPOINT_TOLERANCE } from "../data/targets.js";
+import React, { useMemo, useState } from 'react'
+import { useData } from '../data/store.jsx'
+import {
+  CATEGORY_TARGETS,
+  PRODUCT_TARGETS,
+  DELTA_OK,
+  DELTA_WARN,
+  PACING_CONFIG,
+} from '../data/targets.js'
 
-// Inline formatters — avoids any mismatch with formatters.js exports
-const fmtINR = (v) => {
-  if (v == null || isNaN(v)) return "₹—";
-  const n = Number(v);
-  if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)}Cr`;
-  if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
-  if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
-  return `₹${Math.round(n)}`;
-};
+// ── Formatters ────────────────────────────────────────────────────────────────
+const fmt = (n) => {
+  if (n === undefined || n === null || isNaN(n)) return '—'
+  if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)}Cr`
+  if (n >= 100000)   return `₹${(n / 100000).toFixed(2)}L`
+  if (n >= 1000)     return `₹${(n / 1000).toFixed(1)}K`
+  return `₹${Math.round(n)}`
+}
+const fmtN   = (n, d = 1) => (n == null || isNaN(n) ? '—' : Number(n).toFixed(d))
+const fmtPct = (n)        => (n == null || isNaN(n) ? '—' : `${(n * 100).toFixed(1)}%`)
+const fmtX   = (n)        => (n == null || isNaN(n) ? '—' : `${Number(n).toFixed(2)}x`)
 
-function ragClass(actual, target, higherIsBetter = true) {
-  if (!actual || !target) return "rag-none";
-  const ratio = actual / target;
+// ── Days elapsed in April up to yesterday ─────────────────────────────────────
+function getDaysElapsed() {
+  const start     = new Date(PACING_CONFIG.startDate)
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (yesterday < start) return 1
+  const diff = Math.floor((yesterday - start) / 86400000) + 1
+  return Math.min(diff, PACING_CONFIG.totalDays)
+}
+
+// ── RAG ───────────────────────────────────────────────────────────────────────
+function rag(actual, target, higherIsBetter = true) {
+  if (!target || target === 0) return 'neutral'
+  const ratio = actual / target
   if (higherIsBetter) {
-    if (ratio >= 0.9) return "rag-green";
-    if (ratio >= 0.75) return "rag-amber";
-    return "rag-red";
+    if (ratio >= DELTA_OK)   return 'green'
+    if (ratio >= DELTA_WARN) return 'amber'
+    return 'red'
   } else {
-    if (ratio <= 1.1) return "rag-green";
-    if (ratio <= 1.25) return "rag-amber";
-    return "rag-red";
+    if (ratio <= (1 / DELTA_OK))   return 'green'
+    if (ratio <= (1 / DELTA_WARN)) return 'amber'
+    return 'red'
   }
 }
 
-function pacePct(actual, target) {
-  if (!target) return 0;
-  return Math.round((actual / target) * 100);
+const C = {
+  green:   { bg: 'rgba(34,197,94,0.12)',  text: '#22c55e', border: 'rgba(34,197,94,0.3)' },
+  amber:   { bg: 'rgba(251,191,36,0.12)', text: '#fbbf24', border: 'rgba(251,191,36,0.3)' },
+  red:     { bg: 'rgba(239,68,68,0.12)',  text: '#ef4444', border: 'rgba(239,68,68,0.3)' },
+  neutral: { bg: 'transparent',           text: '#64748b', border: 'rgba(148,163,184,0.15)' },
 }
 
-function getBreakpoint(actual, target) {
-  if (!actual || !target) return { status: "no-data", label: "No data" };
-  const revRatio = (actual.ga4Revenue || 0) / target.ga4Revenue;
-  if (revRatio >= 0.9) return { status: "on-track", label: "On track" };
+// ── Breakpoint detector ───────────────────────────────────────────────────────
+// Order: spend → CPC → CPS → sessions → CR% → orders
+function getBreakpoint(act = {}, tgt = {}) {
   const checks = [
-    { key: "cpc", label: "CPC", higherBetter: false },
-    { key: "cplpv", label: "CPLPV", higherBetter: false },
-    { key: "sessions", label: "Sessions", higherBetter: true },
-    { key: "crPct", label: "CR%", higherBetter: true },
-  ];
-  for (const c of checks) {
-    if (!actual[c.key] || !target[c.key]) continue;
-    const ratio = actual[c.key] / target[c.key];
-    const broken = c.higherBetter ? ratio < 0.8 : ratio > 1.2;
-    if (broken) return { status: "breaking", label: `${c.label} breaking` };
+    { key: 'spend',    label: 'Spend under-pacing',   higher: true  },
+    { key: 'cpc',      label: 'CPC over target',       higher: false },
+    { key: 'cps',      label: 'Cost/Session too high', higher: false },
+    { key: 'sessions', label: 'Sessions low',          higher: true  },
+    { key: 'crPct',    label: 'CR% low',               higher: true  },
+    { key: 'orders',   label: 'Orders low',            higher: true  },
+  ]
+  for (const { key, label, higher } of checks) {
+    const status = rag(act[key] ?? 0, tgt[key], higher)
+    if (status === 'red' || status === 'amber') return { label, status }
   }
-  return { status: "underspend", label: "Check spend" };
+  return null
 }
 
-function computeActuals(metaRows, ga4Rows) {
-  const totalSpend = metaRows.reduce((s, r) => s + (r.spend || 0), 0);
-  const totalRev = ga4Rows.reduce((s, r) => s + (r.revenue || 0), 0);
-  const totalOrders = ga4Rows.reduce((s, r) => s + (r.transactions || 0), 0);
-  const totalSessions = ga4Rows.reduce((s, r) => s + (r.sessions || 0), 0);
-  const totalClicks = metaRows.reduce((s, r) => s + (r.clicks || 0), 0);
+// ── Aggregate metaDB rows into category + product buckets ─────────────────────
+function aggregateActuals(metaDB) {
+  const rows = Array.isArray(metaDB) ? metaDB : (metaDB?.rows ?? [])
+  const byCategory = {}
+  const byProduct  = {}
 
-  const catMap = {};
-  CATEGORY_TARGETS.forEach(cat => {
-    const spendMix = cat.spendMixPct / 100;
-    const revMix = cat.revenueMixPct / 100;
-    const catSpend = totalSpend * spendMix;
-    const catRev = totalRev * revMix;
-    const catClicks = totalClicks * spendMix;
-    const catSessions = totalSessions * spendMix;
-    const catOrders = totalOrders * revMix;
-    catMap[cat.id] = {
-      ga4Revenue: catRev,
-      spends: catSpend,
-      sessions: catSessions,
-      clicks: catClicks,
-      orders: catOrders,
-      cpc: catClicks > 0 ? catSpend / catClicks : 0,
-      cplpv: catClicks > 0 ? catSpend / catClicks : 0,
-      ga4Roas: catSpend > 0 ? catRev / catSpend : 0,
-      crPct: catSessions > 0 ? (catOrders / catSessions) * 100 : 0,
-    };
-  });
-  return { catMap, totalSpend, totalRev, totalSessions, totalClicks };
-}
+  for (const row of rows) {
+    const cat  = row.category || 'Other'
+    const prod = row.product  || 'Other'
 
-function PaceBar({ pct, rag }) {
-  return (
-    <div className="pt-bar-wrap">
-      <div className={`pt-bar-fill ${rag}`} style={{ width: `${Math.min(pct, 100)}%` }} />
-    </div>
-  );
-}
-
-function AccountSummary({ catMap, totalClicks, totalRev }) {
-  const totalActualRev = Object.values(catMap).reduce((s, a) => s + (a?.ga4Revenue || 0), 0);
-  const totalActualSpend = Object.values(catMap).reduce((s, a) => s + (a?.spends || 0), 0);
-  const totalActualSessions = Object.values(catMap).reduce((s, a) => s + (a?.sessions || 0), 0);
-  const revPace = pacePct(totalActualRev, ACCOUNT_TOTALS.ga4Revenue);
-  const spendPace = pacePct(totalActualSpend, ACCOUNT_TOTALS.spends);
-  const blendedRoas = totalActualSpend > 0 ? totalActualRev / totalActualSpend : 0;
-  const avgCpc = totalClicks > 0 ? totalActualSpend / totalClicks : 0;
-
-  const cards = [
-    { label: "Meta GA4 Revenue", value: fmtINR(totalActualRev), sub: `vs ${fmtINR(ACCOUNT_TOTALS.ga4Revenue)}/day`, pace: revPace, rag: ragClass(totalActualRev, ACCOUNT_TOTALS.ga4Revenue) },
-    { label: "Total Spend", value: fmtINR(totalActualSpend), sub: `vs ${fmtINR(ACCOUNT_TOTALS.spends)}/day`, pace: spendPace, rag: ragClass(totalActualSpend, ACCOUNT_TOTALS.spends) },
-    { label: "Blended ROAS", value: `${blendedRoas.toFixed(2)}x`, sub: `target ${ACCOUNT_TOTALS.ga4Roas.toFixed(2)}x`, pace: null },
-    { label: "Avg CPC", value: avgCpc > 0 ? `₹${avgCpc.toFixed(0)}` : "—", sub: `target ₹${ACCOUNT_TOTALS.cpc}`, pace: null },
-    { label: "Sessions", value: totalActualSessions > 0 ? totalActualSessions.toLocaleString("en-IN") : "—", sub: `target ${ACCOUNT_TOTALS.sessions.toLocaleString("en-IN")}/day`, pace: null },
-  ];
-
-  return (
-    <div className="pt-summary-row">
-      {cards.map((c, i) => (
-        <div key={i} className="pt-card">
-          <div className="pt-card-label">{c.label}</div>
-          <div className="pt-card-value">{c.value}</div>
-          {c.pace != null && (
-            <div className="pt-pace-row">
-              <PaceBar pct={c.pace} rag={c.rag} />
-              <span className="pt-pace-pct">{c.pace}%</span>
-            </div>
-          )}
-          <div className="pt-card-sub">{c.sub}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function InsightBlock({ catMap }) {
-  const insights = [];
-  CATEGORY_TARGETS.forEach(cat => {
-    const actual = catMap[cat.id];
-    if (!actual) return;
-    const revRatio = cat.ga4Revenue > 0 ? (actual.ga4Revenue || 0) / cat.ga4Revenue : 0;
-    const cpcRatio = cat.cpc > 0 ? (actual.cpc || 0) / cat.cpc : 0;
-    const crRatio = cat.crPct > 0 ? (actual.crPct || 0) / (cat.crPct || 1) : 0;
-
-    if (revRatio < 0.75 && actual.ga4Revenue > 0) {
-      if (cpcRatio > 1.2) {
-        insights.push({ type: "red", text: `${cat.name}: CPC at ₹${(actual.cpc||0).toFixed(0)} vs ₹${cat.cpc} target — reduce bids or pause weak adsets.` });
-      } else if (crRatio < 0.8 && actual.crPct > 0) {
-        insights.push({ type: "amber", text: `${cat.name}: CR% below target — check landing page or creative relevance.` });
-      } else {
-        insights.push({ type: "amber", text: `${cat.name}: Revenue at ${Math.round(revRatio*100)}% of daily target — review session volume and spend.` });
-      }
-    } else if (revRatio > 1.1 && actual.ga4Revenue > 0) {
-      insights.push({ type: "green", text: `${cat.name}: Ahead at ${Math.round(revRatio*100)}% of target — consider increasing spend.` });
+    for (const bucket of [
+      [byCategory, cat],
+      [byProduct, prod],
+    ]) {
+      const [map, key] = bucket
+      if (!map[key]) map[key] = { spend: 0, clicks: 0, sessions: 0, ga4Revenue: 0, orders: 0, impressions: 0 }
+      map[key].spend       += Number(row.spend       || 0)
+      map[key].clicks      += Number(row.clicks      || row.linkClicks || 0)
+      map[key].sessions    += Number(row.sessions    || row.ga4Sessions || 0)
+      map[key].ga4Revenue  += Number(row.ga4Revenue  || row.gaRevenue   || 0)
+      map[key].orders      += Number(row.ga4Orders   || row.gaOrders    || 0)
+      map[key].impressions += Number(row.impressions || 0)
     }
-  });
-
-  if (insights.length === 0) {
-    insights.push({ type: "blue", text: "Upload today's Meta daily CSV and GA4 CSV on the Upload page to generate live insights." });
   }
 
+  const derive = (agg) => ({
+    ...agg,
+    cpc:     agg.clicks   > 0 ? agg.spend / agg.clicks   : 0,
+    cps:     agg.sessions > 0 ? agg.spend / agg.sessions  : 0,
+    ga4ROAS: agg.spend    > 0 ? agg.ga4Revenue / agg.spend : 0,
+    crPct:   agg.sessions > 0 ? agg.orders / agg.sessions  : 0,
+  })
+
+  Object.keys(byCategory).forEach(k => { byCategory[k] = derive(byCategory[k]) })
+  Object.keys(byProduct).forEach(k  => { byProduct[k]  = derive(byProduct[k])  })
+
+  return { byCategory, byProduct }
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+function PaceBar({ actual, target, higherIsBetter = true }) {
+  if (!target) return null
+  const pct    = Math.min((actual / target) * 100, 120)
+  const status = rag(actual, target, higherIsBetter)
   return (
-    <div className="pt-insight-block">
-      <div className="pt-insight-header">Auto-generated insights</div>
-      {insights.slice(0, 5).map((ins, i) => (
-        <div key={i} className="pt-insight-row">
-          <span className={`pt-insight-dot dot-${ins.type}`} />
-          <span>{ins.text}</span>
-        </div>
-      ))}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: C[status].text, borderRadius: 2 }} />
+      </div>
+      <span style={{ fontSize: 11, color: C[status].text, minWidth: 38, textAlign: 'right' }}>
+        {fmtPct(actual / target)}
+      </span>
     </div>
-  );
+  )
 }
 
-function ProductRow({ product }) {
-  return (
-    <tr className="pt-product-row">
-      <td className="pt-product-name-cell">
-        <span className="pt-product-name">{product.name}</span>
-        {product.alias && <span className="pt-product-alias">{product.alias}</span>}
-      </td>
-      <td className="pt-metric-cell"><span className="pt-badge pt-rag-none">{fmtINR(product.ga4Revenue)}<span className="pt-target-sub">/day</span></span></td>
-      <td className="pt-metric-cell"><span className="pt-badge pt-rag-none">{fmtINR(product.spends)}<span className="pt-target-sub">/day</span></span></td>
-      <td className="pt-metric-cell"><span className="pt-badge pt-rag-none">{product.ga4Roas?.toFixed(2)}x</span></td>
-      <td className="pt-metric-cell"><span className="pt-badge pt-rag-none">₹{product.cpc}</span></td>
-      <td className="pt-metric-cell"><span className="pt-badge pt-rag-none">{product.sessions?.toLocaleString("en-IN")}</span></td>
-      <td></td>
-    </tr>
-  );
-}
-
-function CategoryRow({ cat, actual, expanded, onToggle }) {
-  const bp = getBreakpoint(actual, cat);
-  const revPace = pacePct(actual?.ga4Revenue, cat.ga4Revenue);
-  const spendPace = pacePct(actual?.spends, cat.spends);
-  const revRag = ragClass(actual?.ga4Revenue, cat.ga4Revenue, true);
-  const spendRag = ragClass(actual?.spends, cat.spends, true);
-  const roasRag = ragClass(actual?.ga4Roas, cat.ga4Roas, true);
-  const cpcRag = ragClass(actual?.cpc, cat.cpc, false);
-  const sessRag = ragClass(actual?.sessions, cat.sessions, true);
+function KPICard({ label, actual, target, formatter = fmt, higherIsBetter = true }) {
+  const daysElapsed = getDaysElapsed()
+  const cumTarget   = target * daysElapsed
+  const status      = rag(actual, cumTarget, higherIsBetter)
+  const required    = cumTarget > 0 ? ((cumTarget - actual) / Math.max(PACING_CONFIG.totalDays - daysElapsed, 1)) : 0
 
   return (
-    <>
-      <tr className={`pt-cat-row${expanded ? " pt-cat-expanded" : ""}`} onClick={() => onToggle(cat.id)}>
-        <td className="pt-cat-name-cell">
-          <span className={`pt-expand${expanded ? " open" : ""}`}>›</span>
-          <div>
-            <span className="pt-cat-name">{cat.name}</span>
-            <span className="pt-cat-mix">{cat.spendMixPct}% mix</span>
-          </div>
-        </td>
-
-        <td className="pt-metric-cell">
-          <span className={`pt-badge ${revRag}`}>{fmtINR(actual?.ga4Revenue ?? 0)}</span>
-          <div className="pt-pace-row">
-            <PaceBar pct={revPace} rag={revRag} />
-            <span className="pt-pace-pct">{revPace}%</span>
-          </div>
-          <span className="pt-target-sub">{fmtINR(cat.ga4Revenue)}/day</span>
-        </td>
-
-        <td className="pt-metric-cell">
-          <span className={`pt-badge ${spendRag}`}>{fmtINR(actual?.spends ?? 0)}</span>
-          <div className="pt-pace-row">
-            <PaceBar pct={spendPace} rag={spendRag} />
-            <span className="pt-pace-pct">{spendPace}%</span>
-          </div>
-          <span className="pt-target-sub">{fmtINR(cat.spends)}/day</span>
-        </td>
-
-        <td className="pt-metric-cell">
-          <span className={`pt-badge ${roasRag}`}>{(actual?.ga4Roas ?? 0).toFixed(2)}x</span>
-          <span className="pt-target-sub">{cat.ga4Roas}x</span>
-        </td>
-
-        <td className="pt-metric-cell">
-          <span className={`pt-badge ${cpcRag}`}>₹{(actual?.cpc ?? 0).toFixed(0)}</span>
-          <span className="pt-target-sub">₹{cat.cpc}</span>
-        </td>
-
-        <td className="pt-metric-cell">
-          <span className={`pt-badge ${sessRag}`}>{(actual?.sessions ?? 0).toLocaleString("en-IN")}</span>
-          <span className="pt-target-sub">{cat.sessions.toLocaleString("en-IN")}</span>
-        </td>
-
-        <td className="pt-bp-cell">
-          <span className={`pt-bp bp-${bp.status}`}>{bp.label}</span>
-        </td>
-      </tr>
-      {expanded && cat.products.map(p => <ProductRow key={p.alias} product={p} />)}
-    </>
-  );
-}
-
-export default function PacingTracker() {
-  const store = useStore();
-  const metaData = store?.metaData ?? store?.meta ?? null;
-  const ga4Data = store?.ga4Data ?? store?.ga4 ?? null;
-
-  const [expanded, setExpanded] = useState({});
-  const toggleCat = (id) => setExpanded(p => ({ ...p, [id]: !p[id] }));
-
-  const metaRows = useMemo(() => metaData?.rows || [], [metaData]);
-  const ga4Rows = useMemo(() => ga4Data?.rows || [], [ga4Data]);
-  const hasData = metaRows.length > 0 || ga4Rows.length > 0;
-
-  const { catMap, totalClicks, totalRev } = useMemo(
-    () => computeActuals(metaRows, ga4Rows),
-    [metaRows, ga4Rows]
-  );
-
-  return (
-    <div className="pt-page">
-      <style>{`
-        .pt-page{padding:24px;max-width:100%}
-        .pt-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
-        .pt-title{font-size:20px;font-weight:500;color:var(--color-text-primary)}
-        .pt-subtitle{font-size:12px;color:var(--color-text-secondary);margin-top:3px}
-        .pt-warning{background:var(--color-background-warning);border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--color-text-warning);margin-bottom:16px}
-        .pt-legend{display:flex;gap:12px;font-size:11px;color:var(--color-text-tertiary);align-items:center}
-        .pt-leg-dot{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:3px;vertical-align:middle}
-
-        /* summary */
-        .pt-summary-row{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
-        .pt-card{flex:1;min-width:140px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:12px 14px}
-        .pt-card-label{font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
-        .pt-card-value{font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px}
-        .pt-card-sub{font-size:10px;color:var(--color-text-tertiary);margin-top:4px}
-        .pt-pace-row{display:flex;align-items:center;gap:4px;margin:3px 0}
-        .pt-pace-pct{font-size:10px;color:var(--color-text-tertiary);min-width:26px}
-        .pt-bar-wrap{flex:1;height:4px;background:var(--color-background-secondary);border-radius:2px;overflow:hidden;min-width:30px}
-        .pt-bar-fill{height:100%;border-radius:2px;transition:width .4s ease}
-        .pt-bar-fill.rag-green{background:#3B8BD4}
-        .pt-bar-fill.rag-amber{background:#EF9F27}
-        .pt-bar-fill.rag-red{background:#E24B4A}
-        .pt-bar-fill.rag-none{background:var(--color-border-secondary)}
-
-        /* insights */
-        .pt-insight-block{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:14px 16px;margin-bottom:16px}
-        .pt-insight-header{font-size:10px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
-        .pt-insight-row{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--color-text-primary);margin-bottom:7px;line-height:1.5}
-        .pt-insight-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
-        .dot-red{background:#E24B4A}.dot-amber{background:#EF9F27}.dot-green,.dot-blue{background:#3B8BD4}
-
-        /* table */
-        .pt-table-wrap{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden;margin-bottom:16px}
-        .pt-table-header{padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:10px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em}
-        .pt-table{width:100%;border-collapse:collapse}
-        .pt-table th{font-size:10px;color:var(--color-text-tertiary);font-weight:400;padding:8px 10px;text-align:left;border-bottom:0.5px solid var(--color-border-tertiary);white-space:nowrap}
-        .pt-table th:not(:first-child){text-align:center}
-
-        /* rows */
-        .pt-cat-row{cursor:pointer;border-bottom:0.5px solid var(--color-border-tertiary);transition:background .12s}
-        .pt-cat-row:hover{background:var(--color-background-secondary)}
-        .pt-cat-expanded{background:var(--color-background-secondary)}
-        .pt-cat-name-cell{padding:10px 10px;display:flex;align-items:center;gap:6px;min-width:150px}
-        .pt-expand{font-size:15px;color:var(--color-text-tertiary);transition:transform .18s;display:inline-block;line-height:1}
-        .pt-expand.open{transform:rotate(90deg)}
-        .pt-cat-name{font-size:12px;font-weight:500;color:var(--color-text-primary);display:block}
-        .pt-cat-mix{font-size:10px;color:var(--color-text-tertiary)}
-        .pt-product-row{border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)}
-        .pt-product-name-cell{padding:7px 10px 7px 32px}
-        .pt-product-name{font-size:11px;font-weight:500;color:var(--color-text-primary);display:block}
-        .pt-product-alias{font-size:10px;color:var(--color-text-tertiary)}
-
-        /* metric cells */
-        .pt-metric-cell{padding:8px 10px;text-align:center;vertical-align:top}
-        .pt-target-sub{font-size:10px;color:var(--color-text-tertiary);display:block;margin-top:2px}
-        .pt-badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px}
-        .rag-green{background:#EAF3DE;color:#3B6D11}
-        .rag-amber{background:#FAEEDA;color:#854F0B}
-        .rag-red{background:#FCEBEB;color:#A32D2D}
-        .pt-rag-none,.rag-none{background:var(--color-background-secondary);color:var(--color-text-secondary)}
-
-        /* breakpoint */
-        .pt-bp-cell{padding:8px 10px;text-align:right;vertical-align:top}
-        .pt-bp{font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px}
-        .bp-on-track{background:#EAF3DE;color:#3B6D11}
-        .bp-breaking{background:#FCEBEB;color:#A32D2D}
-        .bp-underspend,.bp-no-data{background:#FAEEDA;color:#854F0B}
-      `}</style>
-
-      <div className="pt-header">
-        <div>
-          <div className="pt-title">Pacing Tracker</div>
-          <div className="pt-subtitle">Meta GA4 tracked revenue · daily targets · {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>
+    <div style={{
+      background: 'rgba(255,255,255,0.03)',
+      border: `1px solid rgba(255,255,255,0.08)`,
+      borderRadius: 12,
+      padding: '16px 18px',
+      flex: 1,
+      minWidth: 145,
+    }}>
+      <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: C[status].text, marginBottom: 2 }}>{formatter(actual)}</div>
+      <div style={{ fontSize: 11, color: '#475569', marginBottom: 8 }}>MTD target {formatter(cumTarget)}</div>
+      <PaceBar actual={actual} target={cumTarget} higherIsBetter={higherIsBetter} />
+      {required > 0 && actual < cumTarget && (
+        <div style={{ fontSize: 10, color: '#64748b', marginTop: 6 }}>
+          Run-rate needed: <span style={{ color: '#f472b6' }}>{formatter(required)}/day</span>
         </div>
-        <div className="pt-legend">
-          <span><span className="pt-leg-dot" style={{background:"#3B8BD4"}}/>On target</span>
-          <span><span className="pt-leg-dot" style={{background:"#EF9F27"}}/>Within 25%</span>
-          <span><span className="pt-leg-dot" style={{background:"#E24B4A"}}/>Below 75%</span>
+      )}
+    </div>
+  )
+}
+
+function RagCell({ actual, target, formatter = fmt, higherIsBetter = true }) {
+  const status = rag(actual, target, higherIsBetter)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: C[status].text }}>{formatter(actual || 0)}</span>
+      <span style={{ fontSize: 10, color: '#475569' }}>tgt {formatter(target)}</span>
+    </div>
+  )
+}
+
+// ── Products under a category ─────────────────────────────────────────────────
+function ProductRows({ categoryName, byProduct, daysElapsed }) {
+  const products = Object.entries(PRODUCT_TARGETS).filter(([, p]) => p.category === categoryName)
+  if (!products.length) return null
+
+  return (
+    <div style={{ background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      {/* product sub-header */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '32px 180px 130px 130px 80px 80px 80px 150px',
+        gap: 0,
+        padding: '8px 16px 8px 48px',
+        fontSize: 10,
+        color: '#475569',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+      }}>
+        <div />
+        <div>Product</div>
+        <div>GA4 Rev (cumulative)</div>
+        <div>Spend</div>
+        <div>ROAS</div>
+        <div>CPC</div>
+        <div>CR%</div>
+        <div>Breakpoint</div>
+      </div>
+
+      {products.map(([prodName, tgt]) => {
+        const act        = byProduct[prodName] || byProduct[tgt.alias] || {}
+        const cumRevTgt  = tgt.ga4Revenue * daysElapsed
+        const cumSpndTgt = tgt.spend * daysElapsed
+        const bp         = getBreakpoint(act, tgt)
+        const revStatus  = rag(act.ga4Revenue || 0, cumRevTgt)
+
+        return (
+          <div key={prodName} style={{
+            display: 'grid',
+            gridTemplateColumns: '32px 180px 130px 130px 80px 80px 80px 150px',
+            gap: 0,
+            padding: '10px 16px 10px 48px',
+            borderBottom: '1px solid rgba(255,255,255,0.03)',
+            alignItems: 'center',
+          }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: C[revStatus].text }} />
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: '#cbd5e1' }}>{prodName}</div>
+              {tgt.alias && <div style={{ fontSize: 10, color: '#475569' }}>{tgt.alias}</div>}
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, color: C[revStatus].text, fontWeight: 600 }}>{fmt(act.ga4Revenue || 0)}</div>
+              <PaceBar actual={act.ga4Revenue || 0} target={cumRevTgt} />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, color: C[rag(act.spend || 0, cumSpndTgt)].text }}>{fmt(act.spend || 0)}</div>
+              <PaceBar actual={act.spend || 0} target={cumSpndTgt} />
+            </div>
+
+            <RagCell actual={act.ga4ROAS || 0} target={tgt.ga4ROAS} formatter={fmtX} />
+            <RagCell actual={act.cpc     || 0} target={tgt.cpc}     formatter={n => '₹' + fmtN(n, 0)} higherIsBetter={false} />
+            <RagCell actual={act.crPct   || 0} target={tgt.crPct}   formatter={fmtPct} />
+
+            <div>
+              {bp ? (
+                <span style={{
+                  background: C[bp.status].bg,
+                  color: C[bp.status].text,
+                  border: `1px solid ${C[bp.status].border}`,
+                  borderRadius: 6,
+                  padding: '3px 8px',
+                  fontSize: 11,
+                }}>
+                  {bp.label}
+                </span>
+              ) : act.spend > 0 ? (
+                <span style={{ color: '#22c55e', fontSize: 11 }}>✓ On track</span>
+              ) : (
+                <span style={{ color: '#475569', fontSize: 11 }}>No data</span>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function PacingTracker() {
+  const { state }         = useData()
+  const [expanded, setExpanded] = useState(null)
+  const daysElapsed       = getDaysElapsed()
+  const hasData           = (state.metaDB?.length ?? 0) > 0
+
+  const { byCategory, byProduct } = useMemo(
+    () => aggregateActuals(state.metaDB),
+    [state.metaDB]
+  )
+
+  // Account-level totals
+  const acct = useMemo(() => {
+    const t = { spend: 0, ga4Revenue: 0, orders: 0, sessions: 0, clicks: 0 }
+    Object.values(byCategory).forEach(c => {
+      t.spend      += c.spend
+      t.ga4Revenue += c.ga4Revenue
+      t.orders     += c.orders
+      t.sessions   += c.sessions
+      t.clicks     += c.clicks
+    })
+    return {
+      ...t,
+      cpc:     t.clicks   > 0 ? t.spend / t.clicks   : 0,
+      ga4ROAS: t.spend    > 0 ? t.ga4Revenue / t.spend : 0,
+      crPct:   t.sessions > 0 ? t.orders / t.sessions  : 0,
+    }
+  }, [byCategory])
+
+  // Daily account targets (sum of all categories)
+  const acctTgt = useMemo(() => {
+    const t = { spend: 0, ga4Revenue: 0, orders: 0, sessions: 0 }
+    Object.values(CATEGORY_TARGETS).forEach(c => {
+      t.spend      += c.spend
+      t.ga4Revenue += c.ga4Revenue
+      t.orders     += c.orders
+      t.sessions   += c.sessions
+    })
+    return { ...t, cpc: 11.5, ga4ROAS: 2.18 }
+  }, [])
+
+  // Auto-insights: categories that are breaking today
+  const breaking = useMemo(() => {
+    return Object.entries(CATEGORY_TARGETS)
+      .map(([name, tgt]) => {
+        const act = byCategory[name]
+        if (!act || act.spend === 0) return null
+        const bp = getBreakpoint(act, tgt)
+        if (!bp) return null
+        return { name, ...bp }
+      })
+      .filter(Boolean)
+  }, [byCategory])
+
+  return (
+    <div style={{
+      padding: '24px 28px',
+      minHeight: '100vh',
+      background: '#090e1a',
+      color: '#e2e8f0',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    }}>
+
+      {/* ── Header ── */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Pacing Tracker</h1>
+          <span style={{
+            background: 'rgba(244,114,182,0.15)',
+            color: '#f472b6',
+            border: '1px solid rgba(244,114,182,0.3)',
+            borderRadius: 20, padding: '2px 12px', fontSize: 11, fontWeight: 500,
+          }}>
+            Meta GA4 Revenue Only (~55% of Total NR)
+          </span>
+        </div>
+        <div style={{ fontSize: 13, color: '#64748b' }}>
+          Day <strong style={{ color: '#94a3b8' }}>{daysElapsed}</strong> of {PACING_CONFIG.totalDays} ·{' '}
+          {PACING_CONFIG.month} · All targets are daily benchmarks · Cumulative = target × days elapsed
         </div>
       </div>
 
+      {/* ── No data banner ── */}
       {!hasData && (
-        <div className="pt-warning">
-          No data uploaded yet — targets shown below. Upload today's Meta daily CSV + GA4 CSV on the Upload page to see actuals vs targets.
+        <div style={{
+          background: 'rgba(251,191,36,0.08)',
+          border: '1px solid rgba(251,191,36,0.25)',
+          borderRadius: 10, padding: '14px 18px', marginBottom: 24, color: '#fbbf24', fontSize: 13,
+        }}>
+          ⚠️ No Meta data loaded yet. Upload a Meta daily CSV on the Upload page to see actuals vs targets.
+          Daily targets from the April media plan are shown below.
         </div>
       )}
 
-      <AccountSummary catMap={catMap} totalClicks={totalClicks} totalRev={totalRev} />
-      <InsightBlock catMap={catMap} />
-
-      <div className="pt-table-wrap">
-        <div className="pt-table-header">Category breakpoint heatmap — click any row to expand products</div>
-        <table className="pt-table">
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>GA4 Revenue</th>
-              <th>Spend</th>
-              <th>GA4 ROAS</th>
-              <th>CPC</th>
-              <th>Sessions</th>
-              <th style={{textAlign:"right"}}>Breakpoint</th>
-            </tr>
-          </thead>
-          <tbody>
-            {CATEGORY_TARGETS.map(cat => (
-              <CategoryRow
-                key={cat.id}
-                cat={cat}
-                actual={catMap[cat.id]}
-                expanded={!!expanded[cat.id]}
-                onToggle={toggleCat}
-              />
-            ))}
-          </tbody>
-        </table>
+      {/* ── Account KPI strip ── */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
+        <KPICard label="Meta GA4 Revenue"  actual={acct.ga4Revenue} target={acctTgt.ga4Revenue} />
+        <KPICard label="Total Spend"        actual={acct.spend}      target={acctTgt.spend} />
+        <KPICard label="GA4 ROAS"           actual={acct.ga4ROAS}    target={acctTgt.ga4ROAS}   formatter={fmtX} />
+        <KPICard label="Avg CPC"            actual={acct.cpc}        target={acctTgt.cpc}        formatter={n => '₹' + fmtN(n,0)} higherIsBetter={false} />
+        <KPICard label="Sessions"           actual={acct.sessions}   target={acctTgt.sessions}   formatter={n => Math.round(n).toLocaleString()} />
+        <KPICard label="Orders"             actual={acct.orders}     target={acctTgt.orders}     formatter={n => fmtN(n, 0)} />
       </div>
+
+      {/* ── Breaking insights ── */}
+      {breaking.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+            🔴 Breaking Metrics
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {breaking.map((b, i) => (
+              <div key={i} style={{
+                background: C[b.status].bg,
+                border: `1px solid ${C[b.status].border}`,
+                borderRadius: 8, padding: '7px 14px', fontSize: 13,
+                cursor: 'pointer',
+              }}
+                onClick={() => setExpanded(expanded === b.name ? null : b.name)}
+              >
+                <span style={{ color: C[b.status].text, fontWeight: 600 }}>{b.name}</span>
+                <span style={{ color: '#94a3b8', marginLeft: 8 }}>→ {b.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Category heatmap ── */}
+      <div style={{
+        background: 'rgba(255,255,255,0.02)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 12, overflow: 'hidden',
+      }}>
+        {/* Table header */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '32px 180px 160px 140px 80px 80px 80px 150px',
+          padding: '10px 16px',
+          background: 'rgba(255,255,255,0.04)',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          fontSize: 10, color: '#64748b',
+          textTransform: 'uppercase', letterSpacing: 0.8,
+        }}>
+          <div />
+          <div>Category</div>
+          <div>GA4 Revenue (MTD)</div>
+          <div>Spend (MTD)</div>
+          <div>ROAS</div>
+          <div>CPC</div>
+          <div>CR%</div>
+          <div>Breakpoint</div>
+        </div>
+
+        {Object.entries(CATEGORY_TARGETS).map(([catName, tgt]) => {
+          const act        = byCategory[catName] || {}
+          const cumRevTgt  = tgt.ga4Revenue * daysElapsed
+          const cumSpndTgt = tgt.spend       * daysElapsed
+          const revStatus  = rag(act.ga4Revenue || 0, cumRevTgt)
+          const spndStatus = rag(act.spend      || 0, cumSpndTgt)
+          const roasStatus = rag(act.ga4ROAS    || 0, tgt.ga4ROAS)
+          const cpcStatus  = rag(act.cpc        || 0, tgt.cpc, false)
+          const crStatus   = rag(act.crPct      || 0, tgt.crPct)
+          const bp         = getBreakpoint(act, tgt)
+          const isOpen     = expanded === catName
+
+          return (
+            <React.Fragment key={catName}>
+              {/* Category row */}
+              <div
+                onClick={() => setExpanded(isOpen ? null : catName)}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '32px 180px 160px 140px 80px 80px 80px 150px',
+                  padding: '13px 16px',
+                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  cursor: 'pointer',
+                  background: isOpen ? 'rgba(244,114,182,0.04)' : 'transparent',
+                  transition: 'background 0.15s',
+                  alignItems: 'center',
+                }}
+              >
+                {/* Expand arrow */}
+                <div style={{
+                  color: '#64748b', fontSize: 10,
+                  transform: isOpen ? 'rotate(90deg)' : 'none',
+                  transition: 'transform 0.2s',
+                }}>▶</div>
+
+                {/* Name + dot */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: C[revStatus].text, flexShrink: 0 }} />
+                  <span style={{ fontWeight: 600, fontSize: 13, color: '#f1f5f9' }}>{catName}</span>
+                </div>
+
+                {/* GA4 Revenue */}
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C[revStatus].text, marginBottom: 3 }}>
+                    {fmt(act.ga4Revenue || 0)}
+                  </div>
+                  <PaceBar actual={act.ga4Revenue || 0} target={cumRevTgt} />
+                </div>
+
+                {/* Spend */}
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C[spndStatus].text, marginBottom: 3 }}>
+                    {fmt(act.spend || 0)}
+                  </div>
+                  <PaceBar actual={act.spend || 0} target={cumSpndTgt} />
+                </div>
+
+                {/* ROAS */}
+                <div style={{ fontSize: 13, color: C[roasStatus].text, fontWeight: 600 }}>
+                  {fmtX(act.ga4ROAS || 0)}
+                  <div style={{ fontSize: 10, color: '#475569', fontWeight: 400 }}>tgt {fmtX(tgt.ga4ROAS)}</div>
+                </div>
+
+                {/* CPC */}
+                <div style={{ fontSize: 13, color: C[cpcStatus].text, fontWeight: 600 }}>
+                  {act.cpc ? '₹' + fmtN(act.cpc, 0) : '—'}
+                  <div style={{ fontSize: 10, color: '#475569', fontWeight: 400 }}>tgt ₹{fmtN(tgt.cpc, 0)}</div>
+                </div>
+
+                {/* CR% */}
+                <div style={{ fontSize: 13, color: C[crStatus].text, fontWeight: 600 }}>
+                  {fmtPct(act.crPct || 0)}
+                  <div style={{ fontSize: 10, color: '#475569', fontWeight: 400 }}>tgt {fmtPct(tgt.crPct)}</div>
+                </div>
+
+                {/* Breakpoint */}
+                <div>
+                  {bp ? (
+                    <span style={{
+                      background: C[bp.status].bg,
+                      color: C[bp.status].text,
+                      border: `1px solid ${C[bp.status].border}`,
+                      borderRadius: 6, padding: '3px 8px', fontSize: 11,
+                    }}>
+                      {bp.label}
+                    </span>
+                  ) : act.spend > 0 ? (
+                    <span style={{ color: '#22c55e', fontSize: 12 }}>✓ On track</span>
+                  ) : (
+                    <span style={{ color: '#334155', fontSize: 12 }}>No data</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Product accordion */}
+              {isOpen && (
+                <ProductRows
+                  categoryName={catName}
+                  byProduct={byProduct}
+                  daysElapsed={daysElapsed}
+                />
+              )}
+            </React.Fragment>
+          )
+        })}
+      </div>
+
+      {/* ── Remaining run-rate footer ── */}
+      {hasData && (
+        <div style={{
+          marginTop: 20,
+          background: 'rgba(244,114,182,0.06)',
+          border: '1px solid rgba(244,114,182,0.2)',
+          borderRadius: 10, padding: '14px 20px',
+          display: 'flex', alignItems: 'center', gap: 16,
+        }}>
+          <span style={{ fontSize: 12, color: '#94a3b8' }}>
+            📅 {PACING_CONFIG.totalDays - daysElapsed} days remaining in April
+          </span>
+          {acct.ga4Revenue < acctTgt.ga4Revenue * daysElapsed && (
+            <span style={{ fontSize: 13, color: '#f472b6', fontWeight: 600 }}>
+              Required daily run-rate to close deficit:{' '}
+              {fmt((acctTgt.ga4Revenue * PACING_CONFIG.totalDays - acct.ga4Revenue) / Math.max(PACING_CONFIG.totalDays - daysElapsed, 1))}
+              /day
+            </span>
+          )}
+          {acct.ga4Revenue >= acctTgt.ga4Revenue * daysElapsed && (
+            <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>
+              ✓ Ahead of pace — current run-rate: {fmt(acct.ga4Revenue / daysElapsed)}/day
+            </span>
+          )}
+        </div>
+      )}
     </div>
-  );
+  )
+}
+
+// ── ProductRows sub-component ─────────────────────────────────────────────────
+function ProductRows({ categoryName, byProduct, daysElapsed }) {
+  const products = Object.entries(PRODUCT_TARGETS).filter(([, p]) => p.category === categoryName)
+  if (!products.length) return null
+
+  return (
+    <div style={{ background: 'rgba(0,0,0,0.25)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      {/* Sub-header */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '48px 200px 160px 140px 80px 80px 80px 150px',
+        padding: '7px 16px',
+        fontSize: 10, color: '#334155',
+        textTransform: 'uppercase', letterSpacing: 0.8,
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+      }}>
+        <div /><div>Product</div><div>GA4 Rev (MTD)</div><div>Spend (MTD)</div>
+        <div>ROAS</div><div>CPC</div><div>CR%</div><div>Breakpoint</div>
+      </div>
+
+      {products.map(([prodName, tgt]) => {
+        // try to match by product name or alias
+        const act        = byProduct[prodName] || byProduct[tgt.alias] || {}
+        const cumRevTgt  = tgt.ga4Revenue * daysElapsed
+        const cumSpndTgt = tgt.spend       * daysElapsed
+        const revStatus  = rag(act.ga4Revenue || 0, cumRevTgt)
+        const bp         = getBreakpoint(act, tgt)
+
+        return (
+          <div key={prodName} style={{
+            display: 'grid',
+            gridTemplateColumns: '48px 200px 160px 140px 80px 80px 80px 150px',
+            padding: '10px 16px',
+            borderBottom: '1px solid rgba(255,255,255,0.03)',
+            alignItems: 'center',
+          }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: C[revStatus].text, margin: '0 auto' }} />
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: '#cbd5e1' }}>{prodName}</div>
+              {tgt.alias && <div style={{ fontSize: 10, color: '#475569' }}>{tgt.alias}</div>}
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, color: C[revStatus].text, fontWeight: 600 }}>{fmt(act.ga4Revenue || 0)}</div>
+              <PaceBar actual={act.ga4Revenue || 0} target={cumRevTgt} />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, color: C[rag(act.spend||0,cumSpndTgt)].text, fontWeight: 600 }}>{fmt(act.spend || 0)}</div>
+              <PaceBar actual={act.spend || 0} target={cumSpndTgt} />
+            </div>
+
+            <div style={{ fontSize: 12, color: C[rag(act.ga4ROAS||0,tgt.ga4ROAS)].text }}>{fmtX(act.ga4ROAS||0)}</div>
+            <div style={{ fontSize: 12, color: C[rag(act.cpc||0,tgt.cpc,false)].text }}>{act.cpc ? '₹'+fmtN(act.cpc,0) : '—'}</div>
+            <div style={{ fontSize: 12, color: C[rag(act.crPct||0,tgt.crPct)].text }}>{fmtPct(act.crPct||0)}</div>
+
+            <div>
+              {bp ? (
+                <span style={{
+                  background: C[bp.status].bg,
+                  color: C[bp.status].text,
+                  border: `1px solid ${C[bp.status].border}`,
+                  borderRadius: 6, padding: '2px 8px', fontSize: 11,
+                }}>{bp.label}</span>
+              ) : act.spend > 0 ? (
+                <span style={{ color: '#22c55e', fontSize: 11 }}>✓ On track</span>
+              ) : (
+                <span style={{ color: '#334155', fontSize: 11 }}>No data</span>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
