@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import { DataProvider, useData } from './data/store.jsx'
 
+import PacingTracker from './pages/PacingTracker.jsx'
 import Weekly from './pages/Weekly.jsx'
 import MetaCampaigns from './pages/MetaCampaigns.jsx'
 import MetaCreative from './pages/MetaCreative.jsx'
@@ -13,15 +14,16 @@ import BlendedHealth from './pages/BlendedHealth.jsx'
 import Upload from './pages/Upload.jsx'
 
 const NAV = [
-  { path: '/', label: 'Weekly', icon: '⬛', group: 'Overview' },
-  { path: '/blended', label: 'Blended health', icon: '◈', group: 'Overview' },
-  { path: '/hourly', label: 'Hourly pulse', icon: '⏱', group: 'Meta' },
-  { path: '/meta/campaigns', label: 'Campaigns', icon: '▤', group: 'Meta' },
-  { path: '/meta/creative', label: 'Creative lookback', icon: '◧', group: 'Meta' },
-  { path: '/meta/cohort', label: 'Cohort matrix', icon: '⊞', group: 'Meta' },
-  { path: '/google/campaigns', label: 'Campaigns', icon: '▤', group: 'Google' },
-  { path: '/google/keywords', label: 'Brand vs NB', icon: '⌕', group: 'Google' },
-  { path: '/upload', label: 'Upload data', icon: '⬆', group: 'Data' },
+  { path: '/',                  label: 'Pacing Tracker',    icon: '◎', group: 'Overview' },
+  { path: '/weekly',            label: 'Weekly',            icon: '⬛', group: 'Overview' },
+  { path: '/blended',           label: 'Blended health',    icon: '◈', group: 'Overview' },
+  { path: '/hourly',            label: 'Hourly pulse',      icon: '⏱', group: 'Meta' },
+  { path: '/meta/campaigns',    label: 'Campaigns',         icon: '▤', group: 'Meta' },
+  { path: '/meta/creative',     label: 'Creative lookback', icon: '◧', group: 'Meta' },
+  { path: '/meta/cohort',       label: 'Cohort matrix',     icon: '⊞', group: 'Meta' },
+  { path: '/google/campaigns',  label: 'Campaigns',         icon: '▤', group: 'Google' },
+  { path: '/google/keywords',   label: 'Brand vs NB',       icon: '⌕', group: 'Google' },
+  { path: '/upload',            label: 'Upload data',       icon: '⬆', group: 'Data' },
 ]
 
 function Sidebar() {
@@ -94,9 +96,9 @@ function Sidebar() {
         )}
         <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
           {[
-            { label: 'M', count: state.metaDB.length, color: 'var(--pink)' },
-            { label: 'G', count: state.googleDump.length, color: 'var(--blue)' },
-            { label: 'GA4', count: state.ga4Dump.length, color: 'var(--purple)' },
+            { label: 'M',   count: state.metaDB.length,     color: 'var(--pink)'   },
+            { label: 'G',   count: state.googleDump.length,  color: 'var(--blue)'   },
+            { label: 'GA4', count: state.ga4Dump.length,     color: 'var(--purple)' },
           ].map(s => (
             <div key={s.label} style={{ fontSize: 10, color: s.count > 0 ? s.color : 'var(--text3)' }}>
               {s.label} {s.count > 0 ? `${Math.round(s.count / 1000)}K` : '—'}
@@ -112,17 +114,18 @@ function Layout() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar />
-      <main style={{ flex: 1, padding: '24px 28px', overflowX: 'hidden', minWidth: 0 }}>
+      <main style={{ flex: 1, overflowX: 'hidden', minWidth: 0 }}>
         <Routes>
-          <Route path="/" element={<Weekly />} />
-          <Route path="/blended" element={<BlendedHealth />} />
-          <Route path="/hourly" element={<Hourly />} />
-          <Route path="/meta/campaigns" element={<MetaCampaigns />} />
-          <Route path="/meta/creative" element={<MetaCreative />} />
-          <Route path="/meta/cohort" element={<MetaCohortMatrix />} />
+          <Route path="/"                 element={<PacingTracker />} />
+          <Route path="/weekly"           element={<Weekly />} />
+          <Route path="/blended"          element={<BlendedHealth />} />
+          <Route path="/hourly"           element={<Hourly />} />
+          <Route path="/meta/campaigns"   element={<MetaCampaigns />} />
+          <Route path="/meta/creative"    element={<MetaCreative />} />
+          <Route path="/meta/cohort"      element={<MetaCohortMatrix />} />
           <Route path="/google/campaigns" element={<GoogleCampaigns />} />
-          <Route path="/google/keywords" element={<GoogleKeywords />} />
-          <Route path="/upload" element={<Upload />} />
+          <Route path="/google/keywords"  element={<GoogleKeywords />} />
+          <Route path="/upload"           element={<Upload />} />
         </Routes>
       </main>
     </div>
@@ -136,6 +139,3 @@ export default function App() {
     </DataProvider>
   )
 }
-import PacingTracker from "./pages/PacingTracker.jsx";
-// add in routes: <Route path="/pacing" element={<PacingTracker />} />
-// add in sidebar: { path: "/pacing", label: "Pacing Tracker" }
