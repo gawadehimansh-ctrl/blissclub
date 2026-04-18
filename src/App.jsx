@@ -136,3 +136,6 @@ export default function App() {
     </DataProvider>
   )
 }
+import PacingTracker from "./pages/PacingTracker.jsx";
+// add in routes: <Route path="/pacing" element={<PacingTracker />} />
+// add in sidebar: { path: "/pacing", label: "Pacing Tracker" }
