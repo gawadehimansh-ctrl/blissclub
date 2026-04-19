@@ -11,7 +11,7 @@ export function fmtINR(val, decimals = 2) {
 }
 
 export function fmtINRCompact(val) {
-  if (val == null || isNaN(val)) return '—'
+  if (val == null || isNaN(val) || !isFinite(val)) return '—'
   const n = Number(val)
   if (Math.abs(n) >= 10000000) return `₹${(n / 10000000).toFixed(1)}Cr`
   if (Math.abs(n) >= 100000) return `₹${(n / 100000).toFixed(1)}L`
