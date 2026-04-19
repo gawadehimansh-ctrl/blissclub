@@ -441,23 +441,28 @@ function parseWindsorMetaGA4(rows) {
     const adContent = r['session_manual_ad_content'] || ''
     // Parse creative name from session_manual_ad_content (contains ad name)
     const parsed  = parseCreativeName(adContent || term)
+    const isGA4 = (r['datasource'] || '') === 'googleanalytics4'
+    const isMeta = (r['datasource'] || '') === 'facebook' || num(r['spend']) > 0
+
     return {
       date:           parseDate(r['date']),
-      adsetName:      term,   // session_manual_term = adset name in Meta UTM
+      adsetName:      term,
       adName:         adContent,
       campaignName:   r['campaign'] || '',
       spend:          num(r['spend']),
       clicks:         num(r['clicks']),
+      impressions:    num(r['impressions']),
       cpc:            num(r['cpc']),
       sessions:       num(r['sessions']),
       gaOrders:       num(r['transactions']),
       gaRevenue:      num(r['totalrevenue']),
-      fbRevenue:      num(r['totalrevenue']),  // use GA4 revenue as primary
+      fbRevenue:      isMeta ? num(r['purchase_roas_omni_purchase']) * num(r['spend']) : num(r['totalrevenue']),
       fbOrders:       num(r['transactions']),
       reportedROAS:   num(r['purchase_roas_omni_purchase']),
       cplpv:          num(r['cost_per_action_type_landing_page_view']),
       datasource:     r['datasource'] || '',
       source:         r['source'] || '',
+      manualTerm:     r['session_manual_term'] || '',
       cohort:         parsed.cohort || '',
       format:         parsed.format || '',
       product:        parsed.product || '',
