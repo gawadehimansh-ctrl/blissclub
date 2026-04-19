@@ -552,15 +552,24 @@ export function parseCSV(file) {
   })
 }
 
-export function parseWindsorPayload(payload, dataType) {
-  if (dataType === 'meta') return parseMetaDB(payload)
-  if (dataType === 'google') return parseGoogleDump(payload)
-  if (dataType === 'google_awareness') return parseGoogleAwareness(payload)
-  if (dataType === 'google_keywords') return parseGoogleKeywords(payload)
-  if (dataType === 'google_search_terms') return parseGoogleSearchTerms(payload)
-  if (dataType === 'ga4') return parseGA4Dump(payload)
-  return payload
+
+// ── Windsor API payload parsers (called from useWindsor.js) ───────────────────
+// These parse raw JSON from the Railway proxy, not CSV
+
+export function parseWindsorPayload(rows, dataType) {
+  if (!Array.isArray(rows)) rows = []
+  switch (dataType) {
+    case 'windsor_meta_ga4':    return parseWindsorMetaGA4(rows)
+    case 'windsor_google':      return parseWindsorGoogleDaily(rows)
+    case 'windsor_search_terms':return parseWindsorSearchTerms(rows)
+    case 'windsor_keywords':    return parseWindsorKeywords(rows)
+    case 'meta':                return parseMetaDB(rows)
+    case 'google':              return parseGoogleDump(rows)
+    case 'ga4':                 return parseGA4Dump(rows)
+    default:                    return rows
+  }
 }
+
 
 function num(v) {
   if (v === null || v === undefined || v === '' || v === 'NaN') return 0
