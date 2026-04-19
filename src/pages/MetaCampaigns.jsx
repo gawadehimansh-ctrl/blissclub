@@ -27,7 +27,7 @@ export default function MetaCampaigns() {
   const [drillKey, setDrillKey] = useState(null) // selected campaign or adset
 
   const rows = useMemo(() => {
-    let r = filterRows(state.metaDB)
+    let r = filterRows(state.metaDB || [])
     // Women/Men filter via adset name
     if (segment === 'women') r = r.filter(x => !x.adsetName.toLowerCase().includes('men') || x.category?.toLowerCase().includes('women'))
     if (segment === 'men') r = r.filter(x => x.adsetName.toLowerCase().includes('men') || x.adsetName.toLowerCase().includes("men's"))
