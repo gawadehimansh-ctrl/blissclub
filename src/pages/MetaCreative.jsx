@@ -43,7 +43,7 @@ export default function MetaCreative() {
   const { filterRows } = filters
   const [pivotDim, setPivotDim] = useState('product')
 
-  const rows = useMemo(() => filterRows(state.metaDB), [state.metaDB, filters])
+  const rows = useMemo(() => filterRows(state.metaDB || []), [state.metaDB, filters])
   const pivoted = useMemo(() => groupAndAggregate(rows, pivotDim), [rows, pivotDim])
   const totals = useMemo(() => aggregateRows(rows), [rows])
 
