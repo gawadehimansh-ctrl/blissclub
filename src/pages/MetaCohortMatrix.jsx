@@ -195,7 +195,7 @@ export default function MetaCohortMatrix() {
   const [yDim, setYDim]     = useState('product')
   const [search, setSearch] = useState('')
 
-  const rows       = useMemo(() => filterRows(state.metaDB), [state.metaDB, filters])
+  const rows       = useMemo(() => filterRows(state.metaDB || []), [state.metaDB, filters])
   const totalSpend = useMemo(() => rows.reduce((s, r) => s + (r.spend || 0), 0), [rows])
 
   // Cohort summary cards
