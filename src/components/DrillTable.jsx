@@ -1,10 +1,22 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 
-export default function DrillTable({ columns, data, onRowClick, defaultSort, stickyFirst = true, compact = false, emptyMsg = 'No data for selected period' }) {
-  const [sort, setSort] = useState(defaultSort || { key: columns[0]?.key, dir: 'desc' })
+const PAGE_SIZE_DEFAULT = 50
+const PAGE_SIZE_COMPACT = 25
+
+export default function DrillTable({
+  columns, data, onRowClick,
+  defaultSort, stickyFirst = true, compact = false,
+  emptyMsg = 'No data for selected period',
+  // optional: pass addMetricFilter / metricFilters for inline filter buttons
+  extras,
+}) {
+  const [sort, setSort]   = useState(defaultSort || { key: columns[0]?.key, dir: 'desc' })
   const [search, setSearch] = useState('')
-  const [page, setPage] = useState(0)
-  const PAGE_SIZE = compact ? 20 : 50
+  const [page, setPage]   = useState(0)
+  const PAGE_SIZE = compact ? PAGE_SIZE_COMPACT : PAGE_SIZE_DEFAULT
+
+  // Reset page when data changes
+  useEffect(() => { setPage(0) }, [data])
 
   const sorted = useMemo(() => {
     let rows = [...data]
@@ -23,46 +35,40 @@ export default function DrillTable({ columns, data, onRowClick, defaultSort, sti
       })
     }
     return rows
-  }, [data, sort, search, columns])
+  }, [data, sort, search])
 
-  const pages = Math.ceil(sorted.length / PAGE_SIZE)
+  const pages   = Math.ceil(sorted.length / PAGE_SIZE)
   const visible = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   function toggleSort(key) {
-    setSort(prev => prev.key === key ? { key, dir: prev.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: 'desc' })
+    setSort(prev => prev.key === key
+      ? { key, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
+      : { key, dir: 'desc' }
+    )
     setPage(0)
   }
 
-  const th = {
+  const thBase = {
     padding: compact ? '6px 10px' : '8px 12px',
-    fontSize: 11,
-    fontWeight: 600,
-    color: 'var(--text2)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    whiteSpace: 'nowrap',
-    cursor: 'pointer',
-    userSelect: 'none',
-    background: 'var(--bg3)',
-    borderBottom: '0.5px solid var(--border2)',
-    position: 'sticky',
-    top: 0,
-    zIndex: 1,
+    fontSize: 10, fontWeight: 600, color: 'var(--text2)',
+    textTransform: 'uppercase', letterSpacing: '0.05em',
+    whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
+    background: 'var(--bg3)', borderBottom: '0.5px solid var(--border2)',
+    position: 'sticky', top: 0, zIndex: 1,
+    transition: 'color .1s',
   }
 
-  const td = {
+  const tdBase = {
     padding: compact ? '5px 10px' : '8px 12px',
     fontSize: compact ? 12 : 13,
     borderBottom: '0.5px solid var(--border)',
     whiteSpace: 'nowrap',
-    maxWidth: 240,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <input
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(0) }}
@@ -70,16 +76,18 @@ export default function DrillTable({ columns, data, onRowClick, defaultSort, sti
           style={{
             background: 'var(--bg3)', border: '0.5px solid var(--border2)',
             borderRadius: 6, padding: '6px 10px', color: 'var(--text)',
-            fontSize: 13, width: 220, outline: 'none'
+            fontSize: 12, width: 200, outline: 'none',
           }}
         />
-        <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+        {extras}
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>
           {sorted.length.toLocaleString()} rows
-          {sorted.length > PAGE_SIZE && ` · page ${page + 1}/${pages}`}
+          {pages > 1 && ` · page ${page + 1}/${pages}`}
         </span>
       </div>
 
-      <div style={{ overflowX: 'auto', borderRadius: 'var(--radius)', border: '0.5px solid var(--border)' }}>
+      {/* Table */}
+      <div style={{ overflowX: 'auto', borderRadius: 8, border: '0.5px solid var(--border)' }}>
         {data.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
             {emptyMsg}
@@ -91,17 +99,21 @@ export default function DrillTable({ columns, data, onRowClick, defaultSort, sti
                 {columns.map((col, i) => (
                   <th
                     key={col.key}
-                    style={{
-                      ...th,
-                      textAlign: col.align || (i === 0 ? 'left' : 'right'),
-                      ...(stickyFirst && i === 0 ? { position: 'sticky', left: 0, zIndex: 2, background: 'var(--bg3)' } : {})
-                    }}
                     onClick={() => toggleSort(col.key)}
+                    style={{
+                      ...thBase,
+                      textAlign: col.align || (i === 0 ? 'left' : 'right'),
+                      color: sort.key === col.key ? 'var(--text)' : 'var(--text2)',
+                      ...(stickyFirst && i === 0 ? { position: 'sticky', left: 0, zIndex: 2 } : {}),
+                    }}
                   >
-                    {col.label}
-                    {sort.key === col.key && (
-                      <span style={{ marginLeft: 4, opacity: 0.6 }}>{sort.dir === 'desc' ? '↓' : '↑'}</span>
-                    )}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      {col.label}
+                      {sort.key === col.key
+                        ? <span style={{ color: 'var(--pink)', fontSize: 11 }}>{sort.dir === 'desc' ? '↓' : '↑'}</span>
+                        : <span style={{ opacity: 0.2, fontSize: 11 }}>↕</span>
+                      }
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -111,21 +123,21 @@ export default function DrillTable({ columns, data, onRowClick, defaultSort, sti
                 <tr
                   key={ri}
                   onClick={() => onRowClick?.(row)}
-                  style={{ cursor: onRowClick ? 'pointer' : 'default', background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}
+                  style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
-                  onMouseLeave={e => e.currentTarget.style.background = ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   {columns.map((col, i) => (
                     <td
                       key={col.key}
+                      title={String(row[col.key] ?? '')}
                       style={{
-                        ...td,
+                        ...tdBase,
                         textAlign: col.align || (i === 0 ? 'left' : 'right'),
                         color: col.color?.(row[col.key], row) || 'var(--text)',
                         fontWeight: col.bold ? 500 : 400,
-                        ...(stickyFirst && i === 0 ? { position: 'sticky', left: 0, background: 'var(--bg2)', zIndex: 1 } : {})
+                        ...(stickyFirst && i === 0 ? { position: 'sticky', left: 0, background: 'var(--bg2)', zIndex: 1 } : {}),
                       }}
-                      title={String(row[col.key] ?? '')}
                     >
                       {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '—')}
                     </td>
@@ -137,16 +149,15 @@ export default function DrillTable({ columns, data, onRowClick, defaultSort, sti
         )}
       </div>
 
+      {/* Pagination */}
       {pages > 1 && (
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
-          <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-            style={btnStyle(page === 0)}>← Prev</button>
+        <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end', alignItems: 'center' }}>
+          <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} style={btnStyle(page === 0)}>← Prev</button>
           {Array.from({ length: Math.min(pages, 7) }, (_, i) => (
-            <button key={i} onClick={() => setPage(i)}
-              style={btnStyle(false, page === i)}>{i + 1}</button>
+            <button key={i} onClick={() => setPage(i)} style={btnStyle(false, page === i)}>{i + 1}</button>
           ))}
-          <button onClick={() => setPage(p => Math.min(pages - 1, p + 1))} disabled={page === pages - 1}
-            style={btnStyle(page === pages - 1)}>Next →</button>
+          {pages > 7 && <span style={{ fontSize: 12, color: 'var(--text3)' }}>... {pages}</span>}
+          <button onClick={() => setPage(p => Math.min(pages - 1, p + 1))} disabled={page === pages - 1} style={btnStyle(page === pages - 1)}>Next →</button>
         </div>
       )}
     </div>
@@ -155,7 +166,8 @@ export default function DrillTable({ columns, data, onRowClick, defaultSort, sti
 
 function btnStyle(disabled, active) {
   return {
-    padding: '4px 10px', fontSize: 12, borderRadius: 6, cursor: disabled ? 'default' : 'pointer',
+    padding: '4px 10px', fontSize: 12, borderRadius: 6,
+    cursor: disabled ? 'default' : 'pointer',
     background: active ? 'var(--pink)' : 'var(--bg3)',
     color: active ? '#fff' : disabled ? 'var(--text3)' : 'var(--text)',
     border: '0.5px solid var(--border2)',
