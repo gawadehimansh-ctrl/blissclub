@@ -45,8 +45,8 @@ export default function GoogleAwareness() {
   const { filterRows, getPrevRows } = filters
   const [tab, setTab] = useState('overview')
 
-  const rows     = useMemo(() => filterRows(state.googleAwareness, 'date'), [state.googleAwareness, filters])
-  const prevRows = useMemo(() => getPrevRows(state.googleAwareness, 'date'), [state.googleAwareness, filters])
+  const rows     = useMemo(() => filterRows(state.googleAwareness || [], 'date'), [state.googleAwareness, filters])
+  const prevRows = useMemo(() => getPrevRows(state.googleAwareness || [], 'date'), [state.googleAwareness, filters])
 
   const totals     = useMemo(() => aggAwr(rows),     [rows])
   const prevTotals = useMemo(() => aggAwr(prevRows),  [prevRows])
