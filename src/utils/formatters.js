@@ -19,23 +19,24 @@ export function fmtINRCompact(val) {
 }
 
 export function fmtNum(val, decimals = 0) {
-  if (val == null || isNaN(val)) return '—'
-  return Number(val).toLocaleString('en-IN', { maximumFractionDigits: decimals })
+  if (val == null || isNaN(val) || !isFinite(val)) return '—'
+  const d = Math.max(0, Math.min(20, Math.round(decimals))) // clamp 0-20
+  return Number(val).toLocaleString('en-IN', { maximumFractionDigits: d })
 }
 
 export function fmtPct(val, decimals = 1) {
-  if (val == null || isNaN(val)) return '—'
-  return `${(Number(val) * 100).toFixed(decimals)}%`
+  if (val == null || isNaN(val) || !isFinite(val)) return '—'
+  return `${(Number(val) * 100).toFixed(Math.max(0, decimals))}%`
 }
 
 export function fmtPctRaw(val, decimals = 1) {
-  if (val == null || isNaN(val)) return '—'
-  return `${Number(val).toFixed(decimals)}%`
+  if (val == null || isNaN(val) || !isFinite(val)) return '—'
+  return `${Number(val).toFixed(Math.max(0, decimals))}%`
 }
 
 export function fmtX(val, decimals = 2) {
-  if (val == null || isNaN(val)) return '—'
-  return `${Number(val).toFixed(decimals)}x`
+  if (val == null || isNaN(val) || !isFinite(val)) return '—'
+  return `${Number(val).toFixed(Math.max(0, decimals))}x`
 }
 
 export function fmtDelta(curr, prev, mode = 'pct') {
