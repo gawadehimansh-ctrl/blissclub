@@ -53,14 +53,18 @@ export function useWindsor() {
     // Search terms
     try {
       const data = await fetchEndpoint(`/api/google-search-terms?preset=${preset}`)
-      loadData(parseWindsorPayload(data, 'windsor_search_terms'), 'WINDSOR_SEARCH_TERMS', true)
+      const parsedSt = parseWindsorPayload(data, 'windsor_search_terms')
+      console.log('SearchTerms raw rows:', data?.length, 'parsed:', parsedSt?.length, 'sample:', data?.[0])
+      if (parsedSt.length > 0) loadData(parsedSt, 'WINDSOR_SEARCH_TERMS', true)
       results.success.push('Search terms')
     } catch (e) { results.errors.push(`Search terms: ${e.message}`) }
 
     // Keywords
     try {
       const data = await fetchEndpoint(`/api/google-keywords?preset=${preset}`)
-      loadData(parseWindsorPayload(data, 'windsor_keywords'), 'WINDSOR_KEYWORDS', true)
+      const parsedKw = parseWindsorPayload(data, 'windsor_keywords')
+      console.log('Keywords raw rows:', data?.length, 'parsed:', parsedKw?.length, 'sample:', data?.[0])
+      if (parsedKw.length > 0) loadData(parsedKw, 'WINDSOR_KEYWORDS', true)
       results.success.push('Keywords')
     } catch (e) { results.errors.push(`Keywords: ${e.message}`) }
 
