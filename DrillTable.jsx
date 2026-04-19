@@ -7,6 +7,7 @@ export default function DrillTable({
   columns, data, onRowClick,
   defaultSort, stickyFirst = true, compact = false,
   emptyMsg = 'No data for selected period',
+  // optional: pass addMetricFilter / metricFilters for inline filter buttons
   extras,
 }) {
   const [sort, setSort]   = useState(defaultSort || { key: columns[0]?.key, dir: 'desc' })
@@ -14,6 +15,7 @@ export default function DrillTable({
   const [page, setPage]   = useState(0)
   const PAGE_SIZE = compact ? PAGE_SIZE_COMPACT : PAGE_SIZE_DEFAULT
 
+  // Reset page when data changes
   useEffect(() => { setPage(0) }, [data])
 
   const sorted = useMemo(() => {
@@ -47,33 +49,24 @@ export default function DrillTable({
   }
 
   const thBase = {
-    padding: compact ? '7px 12px' : '9px 14px',
-    fontSize: 10.5,
-    fontWeight: 600,
-    color: 'var(--text3)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-    whiteSpace: 'nowrap',
-    cursor: 'pointer',
-    userSelect: 'none',
-    background: 'var(--bg3)',
-    borderBottom: '1px solid var(--border)',
-    position: 'sticky',
-    top: 0,
-    zIndex: 1,
+    padding: compact ? '6px 10px' : '8px 12px',
+    fontSize: 10, fontWeight: 600, color: 'var(--text2)',
+    textTransform: 'uppercase', letterSpacing: '0.05em',
+    whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
+    background: 'var(--bg3)', borderBottom: '0.5px solid var(--border2)',
+    position: 'sticky', top: 0, zIndex: 1,
     transition: 'color .1s',
   }
 
   const tdBase = {
-    padding: compact ? '6px 12px' : '9px 14px',
-    fontSize: compact ? 12.5 : 13,
-    borderBottom: '1px solid var(--border)',
+    padding: compact ? '5px 10px' : '8px 12px',
+    fontSize: compact ? 12 : 13,
+    borderBottom: '0.5px solid var(--border)',
     whiteSpace: 'nowrap',
-    fontVariantNumeric: 'tabular-nums',
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <input
@@ -81,41 +74,22 @@ export default function DrillTable({
           onChange={e => { setSearch(e.target.value); setPage(0) }}
           placeholder="Search..."
           style={{
-            background: 'var(--bg2)',
-            border: '1px solid var(--border2)',
-            borderRadius: 'var(--radius)',
-            padding: '6px 10px',
-            color: 'var(--text)',
-            fontSize: 12.5,
-            width: 200,
-            outline: 'none',
-            fontFamily: 'inherit',
-            transition: 'border-color .12s',
+            background: 'var(--bg3)', border: '0.5px solid var(--border2)',
+            borderRadius: 6, padding: '6px 10px', color: 'var(--text)',
+            fontSize: 12, width: 200, outline: 'none',
           }}
-          onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-          onBlur={e => e.target.style.borderColor = 'var(--border2)'}
         />
         {extras}
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>
           {sorted.length.toLocaleString()} rows
           {pages > 1 && ` · page ${page + 1}/${pages}`}
         </span>
       </div>
 
       {/* Table */}
-      <div style={{
-        overflowX: 'auto',
-        borderRadius: 'var(--radius)',
-        border: '1px solid var(--border)',
-        background: 'var(--bg2)',
-      }}>
+      <div style={{ overflowX: 'auto', borderRadius: 8, border: '0.5px solid var(--border)' }}>
         {data.length === 0 ? (
-          <div style={{
-            padding: '48px 20px',
-            textAlign: 'center',
-            color: 'var(--text3)',
-            fontSize: 13,
-          }}>
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
             {emptyMsg}
           </div>
         ) : (
@@ -129,15 +103,15 @@ export default function DrillTable({
                     style={{
                       ...thBase,
                       textAlign: col.align || (i === 0 ? 'left' : 'right'),
-                      color: sort.key === col.key ? 'var(--text)' : 'var(--text3)',
+                      color: sort.key === col.key ? 'var(--text)' : 'var(--text2)',
                       ...(stickyFirst && i === 0 ? { position: 'sticky', left: 0, zIndex: 2 } : {}),
                     }}
                   >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                       {col.label}
                       {sort.key === col.key
-                        ? <span style={{ color: 'var(--accent)', fontSize: 10 }}>{sort.dir === 'desc' ? '↓' : '↑'}</span>
-                        : <span style={{ opacity: 0.25, fontSize: 10 }}>↕</span>
+                        ? <span style={{ color: 'var(--pink)', fontSize: 11 }}>{sort.dir === 'desc' ? '↓' : '↑'}</span>
+                        : <span style={{ opacity: 0.2, fontSize: 11 }}>↕</span>
                       }
                     </span>
                   </th>
@@ -162,9 +136,7 @@ export default function DrillTable({
                         textAlign: col.align || (i === 0 ? 'left' : 'right'),
                         color: col.color?.(row[col.key], row) || 'var(--text)',
                         fontWeight: col.bold ? 500 : 400,
-                        ...(stickyFirst && i === 0
-                          ? { position: 'sticky', left: 0, background: 'var(--bg2)', zIndex: 1 }
-                          : {}),
+                        ...(stickyFirst && i === 0 ? { position: 'sticky', left: 0, background: 'var(--bg2)', zIndex: 1 } : {}),
                       }}
                     >
                       {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '—')}
@@ -179,7 +151,7 @@ export default function DrillTable({
 
       {/* Pagination */}
       {pages > 1 && (
-        <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end', alignItems: 'center' }}>
           <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} style={btnStyle(page === 0)}>← Prev</button>
           {Array.from({ length: Math.min(pages, 7) }, (_, i) => (
             <button key={i} onClick={() => setPage(i)} style={btnStyle(false, page === i)}>{i + 1}</button>
@@ -194,15 +166,11 @@ export default function DrillTable({
 
 function btnStyle(disabled, active) {
   return {
-    padding: '4px 10px',
-    fontSize: 12,
-    borderRadius: 'var(--radius)',
+    padding: '4px 10px', fontSize: 12, borderRadius: 6,
     cursor: disabled ? 'default' : 'pointer',
-    background: active ? 'var(--accent)' : 'var(--bg2)',
+    background: active ? 'var(--pink)' : 'var(--bg3)',
     color: active ? '#fff' : disabled ? 'var(--text3)' : 'var(--text)',
-    border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+    border: '0.5px solid var(--border2)',
     opacity: disabled ? 0.4 : 1,
-    fontFamily: 'inherit',
-    fontWeight: active ? 500 : 400,
   }
 }

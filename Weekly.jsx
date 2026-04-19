@@ -103,9 +103,9 @@ export default function Weekly() {
   const cardRow = { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 12 }
 
   return (
-    <div style={{ padding: '28px 32px' }}>
+    <div style={{ padding: '20px 24px' }}>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: 2 }}>Weekly dashboard</h1>
+        <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Weekly dashboard</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>Meta + Google · GA4 as source of truth</div>
       </div>
 
@@ -147,7 +147,7 @@ export default function Weekly() {
       {/* Channel cards side by side */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
         {/* Meta */}
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px' }}>
+        <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>Meta</span>
             <span className="pill pill-meta">GA4</span>
@@ -159,7 +159,7 @@ export default function Weekly() {
             ['CTR', fmtPct(meta.ctr), null, false],
             ['CPM', fmtINRCompact(meta.cpm), null, true],
           ].map(([lbl, val, dl, lowerBetter]) => (
-            <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+            <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '0.5px solid var(--border)', fontSize: 13 }}>
               <span style={{ color: 'var(--text2)' }}>{lbl}</span>
               <span style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                 {val}
@@ -169,7 +169,7 @@ export default function Weekly() {
         </div>
 
         {/* Google */}
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px' }}>
+        <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>Google</span>
             <span className="pill pill-google">GA4 sourced</span>
@@ -183,7 +183,7 @@ export default function Weekly() {
             ['CTR', fmtPct(google.impressions > 0 ? google.clicks / google.impressions : 0), null, false],
             ['CPM', fmtINRCompact(google.impressions > 0 ? (google.cost / google.impressions) * 1000 : 0), null, true],
           ].map(([lbl, val, dl]) => (
-            <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+            <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '0.5px solid var(--border)', fontSize: 13 }}>
               <span style={{ color: 'var(--text2)' }}>{lbl}</span>
               <span style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                 {val}
@@ -196,14 +196,14 @@ export default function Weekly() {
 
       {/* Daily trend chart */}
       {dailyTrend.length > 1 && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 16 }}>
+        <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Daily spend + revenue trend</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={dailyTrend} barSize={12}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} unit="K" />
-              <Tooltip contentStyle={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 6, fontSize: 12 }}
+              <Tooltip contentStyle={{ background: 'var(--bg3)', border: '0.5px solid var(--border2)', borderRadius: 6, fontSize: 12 }}
                 formatter={(v, n) => [`₹${v}K`, n]} />
               <Bar dataKey="metaSpend" fill="var(--pink)" name="Meta spend" opacity={0.8} radius={[2,2,0,0]} />
               <Bar dataKey="googleSpend" fill="var(--blue)" name="Google spend" opacity={0.8} radius={[2,2,0,0]} />
@@ -215,7 +215,7 @@ export default function Weekly() {
 
       {/* Top products */}
       {topProducts.length > 0 && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px' }}>
+        <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>Top products</span>
             <span className="pill pill-meta">Meta · GA4 revenue</span>

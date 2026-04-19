@@ -20,13 +20,9 @@ export default function FilterBar({ filters, extras, showSegment = true, showCoh
 
   return (
     <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 6,
-      flexWrap: 'wrap',
-      padding: '10px 0 14px',
-      borderBottom: '1px solid var(--border)',
-      marginBottom: 20,
+      display: 'flex', alignItems: 'center', gap: 6,
+      flexWrap: 'wrap', padding: '10px 0',
+      borderBottom: '0.5px solid var(--border)', marginBottom: 16,
     }}>
       {/* Segment */}
       {showSegment && (
@@ -64,7 +60,8 @@ export default function FilterBar({ filters, extras, showSegment = true, showCoh
       {showSaleTag && (
         <div style={{ display: 'flex', gap: 3 }}>
           {[['', 'All'], ['BAU', 'BAU'], ['Sale', 'Sale']].map(([val, label]) => (
-            <button key={val} onClick={() => setSaleTag(val)} style={chip(saleTag === val)}>
+            <button key={val} onClick={() => setSaleTag(val)}
+              style={chip(saleTag === val)}>
               {label}
             </button>
           ))}
@@ -86,7 +83,7 @@ export default function FilterBar({ filters, extras, showSegment = true, showCoh
 
       {extras}
 
-      {/* Date picker — right */}
+      {/* Date picker — always right */}
       <div style={{ marginLeft: 'auto' }}>
         <DatePicker from={dateFrom} to={dateTo} onChange={handleDateChange} />
       </div>
@@ -95,21 +92,16 @@ export default function FilterBar({ filters, extras, showSegment = true, showCoh
 }
 
 function Divider() {
-  return <div style={{ width: 1, height: 16, background: 'var(--border2)', margin: '0 2px' }} />
+  return <div style={{ width: 1, height: 18, background: 'var(--border2)', margin: '0 2px' }} />
 }
 
 function chip(active, color) {
-  const c = color || 'var(--accent)'
+  const c = color || 'var(--text2)'
   return {
-    padding: '4px 11px',
-    fontSize: 12,
-    borderRadius: 4,
-    border: `1px solid ${active ? c : 'var(--border)'}`,
-    background: active ? `${c}12` : 'var(--bg2)',
+    padding: '4px 10px', fontSize: 12, borderRadius: 20,
+    border: `0.5px solid ${active ? c : 'var(--border)'}`,
+    background: active ? `${c}20` : 'transparent',
     color: active ? c : 'var(--text2)',
-    cursor: 'pointer',
-    fontWeight: active ? 500 : 400,
-    transition: 'all .1s',
-    fontFamily: 'inherit',
+    cursor: 'pointer', fontWeight: active ? 500 : 400, transition: 'all .12s',
   }
 }

@@ -140,14 +140,14 @@ export default function Hourly() {
   ]
 
   return (
-    <div style={{ padding: '28px 32px' }}>
+    <div style={{ padding: '20px 24px' }}>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: 2 }}>Hourly pulse</h1>
+        <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Hourly pulse</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>Intraday spend pacing · ad set CPC delta vs yesterday</div>
       </div>
 
       {/* Upload strip */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontSize: 12, fontWeight: 500 }}>Upload Meta hourly export</div>
           <div style={{ fontSize: 11, color: 'var(--text3)' }}>Drop the hourly CSV from Ads Manager · auto-parsed · do this at 9am, 12pm, 5pm</div>
@@ -183,7 +183,7 @@ export default function Hourly() {
       </div>
 
       {/* Hourly spend bar chart */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 16 }}>
+      <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 16 }}>
         <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>Spend by hour</div>
         {hourlyRows.length === 0 ? (
           <div style={{ height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 12 }}>
@@ -195,7 +195,7 @@ export default function Hourly() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text3)' }} axisLine={false} tickLine={false} interval={2} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text3)' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'var(--bg3)', border: '1px solid var(--border2)', fontSize: 12 }}
+              <Tooltip contentStyle={{ background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12 }}
                 formatter={v => [fmtINRCompact(v), 'Spend']} />
               <Bar dataKey="spend" radius={[3, 3, 0, 0]}>
                 {byHour.map((h, i) => (

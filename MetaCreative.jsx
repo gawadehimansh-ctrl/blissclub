@@ -106,9 +106,9 @@ export default function MetaCreative() {
   const COLORS = ['var(--pink)', 'var(--blue)', 'var(--amber)', 'var(--green)', 'var(--purple)']
 
   return (
-    <div style={{ padding: '28px 32px' }}>
+    <div style={{ padding: '20px 24px' }}>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: 2 }}>Meta creative lookback</h1>
+        <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Meta creative lookback</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>Product · Format · Content type · Creator · Cohort breakdown</div>
       </div>
       <FilterBar filters={filters} showAdvanced />
@@ -138,13 +138,13 @@ export default function MetaCreative() {
 
       {/* Bar chart of spend by dimension */}
       {pivoted.length > 0 && pivoted.length <= 12 && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 12 }}>
+        <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>GA4 ROAS by {PIVOT_LABELS[pivotDim].toLowerCase()}</div>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={pivoted} barSize={28}>
               <XAxis dataKey={pivotDim} tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} unit="x" />
-              <Tooltip contentStyle={{ background: 'var(--bg3)', border: '1px solid var(--border2)', fontSize: 12 }}
+              <Tooltip contentStyle={{ background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12 }}
                 formatter={v => [`${v.toFixed(2)}x`, 'GA4 ROAS']} />
               <Bar dataKey="roasGA4" radius={[4,4,0,0]}>
                 {pivoted.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -157,7 +157,7 @@ export default function MetaCreative() {
       <DrillTable columns={cols} data={pivoted} defaultSort={{ key: 'spend', dir: 'desc' }} />
 
       <div style={{ marginTop: 24, marginBottom: 8 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>All creatives</div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>All creatives</div>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>Sorted by GA4 revenue · min ₹1K spend</div>
       </div>
       <DrillTable columns={topCreativeCols} data={topCreatives} defaultSort={{ key: 'gaRevenue', dir: 'desc' }} compact />

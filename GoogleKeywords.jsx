@@ -52,12 +52,12 @@ const TABS = [
   { key: 'overview',  label: 'Brand vs NB' },
   { key: 'keywords',  label: 'Keywords' },
   { key: 'terms',     label: 'Search terms' },
-  { key: 'burning',   label: 'Burning' },
+  { key: 'burning',   label: '🔥 Burning' },
   { key: 'irrelevant',label: '⚠️ Irrelevant' },
   { key: 'mom',       label: 'MoM trend' },
 ]
 
-const TIP = { contentStyle: { background: 'var(--bg3)', border: '1px solid var(--border2)', fontSize: 12, borderRadius: 6 } }
+const TIP = { contentStyle: { background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12, borderRadius: 6 } }
 
 // ── Brand/NB pill ─────────────────────────────────────────────────────────────
 function BrandPill({ isBrand }) {
@@ -180,7 +180,7 @@ export default function GoogleKeywords() {
   const kwdCols = [
     { key:'isBrand',       label:'Type',       render: v => <BrandPill isBrand={v} /> },
     { key:'keyword',       label:'Keyword',    align:'left', bold:true },
-    { key:'matchType',     label:'Match',      render: v => <span style={{ fontSize:10, padding:'1px 6px', borderRadius:4, background:'var(--bg3)', color:'var(--text2)', border:'1px solid var(--border)' }}>{v}</span> },
+    { key:'matchType',     label:'Match',      render: v => <span style={{ fontSize:10, padding:'1px 6px', borderRadius:4, background:'var(--bg3)', color:'var(--text2)', border:'0.5px solid var(--border)' }}>{v}</span> },
     { key:'cost',          label:'Spend',      render: fmtINRCompact },
     { key:'impressions',   label:'Impr.',      render: fmtNum },
     { key:'clicks',        label:'Clicks',     render: fmtNum },
@@ -192,7 +192,7 @@ export default function GoogleKeywords() {
     { key:'cpa',           label:'CPA',        render: v => v>0?fmtINRCompact(v):'—' },
     { key:'impressionShare',label:'IS',        render: v => v>0?fmtPct(v):'—', color: v => v>=0.8?'var(--green)':v>=0.5?'var(--amber)':'var(--text2)' },
     { key:'qualityScore',  label:'QS',         render: v => v>0?v.toFixed(0):'—', color: v => v>=7?'var(--green)':v>=5?'var(--amber)':'var(--red)' },
-    { key:'burning',       label:'Status',     render: v => v ? <span style={{ fontSize:10, padding:'1px 7px', borderRadius:5, background:'var(--red-dim)', color:'var(--red)', border:'1px solid var(--red-border)' }}>Burning</span> : null },
+    { key:'burning',       label:'Status',     render: v => v ? <span style={{ fontSize:10, padding:'1px 7px', borderRadius:5, background:'rgba(239,68,68,0.12)', color:'#ef4444', border:'0.5px solid rgba(239,68,68,0.3)' }}>🔥 Burning</span> : null },
   ]
 
   const termCols = [
@@ -206,7 +206,7 @@ export default function GoogleKeywords() {
     { key:'transactions', label:'Conv.',       render: fmtNum },
     { key:'revenue',      label:'Rev.',        render: fmtINRCompact },
     { key:'roas',         label:'ROAS',        render: v => v>0?fmtX(v):'—', color: v => v>=2?'var(--green)':v>=1?'var(--amber)':v>0?'var(--red)':'var(--text3)' },
-    { key:'burning',      label:'',            render: (v,r) => v ? <span style={{ fontSize:10, padding:'1px 7px', borderRadius:5, background:'var(--red-dim)', color:'var(--red)' }}>Burning</span>
+    { key:'burning',      label:'',            render: (v,r) => v ? <span style={{ fontSize:10, padding:'1px 7px', borderRadius:5, background:'rgba(239,68,68,0.12)', color:'#ef4444' }}>🔥 Burning</span>
       : r.irrelevant ? <span style={{ fontSize:10, padding:'1px 7px', borderRadius:5, background:'rgba(245,158,11,0.12)', color:'#f59e0b' }}>⚠️ Irrelevant</span> : null },
   ]
 
@@ -215,16 +215,16 @@ export default function GoogleKeywords() {
   const hasGoogle      = googleRows.length > 0
 
   return (
-    <div style={{ padding: '28px 32px' }}>
+    <div style={{ padding: '20px 24px' }}>
       <div style={{ marginBottom:16 }}>
-        <h1 style={{ fontSize:18, fontWeight:600, letterSpacing:'-0.025em', color:'var(--text)', marginBottom:2 }}>Google — Keywords & Search Terms</h1>
+        <h1 style={{ fontSize:18, fontWeight:600, marginBottom:2 }}>Google — Keywords & Search Terms</h1>
         <div style={{ fontSize:12, color:'var(--text3)' }}>Brand vs NB · Burning keywords · Irrelevant search terms · MoM trend</div>
       </div>
 
       <FilterBar filters={filters} showAdvanced showCohort={false} showSaleTag={false} />
 
       {/* Tab bar */}
-      <div style={{ display:'flex', gap:0, marginBottom:16, borderBottom:'1px solid var(--border)' }}>
+      <div style={{ display:'flex', gap:0, marginBottom:16, borderBottom:'0.5px solid var(--border)' }}>
         {TABS.map(t => {
           const count = t.key==='burning' ? (burningKeywords.length + burningTerms.length)
             : t.key==='irrelevant' ? irrelevantTerms.length : 0
@@ -248,10 +248,10 @@ export default function GoogleKeywords() {
         <>
           {/* Waste alert */}
           {(burningSpend > 0 || wasteSpend > 0) && (
-            <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:8, padding:'10px 16px', marginBottom:14, fontSize:12, color:'var(--red)', display:'flex', gap:16, flexWrap:'wrap' }}>
-              {burningSpend > 0 && <span><strong>{fmtINRCompact(burningSpend)}</strong> in low-ROAS keywords</span>}
+            <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:8, padding:'10px 16px', marginBottom:14, fontSize:12, color:'#ef4444', display:'flex', gap:16, flexWrap:'wrap' }}>
+              {burningSpend > 0 && <span>🔥 <strong>{fmtINRCompact(burningSpend)}</strong> being burned by low-ROAS keywords</span>}
               {wasteSpend > 0  && <span>⚠️ <strong>{fmtINRCompact(wasteSpend)}</strong> wasted on irrelevant search terms with zero conversions</span>}
-              <button onClick={() => setTab('burning')} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--red)', textDecoration:'underline', fontSize:12 }}>View details →</button>
+              <button onClick={() => setTab('burning')} style={{ background:'none', border:'none', cursor:'pointer', color:'#ef4444', textDecoration:'underline', fontSize:12 }}>View details →</button>
             </div>
           )}
 
@@ -296,7 +296,7 @@ export default function GoogleKeywords() {
           {/* Spend split */}
           {hasGoogle && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
+              <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
                 <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>Spend split — Brand vs NB</div>
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
@@ -310,7 +310,7 @@ export default function GoogleKeywords() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
+              <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
                 <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>ROAS comparison — Brand vs NB</div>
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={[{ name:'Brand', roas: totBrand.roas }, { name:'Non-Brand', roas: totNB.roas }]} barSize={40}>
@@ -354,8 +354,8 @@ export default function GoogleKeywords() {
       {tab === 'burning' && (
         <>
           <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:8, padding:'12px 16px', marginBottom:14 }}>
-            <div style={{ fontSize:13, fontWeight:600, color:'var(--red)', marginBottom:4 }}>Burning Keywords & Search Terms</div>
-            <div style={{ fontSize:12, color:'var(--red)', opacity:0.8 }}>
+            <div style={{ fontSize:13, fontWeight:600, color:'#ef4444', marginBottom:4 }}>🔥 Burning keywords & search terms</div>
+            <div style={{ fontSize:12, color:'#ef4444', opacity:0.8 }}>
               Flagged: spend &gt; ₹500 + ROAS &lt; 1.5x + 30+ clicks. Total burning spend: <strong>{fmtINRCompact(burningSpend)}</strong>
             </div>
           </div>
@@ -373,7 +373,7 @@ export default function GoogleKeywords() {
           )}
           {burningKeywords.length === 0 && burningTerms.length === 0 && (
             <div style={{ padding:'32px', textAlign:'center', color:'var(--text3)', fontSize:13, background:'var(--bg2)', borderRadius:10, border:'0.5px dashed var(--border2)' }}>
-              {hasKeywords || hasSearchTerms ? 'No burning keywords detected' : 'Upload keywords and search terms CSVs to detect burning'}
+              {hasKeywords || hasSearchTerms ? '✅ No burning keywords detected' : 'Upload keywords and search terms CSVs to detect burning'}
             </div>
           )}
         </>
@@ -397,7 +397,7 @@ export default function GoogleKeywords() {
                 { key:'clicks',       label:'Clicks',       render: fmtNum },
                 { key:'ctr',          label:'CTR',          render: fmtPct, color: ()=>'var(--red)' },
                 { key:'cpc',          label:'CPC',          render: fmtINRCompact },
-                { key:'transactions', label:'Conv.',        render: v => <span style={{ color:'var(--red)' }}>{v}</span> },
+                { key:'transactions', label:'Conv.',        render: v => <span style={{ color:'#ef4444' }}>{v}</span> },
                 { key:'campaignName', label:'Campaign',     render: v => <span style={{ fontSize:11, color:'var(--text3)' }}>{v}</span> },
                 { key:'irrelevant',   label:'Action',       render: () => <span style={{ fontSize:10, padding:'2px 8px', borderRadius:5, background:'rgba(245,158,11,0.12)', color:'#f59e0b', border:'0.5px solid rgba(245,158,11,0.3)', cursor:'pointer' }}>Add as negative</span> },
               ]}
@@ -405,7 +405,7 @@ export default function GoogleKeywords() {
             />
           ) : (
             <div style={{ padding:'32px', textAlign:'center', color:'var(--text3)', fontSize:13, background:'var(--bg2)', borderRadius:10, border:'0.5px dashed var(--border2)' }}>
-              {hasSearchTerms ? 'No irrelevant search terms detected' : 'Upload Google search terms CSV to detect irrelevant terms'}
+              {hasSearchTerms ? '✅ No irrelevant search terms detected' : 'Upload Google search terms CSV to detect irrelevant terms'}
             </div>
           )}
         </>
@@ -471,7 +471,7 @@ function StatGrid({ rows }) {
   return (
     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'3px 16px' }}>
       {rows.map(([label, val]) => (
-        <div key={label} style={{ display:'flex', justifyContent:'space-between', padding:'3px 0', borderBottom:'1px solid var(--border)', fontSize:12 }}>
+        <div key={label} style={{ display:'flex', justifyContent:'space-between', padding:'3px 0', borderBottom:'0.5px solid var(--border)', fontSize:12 }}>
           <span style={{ color:'var(--text3)' }}>{label}</span>
           <span style={{ fontWeight:500 }}>{val}</span>
         </div>
@@ -482,7 +482,7 @@ function StatGrid({ rows }) {
 
 function Card({ title, children }) {
   return (
-    <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
+    <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
       <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>{title}</div>
       {children}
     </div>
@@ -495,7 +495,7 @@ function Empty({ text='Upload Google data to see trend' }) {
 
 function NoData({ type }) {
   return (
-    <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--red)', marginBottom:12 }}>
+    <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#ef4444', marginBottom:12 }}>
       No {type} data — upload the {type} CSV from Upload page (separate from campaigns CSV)
     </div>
   )

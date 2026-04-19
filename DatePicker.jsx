@@ -69,8 +69,8 @@ export default function DatePicker({ from, to, onChange }) {
       width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 12, borderRadius: 6, cursor: 'pointer', userSelect: 'none',
       fontWeight: (isF || isT) ? 600 : 400,
-      color: (isF || isT) ? '#fff' : !inMonth ? 'var(--text3)' : isToday ? 'var(--accent)' : 'var(--text)',
-      background: (isF || isT) ? 'var(--accent)' : (inRange || inHover) ? 'var(--accent-dim)' : 'transparent',
+      color: (isF || isT) ? '#fff' : !inMonth ? '#444' : isToday ? 'var(--pink)' : 'var(--text)',
+      background: (isF || isT) ? 'var(--pink)' : (inRange || inHover) ? 'rgba(232,69,122,0.2)' : 'transparent',
     }
   }
 
@@ -82,10 +82,10 @@ export default function DatePicker({ from, to, onChange }) {
         display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
         fontSize: 12, fontWeight: 500, borderRadius: 8, cursor: 'pointer',
         background: open ? 'var(--bg3)' : 'var(--bg2)',
-        border: `1px solid ${open ? 'var(--accent-border)' : 'var(--border2)'}`,
+        border: `0.5px solid ${open ? 'var(--pink-border)' : 'var(--border2)'}`,
         color: 'var(--text)', whiteSpace: 'nowrap',
       }}>
-        {label} ▾
+        📅 {label} ▾
       </button>
 
       {open && (
@@ -93,13 +93,13 @@ export default function DatePicker({ from, to, onChange }) {
           position: 'fixed',
           top: ref.current ? ref.current.getBoundingClientRect().bottom + 6 : 60,
           right: 20,
-          background: 'var(--bg2)', border: '1px solid var(--border)',
+          background: 'var(--bg2)', border: '0.5px solid var(--border2)',
           borderRadius: 12, zIndex: 99999,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
           display: 'flex', overflow: 'hidden',
         }}>
           {/* Presets */}
-          <div style={{ width: 130, borderRight: '1px solid var(--border)', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <div style={{ width: 130, borderRight: '0.5px solid var(--border)', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 1 }}>
             <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 8px 8px' }}>Quick select</div>
             {PRESETS.map(p => (
               <button key={p.label} onClick={p.fn} style={{
@@ -141,7 +141,7 @@ export default function DatePicker({ from, to, onChange }) {
                 </div>
               ))}
             </div>
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 11, color: 'var(--text2)' }}>
                 {stage === 'end' ? 'Select end date' : tempFrom && tempTo ? `${format(tempFrom,'d MMM')} – ${format(tempTo,'d MMM yy')}` : 'Click start date'}
               </div>
@@ -149,7 +149,7 @@ export default function DatePicker({ from, to, onChange }) {
                 <button onClick={() => setOpen(false)} style={{ ...ab, background: 'var(--bg3)', color: 'var(--text2)' }}>Cancel</button>
                 <button onClick={apply} disabled={!tempFrom || !tempTo || stage === 'end'} style={{
                   ...ab,
-                  background: tempFrom && tempTo && stage !== 'end' ? 'var(--accent)' : 'var(--bg4)',
+                  background: tempFrom && tempTo && stage !== 'end' ? 'var(--pink)' : 'var(--bg4)',
                   color: tempFrom && tempTo && stage !== 'end' ? '#fff' : 'var(--text3)',
                   opacity: !tempFrom || !tempTo || stage === 'end' ? 0.5 : 1,
                   cursor: !tempFrom || !tempTo || stage === 'end' ? 'default' : 'pointer',
@@ -163,5 +163,5 @@ export default function DatePicker({ from, to, onChange }) {
   )
 }
 
-const nb = { width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: 14, color: 'var(--text2)' }
-const ab = { padding: '5px 14px', fontSize: 12, borderRadius: 6, border: '1px solid var(--border)', fontWeight: 500, cursor: 'pointer' }
+const nb = { width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: 14, color: 'var(--text2)' }
+const ab = { padding: '5px 14px', fontSize: 12, borderRadius: 6, border: '0.5px solid var(--border2)', fontWeight: 500, cursor: 'pointer' }

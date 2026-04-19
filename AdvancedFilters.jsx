@@ -93,7 +93,7 @@ export default function AdvancedFilters({ metricFilters, addMetricFilter, remove
             style={{
               position: 'absolute',
               top: 44, right: 0,
-              background: 'var(--bg2)', border: '1px solid var(--border2)',
+              background: 'var(--bg2)', border: '0.5px solid var(--border2)',
               borderRadius: 12, zIndex: 9999, width: 340,
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             }}
@@ -101,7 +101,7 @@ export default function AdvancedFilters({ metricFilters, addMetricFilter, remove
           >
             {/* Active filters */}
             {activeCount > 0 && (
-              <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active filters</span>
                   <button onClick={clearMetricFilters} style={{ fontSize: 11, color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer' }}>Clear all</button>
@@ -126,7 +126,7 @@ export default function AdvancedFilters({ metricFilters, addMetricFilter, remove
             )}
 
             {/* Quick presets */}
-            <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--border)' }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Quick filters</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {PRESETS.map(p => {
@@ -154,7 +154,7 @@ export default function AdvancedFilters({ metricFilters, addMetricFilter, remove
                   onChange={e => setNewMetric(e.target.value)}
                   style={{
                     flex: 2, padding: '6px 8px', fontSize: 12, borderRadius: 6,
-                    background: 'var(--bg3)', border: '1px solid var(--border2)',
+                    background: 'var(--bg3)', border: '0.5px solid var(--border2)',
                     color: 'var(--text)', outline: 'none',
                   }}
                 >
@@ -167,7 +167,7 @@ export default function AdvancedFilters({ metricFilters, addMetricFilter, remove
                   onChange={e => setNewOp(e.target.value)}
                   style={{
                     flex: 0, padding: '6px 6px', fontSize: 12, borderRadius: 6,
-                    background: 'var(--bg3)', border: '1px solid var(--border2)',
+                    background: 'var(--bg3)', border: '0.5px solid var(--border2)',
                     color: 'var(--text)', outline: 'none', minWidth: 48,
                   }}
                 >
@@ -190,7 +190,7 @@ export default function AdvancedFilters({ metricFilters, addMetricFilter, remove
                     style={{
                       width: '100%', padding: `6px 8px 6px ${metaInfo?.unit && metaInfo.unit !== '%' ? '20px' : '8px'}`,
                       fontSize: 12, borderRadius: 6,
-                      background: 'var(--bg3)', border: '1px solid var(--border2)',
+                      background: 'var(--bg3)', border: '0.5px solid var(--border2)',
                       color: 'var(--text)', outline: 'none',
                     }}
                   />

@@ -130,15 +130,15 @@ export default function BlendedHealth() {
   ]
 
   return (
-    <div style={{ padding: '28px 32px' }}>
+    <div style={{ padding: '20px 24px' }}>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: 2 }}>Blended health</h1>
+        <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Blended health</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>True blended ROAS and CAC · GA4 as revenue source of truth</div>
       </div>
       <FilterBar filters={filters} />
 
       {/* Spend toggles */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 500 }}>Include in blended calculation:</span>
 
         {[
@@ -160,7 +160,7 @@ export default function BlendedHealth() {
           <span style={{ fontSize: 12, color: 'var(--green)' }}>CLM spend ₹L:</span>
           <input type="number" min="0" step="0.1" value={state.clmSpend / 100000 || ''}
             onChange={e => dispatch({ type: 'SET_CLM_SPEND', value: (parseFloat(e.target.value) || 0) * 100000 })}
-            style={{ width: 80, padding: '3px 8px', fontSize: 12, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 6, color: 'var(--text)' }}
+            style={{ width: 80, padding: '3px 8px', fontSize: 12, background: 'var(--bg3)', border: '0.5px solid var(--border2)', borderRadius: 6, color: 'var(--text)' }}
             placeholder="0" />
         </div>
 
@@ -168,7 +168,7 @@ export default function BlendedHealth() {
           <span style={{ fontSize: 12, color: 'var(--amber)' }}>Retention spend ₹L:</span>
           <input type="number" min="0" step="0.1" value={state.retentionSpend / 100000 || ''}
             onChange={e => dispatch({ type: 'SET_RETENTION_SPEND', value: (parseFloat(e.target.value) || 0) * 100000 })}
-            style={{ width: 80, padding: '3px 8px', fontSize: 12, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 6, color: 'var(--text)' }}
+            style={{ width: 80, padding: '3px 8px', fontSize: 12, background: 'var(--bg3)', border: '0.5px solid var(--border2)', borderRadius: 6, color: 'var(--text)' }}
             placeholder="0" />
         </div>
       </div>
@@ -189,7 +189,7 @@ export default function BlendedHealth() {
       </div>
 
       {/* Spend composition */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 16 }}>
+      <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Spend composition</div>
         <div style={{ display: 'flex', gap: 0, height: 20, borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
           {spendComposition.filter(s => s.value > 0).map(s => (
@@ -210,7 +210,7 @@ export default function BlendedHealth() {
 
       {/* DOD trend */}
       {dodTrend.length > 1 && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 16 }}>
+        <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Daily ROAS trend</div>
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={dodTrend}>
@@ -218,7 +218,7 @@ export default function BlendedHealth() {
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="spend" tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} unit="K" />
               <YAxis yAxisId="roas" orientation="right" tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} unit="x" />
-              <Tooltip contentStyle={{ background: 'var(--bg3)', border: '1px solid var(--border2)', fontSize: 12 }} />
+              <Tooltip contentStyle={{ background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12 }} />
               <Line yAxisId="spend" type="monotone" dataKey="spend" stroke="var(--pink)" strokeWidth={1.5} dot={false} name="Spend (₹K)" />
               <Line yAxisId="spend" type="monotone" dataKey="revenue" stroke="var(--green)" strokeWidth={1.5} dot={false} name="Revenue (₹K)" />
               <Line yAxisId="roas" type="monotone" dataKey="roas" stroke="var(--amber)" strokeWidth={2} dot={false} name="Blended ROAS" />
@@ -229,7 +229,7 @@ export default function BlendedHealth() {
 
       {/* MoM trend */}
       {momTrend.some(m => m.revenue > 0) && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px' }}>
+        <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px' }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Month-on-month spend vs revenue</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={momTrend} barSize={16}>
@@ -237,7 +237,7 @@ export default function BlendedHealth() {
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="val" tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} unit="L" />
               <YAxis yAxisId="roas" orientation="right" tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} unit="x" />
-              <Tooltip contentStyle={{ background: 'var(--bg3)', border: '1px solid var(--border2)', fontSize: 12 }}
+              <Tooltip contentStyle={{ background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12 }}
                 formatter={(v, n) => n.includes('ROAS') || n.includes('x') ? [`${v}x`, n] : [`₹${v}L`, n]} />
               <Bar yAxisId="val" dataKey="metaSpend" fill="var(--pink)" name="Meta spend (₹L)" opacity={0.8} radius={[2,2,0,0]} stackId="spend" />
               <Bar yAxisId="val" dataKey="googleSpend" fill="var(--blue)" name="Google spend (₹L)" opacity={0.8} radius={[2,2,0,0]} stackId="spend" />

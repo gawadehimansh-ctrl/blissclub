@@ -46,10 +46,10 @@ function rag(actual, target, higher = true) {
 }
 
 const C = {
-  green:   { bg: 'rgba(22,163,74,0.08)',  text: '#16a34a', border: 'rgba(22,163,74,0.2)' },
-  amber:   { bg: 'rgba(180,83,9,0.08)',   text: '#b45309', border: 'rgba(180,83,9,0.2)' },
-  red:     { bg: 'rgba(220,38,38,0.08)',  text: '#dc2626', border: 'rgba(220,38,38,0.2)' },
-  neutral: { bg: 'transparent',           text: 'var(--text3)', border: 'var(--border)' },
+  green:   { bg: 'rgba(34,197,94,0.10)',  text: '#22c55e', border: 'rgba(34,197,94,0.25)' },
+  amber:   { bg: 'rgba(251,191,36,0.10)', text: '#fbbf24', border: 'rgba(251,191,36,0.25)' },
+  red:     { bg: 'rgba(239,68,68,0.10)',  text: '#ef4444', border: 'rgba(239,68,68,0.25)' },
+  neutral: { bg: 'transparent',           text: '#64748b', border: 'rgba(148,163,184,0.1)' },
 }
 
 // ── Breakpoint detector ───────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ function PaceBar({ actual, target, higher = true }) {
   const status = rag(actual, target, higher)
   return (
     <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-      <div style={{ flex:1, height:3, background:'var(--bg4)', borderRadius:2, overflow:'hidden' }}>
+      <div style={{ flex:1, height:3, background:'rgba(255,255,255,0.07)', borderRadius:2, overflow:'hidden' }}>
         <div style={{ width:`${Math.min(pct,100)}%`, height:'100%', background:C[status].text, borderRadius:2 }} />
       </div>
       <span style={{ fontSize:10, color:C[status].text, minWidth:34, textAlign:'right' }}>
@@ -135,16 +135,16 @@ function KPICard({ label, actual, target, formatter=fmt, higher=true }) {
 
   return (
     <div style={{
-      background:'var(--bg2)', border:'1px solid var(--border)',
-      borderRadius:'var(--radius)', padding:'14px 16px', flex:1, minWidth:140, borderTop:'3px solid ' + (status === 'green' ? 'var(--green)' : status === 'amber' ? 'var(--amber)' : status === 'red' ? 'var(--red)' : 'var(--border2)'),
+      background:'rgba(255,255,255,0.025)', border:`0.5px solid rgba(255,255,255,0.07)`,
+      borderRadius:10, padding:'14px 16px', flex:1, minWidth:130,
     }}>
-      <div style={{ fontSize:10, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6, fontWeight:600 }}>{label}</div>
-      <div style={{ fontSize:22, fontWeight:600, color:'var(--text)', letterSpacing:'-0.02em', fontVariantNumeric:'tabular-nums', marginBottom:2 }}>{formatter(actual)}</div>
-      <div style={{ fontSize:10.5, color:'var(--text3)', marginBottom:6 }}>MTD target {formatter(cumTarget)}</div>
+      <div style={{ fontSize:10, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6 }}>{label}</div>
+      <div style={{ fontSize:20, fontWeight:700, color:C[status].text, marginBottom:2 }}>{formatter(actual)}</div>
+      <div style={{ fontSize:10, color:'#475569', marginBottom:6 }}>MTD target {formatter(cumTarget)}</div>
       <PaceBar actual={actual} target={cumTarget} higher={higher} />
       {runRate > 0 && (
-        <div style={{ fontSize:10.5, color:'var(--text3)', marginTop:5 }}>
-          Need: <span style={{ color:'var(--accent)' }}>{formatter(runRate)}/day</span>
+        <div style={{ fontSize:10, color:'#64748b', marginTop:5 }}>
+          Need: <span style={{ color:'#f472b6' }}>{formatter(runRate)}/day</span>
         </div>
       )}
     </div>
@@ -174,8 +174,8 @@ function ProductRow({ prodName, tgt, act, daysElapsed }) {
   const hasData = actSpend > 0
 
   return (
-    <tr style={{ borderBottom:'1px solid var(--border)' }}
-      onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'}
+    <tr style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}
+      onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
       onMouseLeave={e=>e.currentTarget.style.background='transparent'}
     >
       {/* Product name */}
@@ -183,37 +183,37 @@ function ProductRow({ prodName, tgt, act, daysElapsed }) {
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ width:6, height:6, borderRadius:'50%', background: hasData ? '#22c55e' : '#ef4444', flexShrink:0 }} />
           <div>
-            <div style={{ fontSize:12.5, fontWeight:500, color:'var(--text)' }}>{tgt.alias || prodName}</div>
-            <div style={{ fontSize:10.5, color:'var(--text3)' }}>{prodName}</div>
+            <div style={{ fontSize:12, fontWeight:500, color:'#e2e8f0' }}>{tgt.alias || prodName}</div>
+            <div style={{ fontSize:10, color:'#64748b' }}>{prodName}</div>
           </div>
         </div>
       </td>
       {/* GA4 Revenue */}
       <td style={{ padding:'8px 10px', textAlign:'right' }}>
         <div style={{ fontSize:12, fontWeight:600, color:C[revStatus].text }}>{fmt(actRev)}</div>
-        <div style={{ fontSize:10, color:'var(--text3)' }}>tgt {fmt(cumRev)}</div>
+        <div style={{ fontSize:9, color:'#475569' }}>tgt {fmt(cumRev)}</div>
         <PaceBar actual={actRev} target={cumRev} higher={true} />
       </td>
       {/* Spend */}
       <td style={{ padding:'8px 10px', textAlign:'right' }}>
         <div style={{ fontSize:12, fontWeight:600, color:C[spendStatus].text }}>{fmt(actSpend)}</div>
-        <div style={{ fontSize:10, color:'var(--text3)' }}>tgt {fmt(cumSpend)}</div>
+        <div style={{ fontSize:9, color:'#475569' }}>tgt {fmt(cumSpend)}</div>
         <PaceBar actual={actSpend} target={cumSpend} higher={true} />
       </td>
       {/* ROAS */}
       <td style={{ padding:'8px 10px', textAlign:'right' }}>
         <div style={{ fontSize:12, fontWeight:600, color:C[roasStatus].text }}>{fmtX(actRoas)}</div>
-        <div style={{ fontSize:10, color:'var(--text3)' }}>tgt {fmtX(tgt.ga4ROAS)}</div>
+        <div style={{ fontSize:9, color:'#475569' }}>tgt {fmtX(tgt.ga4ROAS)}</div>
       </td>
       {/* CPC */}
       <td style={{ padding:'8px 10px', textAlign:'right' }}>
         <div style={{ fontSize:12, fontWeight:600, color:C[cpcStatus].text }}>{hasData ? fmt(actCpc) : '—'}</div>
-        <div style={{ fontSize:10, color:'var(--text3)' }}>tgt {fmt(tgt.cpc)}</div>
+        <div style={{ fontSize:9, color:'#475569' }}>tgt {fmt(tgt.cpc)}</div>
       </td>
       {/* CR% */}
       <td style={{ padding:'8px 10px', textAlign:'right' }}>
         <div style={{ fontSize:12, fontWeight:600, color:C[crStatus].text }}>{hasData ? fmtPct(actCr) : '—'}</div>
-        <div style={{ fontSize:10, color:'var(--text3)' }}>tgt {fmtPct(tgt.ecr)}</div>
+        <div style={{ fontSize:9, color:'#475569' }}>tgt {fmtPct(tgt.ecr)}</div>
       </td>
       {/* Breakpoint */}
       <td style={{ padding:'8px 10px', textAlign:'right' }}>
@@ -223,9 +223,9 @@ function ProductRow({ prodName, tgt, act, daysElapsed }) {
             background:C[bp.status].bg, color:C[bp.status].text, border:`0.5px solid ${C[bp.status].border}`,
           }}>{bp.label}</span>
         ) : hasData ? (
-          <span style={{ fontSize:10.5, color:'var(--green)', fontWeight:500 }}>On track</span>
+          <span style={{ fontSize:10, color:'#22c55e' }}>On track ✓</span>
         ) : (
-          <span style={{ fontSize:10.5, color:'var(--text3)' }}>No data</span>
+          <span style={{ fontSize:10, color:'#475569' }}>No data</span>
         )}
       </td>
     </tr>
@@ -266,7 +266,7 @@ function CategoryRow({ catName, tgt, act, daysElapsed, byProduct }) {
       <tr
         onClick={() => catProducts.length > 0 && setOpen(o => !o)}
         style={{
-          borderBottom:'1px solid var(--border)',
+          borderBottom:'0.5px solid rgba(255,255,255,0.06)',
           cursor: catProducts.length > 0 ? 'pointer' : 'default',
           background: open ? 'rgba(255,255,255,0.03)' : 'transparent',
         }}
@@ -277,43 +277,43 @@ function CategoryRow({ catName, tgt, act, daysElapsed, byProduct }) {
         <td style={{ padding:'10px 12px', minWidth:200 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             {catProducts.length > 0 && (
-              <span style={{ fontSize:10, color:'var(--text3)', transition:'transform .15s', display:'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+              <span style={{ fontSize:10, color:'#64748b', transition:'transform .15s', display:'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
             )}
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <div style={{ width:8, height:8, borderRadius:2, background: hasData ? '#22c55e' : '#ef4444', flexShrink:0 }} />
-              <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>{catName}</span>
+              <span style={{ fontSize:13, fontWeight:600, color:'#f1f5f9' }}>{catName}</span>
             </div>
             {catProducts.length > 0 && (
-              <span style={{ fontSize:10.5, color:'var(--text3)', marginLeft:4 }}>{catProducts.length} products</span>
+              <span style={{ fontSize:10, color:'#475569', marginLeft:4 }}>{catProducts.length} products</span>
             )}
           </div>
         </td>
         {/* GA4 Revenue */}
         <td style={{ padding:'10px 10px', textAlign:'right' }}>
           <div style={{ fontSize:13, fontWeight:700, color:C[revStatus].text }}>{fmt(actRev)}</div>
-          <div style={{ fontSize:10, color:'var(--text3)', marginBottom:3 }}>tgt {fmt(cumRev)}</div>
+          <div style={{ fontSize:10, color:'#475569', marginBottom:3 }}>tgt {fmt(cumRev)}</div>
           <PaceBar actual={actRev} target={cumRev} higher={true} />
         </td>
         {/* Spend */}
         <td style={{ padding:'10px 10px', textAlign:'right' }}>
           <div style={{ fontSize:13, fontWeight:700, color:C[spendStatus].text }}>{fmt(actSpend)}</div>
-          <div style={{ fontSize:10, color:'var(--text3)', marginBottom:3 }}>tgt {fmt(cumSpend)}</div>
+          <div style={{ fontSize:10, color:'#475569', marginBottom:3 }}>tgt {fmt(cumSpend)}</div>
           <PaceBar actual={actSpend} target={cumSpend} higher={true} />
         </td>
         {/* ROAS */}
         <td style={{ padding:'10px 10px', textAlign:'right' }}>
           <div style={{ fontSize:13, fontWeight:600, color:C[roasStatus].text }}>{fmtX(actRoas)}</div>
-          <div style={{ fontSize:10, color:'var(--text3)' }}>tgt {fmtX(tgt.ga4ROAS)}</div>
+          <div style={{ fontSize:10, color:'#475569' }}>tgt {fmtX(tgt.ga4ROAS)}</div>
         </td>
         {/* CPC */}
         <td style={{ padding:'10px 10px', textAlign:'right' }}>
           <div style={{ fontSize:13, fontWeight:600, color:C[cpcStatus].text }}>{hasData ? fmt(actCpc) : '—'}</div>
-          <div style={{ fontSize:10, color:'var(--text3)' }}>tgt {fmt(tgt.cpc)}</div>
+          <div style={{ fontSize:10, color:'#475569' }}>tgt {fmt(tgt.cpc)}</div>
         </td>
         {/* CR% */}
         <td style={{ padding:'10px 10px', textAlign:'right' }}>
           <div style={{ fontSize:13, fontWeight:600, color:C[crStatus].text }}>{hasData ? fmtPct(actCr) : '—'}</div>
-          <div style={{ fontSize:10, color:'var(--text3)' }}>tgt {fmtPct(tgt.ecr)}</div>
+          <div style={{ fontSize:10, color:'#475569' }}>tgt {fmtPct(tgt.ecr)}</div>
         </td>
         {/* Breakpoint */}
         <td style={{ padding:'10px 10px', textAlign:'right' }}>
@@ -323,9 +323,9 @@ function CategoryRow({ catName, tgt, act, daysElapsed, byProduct }) {
               background:C[bp.status].bg, color:C[bp.status].text, border:`0.5px solid ${C[bp.status].border}`,
             }}>{bp.label}</span>
           ) : hasData ? (
-            <span style={{ fontSize:11, color:'var(--green)' }}>On track</span>
+            <span style={{ fontSize:11, color:'#22c55e' }}>On track ✓</span>
           ) : (
-            <span style={{ fontSize:11, color:'var(--red)' }}>No data</span>
+            <span style={{ fontSize:11, color:'#ef4444' }}>No data</span>
           )}
         </td>
       </tr>
@@ -384,21 +384,21 @@ export default function PacingTracker() {
   const hasData = totals.spend > 0
 
   return (
-    <div style={{ padding:'28px 32px' }}>
+    <div style={{ padding: '20px 24px' }}>
       {/* Header */}
       <div style={{ marginBottom:16 }}>
-        <h1 style={{ fontSize:18, fontWeight:600, letterSpacing:'-0.025em', color:'var(--text)', marginBottom:2 }}>Pacing tracker</h1>
+        <h1 style={{ fontSize:18, fontWeight:600, marginBottom:2 }}>Pacing tracker</h1>
         <div style={{ fontSize:12, color:'var(--text3)' }}>
           Meta GA4 revenue · {PACING_CONFIG.month} · Day {daysElapsed} of {PACING_CONFIG.totalDays} ·
-          Targets are <strong style={{ color:'var(--accent)', fontWeight:600 }}>daily benchmarks</strong> — cumulative shown vs days elapsed
+          Targets are <strong style={{ color:'#f472b6' }}>daily benchmarks</strong> — cumulative shown vs days elapsed
         </div>
       </div>
 
       {/* No data banner */}
       {!hasData && (
         <div style={{
-          background:'var(--red-dim)', border:'1px solid var(--red-border)',
-          borderRadius:8, padding:'12px 16px', marginBottom:16, fontSize:13, color:'var(--red)',
+          background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.25)',
+          borderRadius:8, padding:'12px 16px', marginBottom:16, fontSize:13, color:'#ef4444',
         }}>
           No Meta data loaded — upload your Meta daily CSV from the Upload page to see live pacing
         </div>
@@ -414,15 +414,15 @@ export default function PacingTracker() {
       </div>
 
       {/* Category table */}
-      <div style={{ overflowX:'auto', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'var(--bg2)' }}>
+      <div style={{ overflowX:'auto', borderRadius:10, border:'0.5px solid rgba(255,255,255,0.07)' }}>
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead>
-            <tr>
+            <tr style={{ background:'rgba(255,255,255,0.03)' }}>
               {['Category / Product','GA4 Revenue (MTD)','Spend (MTD)','GA4 ROAS','CPC','CR%','Breakpoint'].map((h,i) => (
                 <th key={h} style={{
-                  padding:'9px 12px', fontSize:10, fontWeight:600, color:'var(--text3)',
+                  padding:'9px 10px', fontSize:10, fontWeight:600, color:'#64748b',
                   textTransform:'uppercase', letterSpacing:'0.05em',
-                  borderBottom:'1px solid var(--border)', background:'var(--bg3)',
+                  borderBottom:'0.5px solid rgba(255,255,255,0.07)',
                   textAlign: i===0 ? 'left' : 'right', whiteSpace:'nowrap',
                 }}>{h}</th>
               ))}
@@ -442,22 +442,22 @@ export default function PacingTracker() {
           </tbody>
           {/* Grand total row */}
           <tfoot>
-            <tr style={{ background:'var(--bg3)', borderTop:'1px solid var(--border2)' }}>
-              <td style={{ padding:'10px 12px', fontSize:13, fontWeight:600, color:'var(--text)' }}>Grand Total</td>
+            <tr style={{ background:'rgba(255,255,255,0.03)', borderTop:'0.5px solid rgba(255,255,255,0.1)' }}>
+              <td style={{ padding:'10px 12px', fontSize:13, fontWeight:700, color:'#f1f5f9' }}>Grand Total</td>
               <td style={{ padding:'10px 10px', textAlign:'right', fontSize:13, fontWeight:700, color: rag(totals.ga4Revenue, accountTgt.ga4Revenue*daysElapsed) === 'green' ? '#22c55e' : '#ef4444' }}>
                 {fmt(totals.ga4Revenue)}
-                <div style={{ fontSize:10, color:'var(--text3)' }}>tgt {fmt(accountTgt.ga4Revenue * daysElapsed)}</div>
+                <div style={{ fontSize:9, color:'#475569' }}>tgt {fmt(accountTgt.ga4Revenue * daysElapsed)}</div>
               </td>
-              <td style={{ padding:'10px 10px', textAlign:'right', fontSize:13, fontWeight:600, color:'var(--text)' }}>
+              <td style={{ padding:'10px 10px', textAlign:'right', fontSize:13, fontWeight:700, color:'#f1f5f9' }}>
                 {fmt(totals.spend)}
               </td>
-              <td style={{ padding:'10px 10px', textAlign:'right', fontSize:13, fontWeight:600, color:'var(--text)' }}>
+              <td style={{ padding:'10px 10px', textAlign:'right', fontSize:13, fontWeight:700, color:'#f1f5f9' }}>
                 {fmtX(totals.ga4ROAS)}
               </td>
-              <td style={{ padding:'10px 10px', textAlign:'right', fontSize:13, fontWeight:600, color:'var(--text)' }}>
+              <td style={{ padding:'10px 10px', textAlign:'right', fontSize:13, fontWeight:700, color:'#f1f5f9' }}>
                 {totals.cpc > 0 ? `₹${totals.cpc.toFixed(0)}` : '—'}
               </td>
-              <td style={{ padding:'10px 10px', textAlign:'right', fontSize:13, fontWeight:600, color:'var(--text)' }}>
+              <td style={{ padding:'10px 10px', textAlign:'right', fontSize:13, fontWeight:700, color:'#f1f5f9' }}>
                 {fmtPct(totals.crPct)}
               </td>
               <td />
@@ -466,7 +466,7 @@ export default function PacingTracker() {
         </table>
       </div>
 
-      <div style={{ marginTop:8, fontSize:11, color:'var(--text3)' }}>
+      <div style={{ marginTop:8, fontSize:11, color:'#475569' }}>
         Day {daysElapsed} of {PACING_CONFIG.totalDays} elapsed · Click any category row to expand products · All targets are daily benchmarks × days elapsed
       </div>
     </div>

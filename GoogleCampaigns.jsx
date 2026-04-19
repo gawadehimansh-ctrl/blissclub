@@ -58,7 +58,7 @@ const PERIOD_TABS = [
   { key: 'monthly', label: 'Monthly' },
 ]
 
-const TIP = { contentStyle: { background: 'var(--bg3)', border: '1px solid var(--border2)', fontSize: 12, borderRadius: 6 } }
+const TIP = { contentStyle: { background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12, borderRadius: 6 } }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function GoogleCampaigns() {
@@ -184,9 +184,9 @@ export default function GoogleCampaigns() {
   ]
 
   return (
-    <div style={{ padding: '28px 32px' }}>
+    <div style={{ padding: '20px 24px' }}>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize:18, fontWeight:600, letterSpacing:'-0.025em', color:'var(--text)', marginBottom:2 }}>Google — Campaigns</h1>
+        <h1 style={{ fontSize:18, fontWeight:600, marginBottom:2 }}>Google — Campaigns</h1>
         <div style={{ fontSize:12, color:'var(--text3)' }}>7 account cuts · daily / weekly / monthly · campaign drill-down</div>
       </div>
 
@@ -205,7 +205,7 @@ export default function GoogleCampaigns() {
       </div>
 
       {!hasData && (
-        <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:12, color:'var(--red)' }}>
+        <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:12, color:'#ef4444' }}>
           No Google campaign data — upload Google campaigns CSV from Upload page
         </div>
       )}
@@ -225,7 +225,7 @@ export default function GoogleCampaigns() {
       </div>
 
       {/* Period tabs + trend chart */}
-      <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
+      <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
           <span style={{ fontSize:13, fontWeight:600 }}>
             {ACCOUNT_CUTS.find(c => c.key === cut)?.label} — spend & ROAS trend
@@ -236,7 +236,7 @@ export default function GoogleCampaigns() {
                 padding:'3px 10px', fontSize:11, borderRadius:6, cursor:'pointer',
                 background: period===p.key ? 'var(--blue)' : 'var(--bg3)',
                 color: period===p.key ? '#fff' : 'var(--text2)',
-                border: '1px solid var(--border2)', fontWeight: period===p.key ? 600 : 400,
+                border: '0.5px solid var(--border2)', fontWeight: period===p.key ? 600 : 400,
               }}>{p.label}</button>
             ))}
           </div>
@@ -265,7 +265,7 @@ export default function GoogleCampaigns() {
       {byType.length > 0 && (
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
           {byType.slice(0, 6).map(t => (
-            <div key={t.type} style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 14px', flex:1, minWidth:120 }}>
+            <div key={t.type} style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:8, padding:'10px 14px', flex:1, minWidth:120 }}>
               <div style={{ fontSize:10, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>{t.type}</div>
               <div style={{ fontSize:15, fontWeight:700 }}>{fmtINRCompact(t.cost)}</div>
               <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>{fmtX(t.roas)} ROAS</div>
@@ -289,10 +289,10 @@ export default function GoogleCampaigns() {
       </div>
 
       {/* Campaign accordion drill-down */}
-      <div style={{ border:'1px solid var(--border)', borderRadius:10, overflow:'hidden' }}>
+      <div style={{ border:'0.5px solid var(--border)', borderRadius:10, overflow:'hidden' }}>
         {/* Header */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 90px 90px 70px 70px 70px 80px 80px 70px 70px', gap:0,
-          padding:'7px 14px', background:'var(--bg3)', borderBottom:'1px solid var(--border2)' }}>
+          padding:'7px 14px', background:'var(--bg3)', borderBottom:'0.5px solid var(--border2)' }}>
           {['Campaign','Spend','Revenue','ROAS','CPC','CTR','Orders','CPA','ECR','Type'].map(h => (
             <div key={h} style={{ fontSize:10, fontWeight:600, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.05em',
               textAlign: h==='Campaign' ? 'left' : 'right' }}>{h}</div>
@@ -305,7 +305,7 @@ export default function GoogleCampaigns() {
           const isOpen = expanded[c.campaignName]
           const adsets = isOpen ? getAdsetRows(c.campaignName) : []
 
-          const colStyle = (align='right') => ({ padding:'9px 14px', fontSize:12, borderBottom:'1px solid var(--border)', textAlign:align })
+          const colStyle = (align='right') => ({ padding:'9px 14px', fontSize:12, borderBottom:'0.5px solid var(--border)', textAlign:align })
 
           return (
             <React.Fragment key={c.campaignName}>
@@ -342,7 +342,7 @@ export default function GoogleCampaigns() {
               {/* Adgroup rows */}
               {isOpen && adsets.map((ag, ai) => (
                 <div key={ag.adgroupName} style={{ display:'grid', gridTemplateColumns:'1fr 90px 90px 70px 70px 70px 80px 80px 70px 70px',
-                  background:'rgba(59,130,246,0.03)', borderBottom:'1px solid var(--border)' }}>
+                  background:'rgba(59,130,246,0.03)', borderBottom:'0.5px solid var(--border)' }}>
                   <div style={{ ...colStyle('left'), paddingLeft:48, display:'flex', alignItems:'center', gap:6 }}>
                     <span style={{ fontSize:9, color:'var(--blue)', opacity:0.6 }}>AD GROUP</span>
                     <span style={{ fontSize:12, color:'var(--text2)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:260 }}>{ag.adgroupName}</span>

@@ -65,7 +65,7 @@ function CohortCard({ cohort, data, totalSpend }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
         <span style={{ fontSize: 13, fontWeight: 700, color }}>{cohort}</span>
-        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{COHORT_LABEL[cohort]}</span>
+        <span style={{ fontSize: 11, color: '#64748b' }}>{COHORT_LABEL[cohort]}</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
         {[
@@ -78,7 +78,7 @@ function CohortCard({ cohort, data, totalSpend }) {
           { label: 'Creatives',val: data.creatives > 0 ? String(data.creatives) : '—' },
         ].map(({ label, val }) => (
           <div key={label}>
-            <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.6 }}>{label}</div>
+            <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.6 }}>{label}</div>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{val}</div>
           </div>
         ))}
@@ -112,9 +112,9 @@ function CohortBlock({ cohort, matrixRows, yDim }) {
         <span style={{ fontSize: 11, color, transition: 'transform .15s', display: 'inline-block', transform: collapsed ? 'rotate(0deg)' : 'rotate(90deg)' }}>▶</span>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
         <span style={{ fontSize: 13, fontWeight: 700, color }}>{cohort}</span>
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>— {COHORT_LABEL[cohort]}</span>
-        <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 4 }}>{matrixRows.filter(r => r[cohort]?.spend > 0).length} rows with data</span>
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>{collapsed ? 'Expand ↓' : 'Collapse ↑'}</span>
+        <span style={{ fontSize: 12, color: '#64748b' }}>— {COHORT_LABEL[cohort]}</span>
+        <span style={{ fontSize: 11, color: '#475569', marginLeft: 4 }}>{matrixRows.filter(r => r[cohort]?.spend > 0).length} rows with data</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#64748b' }}>{collapsed ? 'Expand ↓' : 'Collapse ↑'}</span>
       </div>
 
       {/* Table — collapsible */}
@@ -122,7 +122,7 @@ function CohortBlock({ cohort, matrixRows, yDim }) {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr style={{ background: 'var(--bg3)' }}>
+              <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
                 <th style={{ ...TH, textAlign: 'left', minWidth: 160 }}>
                   {Y_DIMS.find(d => d.key === yDim)?.label}
                 </th>
@@ -153,7 +153,7 @@ function CohortBlock({ cohort, matrixRows, yDim }) {
               })}
               {matrixRows.length === 0 && (
                 <tr>
-                  <td colSpan={METRICS.length + 1} style={{ ...TD, textAlign: 'center', color: 'var(--text3)', padding: 24 }}>
+                  <td colSpan={METRICS.length + 1} style={{ ...TD, textAlign: 'center', color: '#475569', padding: 24 }}>
                     No data for this cohort
                   </td>
                 </tr>
@@ -167,7 +167,7 @@ function CohortBlock({ cohort, matrixRows, yDim }) {
 }
 
 const TH = {
-  padding: '8px 12px', fontSize: 10, fontWeight: 600, color: 'var(--text3)',
+  padding: '8px 12px', fontSize: 10, fontWeight: 600, color: '#64748b',
   textTransform: 'uppercase', letterSpacing: 0.6, whiteSpace: 'nowrap',
   textAlign: 'right', borderBottom: '1px solid rgba(255,255,255,0.07)',
 }
@@ -223,12 +223,12 @@ export default function MetaCohortMatrix() {
   const hasData = rows.length > 0
 
   return (
-    <div style={{ padding: '28px 32px' }}>
+    <div style={{ padding: '20px 24px' }}>
 
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: 4, letterSpacing: '-0.025em', color: 'var(--text)' }}>Cohort Matrix</h1>
-        <div style={{ fontSize: 13, color: 'var(--text3)' }}>ACQ · REM · RET breakdown across all dimensions</div>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Cohort Matrix</h1>
+        <div style={{ fontSize: 13, color: '#64748b' }}>ACQ · REM · RET breakdown across all dimensions</div>
       </div>
 
       <FilterBar filters={filters} showAdvanced />
@@ -271,7 +271,7 @@ export default function MetaCohortMatrix() {
             outline: 'none', minWidth: 220,
           }}
         />
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>{matrixRows.length} rows</span>
+        <span style={{ fontSize: 12, color: '#475569' }}>{matrixRows.length} rows</span>
       </div>
 
       {/* Three cohort blocks stacked vertically — ACQ then REM then RET */}

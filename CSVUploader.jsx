@@ -37,7 +37,7 @@ export default function CSVUploader({ compact = false }) {
           onClick={() => inputRef.current.click()}
           style={{
             padding: '6px 14px', fontSize: 12, borderRadius: 6,
-            background: 'var(--bg3)', border: '1px solid var(--border2)',
+            background: 'var(--bg3)', border: '0.5px solid var(--border2)',
             color: 'var(--text)', cursor: 'pointer', fontWeight: 500
           }}>
           + Upload CSV
@@ -103,7 +103,7 @@ export default function CSVUploader({ compact = false }) {
         <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent uploads</div>
           {state.uploadLog.slice(0, 4).map((log, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', fontSize: 12, borderBottom: '1px solid var(--border)' }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', fontSize: 12, borderBottom: '0.5px solid var(--border)' }}>
               <span style={{ color: FILE_LABELS[log.type]?.color }}>{FILE_LABELS[log.type]?.label}</span>
               <span style={{ color: 'var(--text3)' }}>{log.count.toLocaleString()} rows · {log.time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>

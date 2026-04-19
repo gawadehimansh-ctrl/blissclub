@@ -151,14 +151,14 @@ export default function Upload() {
   const mandatoryDone = counts.metaDB > 0 && counts.google > 0 && counts.ga4 > 0
 
   return (
-    <div style={{ padding: '28px 32px' }}>
+    <div style={{ padding: '20px 24px' }}>
 
       {/* Windsor Auto-Sync */}
       <div style={{ background: PROXY_URL ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${PROXY_URL ? 'rgba(34,197,94,0.25)' : 'var(--border)'}`, borderRadius: 10, padding: '16px 20px', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
-              {PROXY_URL ? 'Windsor Auto-Sync' : 'Windsor Auto-Sync'}
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>
+              {PROXY_URL ? '⚡ Windsor Auto-Sync' : '⚡ Windsor Auto-Sync'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text3)' }}>
               {PROXY_URL ? 'Proxy connected — pulls Meta + Google + GA4 in one click' : 'Add VITE_WINDSOR_PROXY_URL to Vercel env vars to enable'}
@@ -166,7 +166,7 @@ export default function Upload() {
           </div>
           {PROXY_URL && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <select value={syncPreset} onChange={e => setSyncPreset(e.target.value)} style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 6, padding: '5px 8px', color: 'var(--text)', fontSize: 12, outline: 'none' }}>
+              <select value={syncPreset} onChange={e => setSyncPreset(e.target.value)} style={{ background: 'var(--bg3)', border: '0.5px solid var(--border2)', borderRadius: 6, padding: '5px 8px', color: 'var(--text)', fontSize: 12, outline: 'none' }}>
                 <option value="last_7d">Last 7 days</option>
                 <option value="last_14d">Last 14 days</option>
                 <option value="last_30d">Last 30 days</option>
@@ -180,14 +180,14 @@ export default function Upload() {
         </div>
         {syncResult && (
           <div style={{ fontSize: 12, marginTop: 8 }}>
-            {syncResult.success?.length > 0 && <div style={{ color: 'var(--green)', marginBottom: 4 }}>Synced: {syncResult.success.join(', ')}</div>}
-            {syncResult.errors?.length > 0 && <div style={{ color: 'var(--red)' }}>Failed: {syncResult.errors.join(', ')}</div>}
+            {syncResult.success?.length > 0 && <div style={{ color: 'var(--green)', marginBottom: 4 }}>✅ Synced: {syncResult.success.join(', ')}</div>}
+            {syncResult.errors?.length > 0 && <div style={{ color: 'var(--red)' }}>❌ Failed: {syncResult.errors.join(', ')}</div>}
           </div>
         )}
       </div>
 
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: 2 }}>Data upload</h1>
+        <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Data upload</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>
           Drop any CSV — app auto-detects the file type. Windsor handles Meta + Google automatically once connected.
         </div>
@@ -229,10 +229,10 @@ export default function Upload() {
       {/* Daily routine */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Daily routine</div>
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
 
           {/* Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 160px 1fr 90px', gap: 0, padding: '7px 14px', background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 160px 1fr 90px', gap: 0, padding: '7px 14px', background: 'var(--bg3)', borderBottom: '0.5px solid var(--border)' }}>
             {['Time', 'Report', 'How to export', 'Status'].map(h => (
               <div key={h} style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</div>
             ))}
@@ -242,7 +242,7 @@ export default function Upload() {
             <div key={i} style={{
               display: 'grid', gridTemplateColumns: '80px 160px 1fr 90px',
               gap: 0, padding: '9px 14px',
-              borderBottom: i < ROUTINE.length - 1 ? '1px solid var(--border)' : 'none',
+              borderBottom: i < ROUTINE.length - 1 ? '0.5px solid var(--border)' : 'none',
               background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
             }}>
               <div style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>{item.time}</div>
@@ -267,7 +267,7 @@ export default function Upload() {
       </div>
 
       {/* Clear */}
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+      <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 16 }}>
         <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>Danger zone</div>
         <button
           onClick={() => { if (window.confirm('Clear all loaded data? This cannot be undone.')) dispatch({ type: 'CLEAR_ALL' }) }}

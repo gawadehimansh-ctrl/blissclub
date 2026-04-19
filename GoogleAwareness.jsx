@@ -37,7 +37,7 @@ const TABS = [
   { key: 'placement',  label: 'Placement' },
 ]
 
-const TIP = { contentStyle: { background: 'var(--bg3)', border: '1px solid var(--border2)', fontSize: 12, borderRadius: 6 } }
+const TIP = { contentStyle: { background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12, borderRadius: 6 } }
 
 export default function GoogleAwareness() {
   const { state } = useData()
@@ -138,16 +138,16 @@ export default function GoogleAwareness() {
   ]
 
   return (
-    <div style={{ padding: '28px 32px' }}>
+    <div style={{ padding: '20px 24px' }}>
       <div style={{ marginBottom:16 }}>
-        <h1 style={{ fontSize:18, fontWeight:600, letterSpacing:'-0.025em', color:'var(--text)', marginBottom:2 }}>Google — Awareness</h1>
+        <h1 style={{ fontSize:18, fontWeight:600, marginBottom:2 }}>Google — Awareness</h1>
         <div style={{ fontSize:12, color:'var(--text3)' }}>YouTube campaigns · VTR, CPV, CPM, view completion funnel</div>
       </div>
 
       <FilterBar filters={filters} showAdvanced showCohort={false} showSaleTag={false} />
 
       {/* Tab bar */}
-      <div style={{ display:'flex', gap:0, marginBottom:16, borderBottom:'1px solid var(--border)' }}>
+      <div style={{ display:'flex', gap:0, marginBottom:16, borderBottom:'0.5px solid var(--border)' }}>
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding:'8px 16px', fontSize:13, cursor:'pointer', fontWeight: tab===t.key ? 600 : 400,
@@ -160,7 +160,7 @@ export default function GoogleAwareness() {
       </div>
 
       {!hasData && (
-        <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:12, color:'var(--red)' }}>
+        <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:12, color:'#ef4444' }}>
           No awareness data — upload Google awareness/YouTube CSV from Upload page
         </div>
       )}
@@ -184,7 +184,7 @@ export default function GoogleAwareness() {
         <>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
             {/* View completion funnel */}
-            <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
+            <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
               <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>View completion funnel</div>
               {hasData ? (
                 <ResponsiveContainer width="100%" height={180}>
@@ -202,7 +202,7 @@ export default function GoogleAwareness() {
             </div>
 
             {/* VTR by campaign */}
-            <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
+            <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
               <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>VTR by campaign (top 6)</div>
               {byCampaign.length > 0 ? (
                 <ResponsiveContainer width="100%" height={180}>
@@ -241,7 +241,7 @@ export default function GoogleAwareness() {
       {tab === 'device' && (
         <>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-            <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
+            <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
               <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>Impressions by device</div>
               {byDevice.length > 0 ? (
                 <ResponsiveContainer width="100%" height={200}>
@@ -256,7 +256,7 @@ export default function GoogleAwareness() {
                 </ResponsiveContainer>
               ) : <Empty />}
             </div>
-            <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
+            <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
               <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>VTR by device</div>
               {byDevice.length > 0 ? (
                 <ResponsiveContainer width="100%" height={200}>
@@ -291,7 +291,7 @@ export default function GoogleAwareness() {
       {/* ── LOCATION TAB ─────────────────────────────────────────────────────── */}
       {tab === 'location' && (
         <>
-          <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
+          <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
             <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>Spend & impressions by city (top 10)</div>
             {byLocation.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
