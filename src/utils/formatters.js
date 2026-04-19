@@ -1,55 +1,68 @@
-// All monetary values stored in raw INR (paise/rupees)
-// Display in L (lakhs) or Cr (crores)
+// Safe formatters — all functions guard against NaN, Infinity, null, undefined
+
+function safeNum(v) {
+  if (v === null || v === undefined || v === '' || v === 'NaN') return 0
+  const n = parseFloat(String(v).replace(/[,%\s]/g, ''))
+  if (isNaN(n) || !isFinite(n)) return 0
+  return n
+}
 
 export function fmtINR(val, decimals = 2) {
-  if (val == null || isNaN(val)) return '—'
-  const n = Number(val)
-  if (Math.abs(n) >= 10000000) return `₹${(n / 10000000).toFixed(decimals)}Cr`
-  if (Math.abs(n) >= 100000) return `₹${(n / 100000).toFixed(decimals)}L`
-  if (Math.abs(n) >= 1000) return `₹${(n / 1000).toFixed(1)}K`
+  const n = safeNum(val)
+  if (n === 0 && (val === null || val === undefined || val === '')) return '—'
+  if (Math.abs(n) >= 10000000) return `₹${(n / 10000000).toFixed(2)}Cr`
+  if (Math.abs(n) >= 100000)   return `₹${(n / 100000).toFixed(2)}L`
+  if (Math.abs(n) >= 1000)     return `₹${(n / 1000).toFixed(1)}K`
   return `₹${Math.round(n)}`
 }
 
 export function fmtINRCompact(val) {
-  if (val == null || isNaN(val) || !isFinite(val)) return '—'
-  const n = Number(val)
+  const n = safeNum(val)
+  if (n === 0 && (val === null || val === undefined || val === '')) return '—'
   if (Math.abs(n) >= 10000000) return `₹${(n / 10000000).toFixed(1)}Cr`
-  if (Math.abs(n) >= 100000) return `₹${(n / 100000).toFixed(1)}L`
+  if (Math.abs(n) >= 100000)   return `₹${(n / 100000).toFixed(1)}L`
   return `₹${Math.round(n).toLocaleString('en-IN')}`
 }
 
 export function fmtNum(val, decimals = 0) {
-  if (val == null || isNaN(val) || !isFinite(val)) return '—'
-  const d = Math.max(0, Math.min(20, Math.round(decimals))) // clamp 0-20
-  return Number(val).toLocaleString('en-IN', { maximumFractionDigits: d })
+  const n = safeNum(val)
+  if (n === 0 && (val === null || val === undefined || val === '')) return '—'
+  const d = Math.max(0, Math.min(20, Math.round(safeNum(decimals))))
+  return n.toLocaleString('en-IN', { maximumFractionDigits: d })
 }
 
 export function fmtPct(val, decimals = 1) {
-  if (val == null || isNaN(val) || !isFinite(val)) return '—'
-  return `${(Number(val) * 100).toFixed(Math.max(0, decimals))}%`
+  const n = safeNum(val)
+  if (n === 0 && (val === null || val === undefined || val === '')) return '—'
+  const d = Math.max(0, Math.min(20, Math.round(safeNum(decimals))))
+  return `${(n * 100).toFixed(d)}%`
 }
 
 export function fmtPctRaw(val, decimals = 1) {
-  if (val == null || isNaN(val) || !isFinite(val)) return '—'
-  return `${Number(val).toFixed(Math.max(0, decimals))}%`
+  const n = safeNum(val)
+  if (n === 0 && (val === null || val === undefined || val === '')) return '—'
+  const d = Math.max(0, Math.min(20, Math.round(safeNum(decimals))))
+  return `${n.toFixed(d)}%`
 }
 
 export function fmtX(val, decimals = 2) {
-  if (val == null || isNaN(val) || !isFinite(val)) return '—'
-  return `${Number(val).toFixed(Math.max(0, decimals))}x`
+  const n = safeNum(val)
+  if (n === 0 && (val === null || val === undefined || val === '')) return '—'
+  const d = Math.max(0, Math.min(20, Math.round(safeNum(decimals))))
+  return `${n.toFixed(d)}x`
 }
 
 export function fmtDelta(curr, prev, mode = 'pct') {
-  if (!prev || !curr || isNaN(curr) || isNaN(prev)) return null
-  const delta = mode === 'pct'
-    ? ((curr - prev) / Math.abs(prev)) * 100
-    : curr - prev
+  const c = safeNum(curr), p = safeNum(prev)
+  if (!p || !c) return null
+  const delta = mode === 'pct' ? ((c - p) / Math.abs(p)) * 100 : c - p
   return { value: delta, positive: delta >= 0 }
 }
 
 export function deltaLabel(curr, prev, lowerIsBetter = false) {
-  if (!prev || !curr || isNaN(Number(curr)) || isNaN(Number(prev))) return null
-  const pct = ((Number(curr) - Number(prev)) / Math.abs(Number(prev))) * 100
+  const c = safeNum(curr), p = safeNum(prev)
+  if (!p || !c) return null
+  const pct = ((c - p) / Math.abs(p)) * 100
   const positive = lowerIsBetter ? pct <= 0 : pct >= 0
   const sign = pct >= 0 ? '+' : ''
   return { label: `${sign}${pct.toFixed(1)}%`, positive, pct }
@@ -58,5 +71,6 @@ export function deltaLabel(curr, prev, lowerIsBetter = false) {
 export function fmtDate(d) {
   if (!d) return '—'
   const date = d instanceof Date ? d : new Date(d)
+  if (isNaN(date.getTime())) return '—'
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
 }
