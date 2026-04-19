@@ -31,9 +31,17 @@ export function useWindsor() {
         (r.datasource !== 'facebook' && !r.spend && (r.gaRevenue > 0 || r.sessions > 0))
       )
       if (metaRows.length > 0) loadData(metaRows, 'META_DB', true)
-      if (ga4Rows.length > 0)  loadData(ga4Rows, 'GA4_DUMP', true)
+      if (ga4Rows.length > 0)  loadData(ga4Rows, 'GA4_DUMP', false) // append
       results.success.push(`Meta (${metaRows.length}) + GA4 (${ga4Rows.length})`)
     } catch (e) { results.errors.push(`Meta: ${e.message}`) }
+
+    // GA4 standalone
+    try {
+      const data = await fetchEndpoint(`/api/ga4?preset=${preset}`)
+      const parsed = parseWindsorPayload(data, 'ga4')
+      if (parsed.length > 0) loadData(parsed, 'GA4_DUMP', false) // append not replace
+      results.success.push(`GA4 (${parsed.length})`)
+    } catch (e) { results.errors.push(`GA4: ${e.message}`) }
 
     // Google campaigns
     try {
