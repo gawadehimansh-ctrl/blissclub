@@ -24,7 +24,6 @@ function groupAndAggregate(rows, dim) {
     return {
       [dim]: key,
       ...agg,
-      roas1dc: calcROAS(agg.fbRevenue, agg.spend),
       roasGA4: calcROAS(agg.gaRevenue, agg.spend),
       spendMix: spendTotal > 0 ? (agg.spend / spendTotal) * 100 : 0,
       ctr: agg.impressions > 0 ? agg.clicks / agg.impressions : 0,
@@ -65,8 +64,7 @@ export default function MetaCreative() {
         creator: rs[0]?.creator,
         cohort: rs[0]?.cohort,
         ...agg,
-        roas1dc: calcROAS(agg.fbRevenue, agg.spend),
-        roasGA4: calcROAS(agg.gaRevenue, agg.spend),
+          roasGA4: calcROAS(agg.gaRevenue, agg.spend),
         ctr: agg.impressions > 0 ? agg.clicks / agg.impressions : 0,
         cpa: agg.gaOrders > 0 ? agg.spend / agg.gaOrders : 0,
       }
@@ -83,9 +81,7 @@ export default function MetaCreative() {
     { key: 'ctr', label: 'CTR', render: v => fmtPct(v), color: v => v > 0.02 ? 'var(--green)' : v > 0.01 ? 'var(--amber)' : 'var(--red)' },
     { key: 'cpm', label: 'CPM', render: v => fmtINRCompact(v) },
     { key: 'cpc', label: 'CPC', render: v => fmtINRCompact(v) },
-    { key: 'fbRevenue', label: '1DC Rev', render: v => fmtINRCompact(v) },
     { key: 'gaRevenue', label: 'GA4 Rev', render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
-    { key: 'roas1dc', label: '1DC ROAS', render: v => fmtX(v) },
     { key: 'roasGA4', label: 'GA4 ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
     { key: 'gaOrders', label: 'Orders', render: v => fmtNum(v) },
     { key: 'cpa', label: 'CPA', render: v => fmtINRCompact(v) },
@@ -101,7 +97,6 @@ export default function MetaCreative() {
     { key: 'cohort', label: 'Cohort' },
     { key: 'spend', label: 'Spend', render: v => fmtINRCompact(v) },
     { key: 'ctr', label: 'CTR', render: v => fmtPct(v), color: v => v > 0.02 ? 'var(--green)' : v > 0.01 ? 'var(--amber)' : 'var(--red)' },
-    { key: 'roas1dc', label: '1DC ROAS', render: v => fmtX(v) },
     { key: 'roasGA4', label: 'GA4 ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
     { key: 'gaRevenue', label: 'GA4 Rev', render: v => fmtINRCompact(v) },
     { key: 'gaOrders', label: 'Orders', render: v => fmtNum(v) },
@@ -122,7 +117,6 @@ export default function MetaCreative() {
         <MetricCard label="Total spend" value={fmtINRCompact(totals.spend)} accent="var(--pink)" />
         <MetricCard label="GA4 revenue" value={fmtINRCompact(totals.gaRevenue)} accent="var(--purple)" />
         <MetricCard label="GA4 ROAS" value={fmtX(calcROAS(totals.gaRevenue, totals.spend))} accent="var(--purple)" />
-        <MetricCard label="1DC ROAS" value={fmtX(calcROAS(totals.fbRevenue, totals.spend))} accent="var(--pink)" sublabel="Meta reported" />
         <MetricCard label="Unique creatives" value={fmtNum([...new Set(rows.map(r => r.creativeName))].length)} />
       </div>
 
