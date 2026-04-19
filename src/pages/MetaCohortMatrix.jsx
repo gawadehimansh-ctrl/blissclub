@@ -92,66 +92,79 @@ function CohortCard({ cohort, data, totalSpend }) {
 
 // ── Matrix table for one cohort (vertical layout) ─────────────────────────────
 function CohortBlock({ cohort, matrixRows, yDim }) {
+  const [collapsed, setCollapsed] = React.useState(false)
   const color  = COHORT_COLOR[cohort]
   const bg     = COHORT_BG[cohort]
   const border = COHORT_BORDER[cohort]
+  const hasData = matrixRows.some(r => r[cohort]?.spend > 0)
 
   return (
     <div style={{
       border: `1px solid ${border}`,
       borderRadius: 12, overflow: 'hidden', marginBottom: 16,
     }}>
-      {/* Cohort header */}
-      <div style={{
-        background: bg, borderBottom: `1px solid ${border}`,
-        padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10,
-      }}>
+      {/* Cohort header — clickable to collapse */}
+      <div
+        onClick={() => setCollapsed(c => !c)}
+        style={{
+          background: bg, borderBottom: collapsed ? 'none' : `1px solid ${border}`,
+          padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10,
+          cursor: 'pointer', userSelect: 'none',
+        }}
+      >
+        <span style={{ fontSize: 11, color, transition: 'transform .15s', display: 'inline-block', transform: collapsed ? 'rotate(0deg)' : 'rotate(90deg)' }}>▶</span>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
         <span style={{ fontSize: 13, fontWeight: 700, color }}>{cohort}</span>
         <span style={{ fontSize: 12, color: '#64748b' }}>— {COHORT_LABEL[cohort]}</span>
+        <span style={{ fontSize: 11, color: '#475569', marginLeft: 4 }}>{matrixRows.filter(r => r[cohort]?.spend > 0).length} rows with data</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#64748b' }}>{collapsed ? 'Expand ↓' : 'Collapse ↑'}</span>
       </div>
 
-      {/* Table */}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead>
-            <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-              <th style={{ ...TH, textAlign: 'left', minWidth: 160 }}>
-                {Y_DIMS.find(d => d.key === yDim)?.label}
-              </th>
-              {METRICS.map(m => (
-                <th key={m.key} style={TH}>{m.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {matrixRows.map((row, i) => {
-              const d = row[cohort]
-              if (!d) return null
-              return (
-                <tr key={row.dimVal}
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.04)',
-                    background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}
-                >
-                  <td style={{ ...TD, textAlign: 'left', fontWeight: 500, color: '#cbd5e1' }}>
-                    {row.dimVal}
-                  </td>
-                  {METRICS.map(m => (
-                    <td key={m.key} style={{ ...TD, color: metricColor(m.key, d[m.key]) }}>
-                      {d.spend > 0 ? m.fmt(d[m.key]) : '—'}
+      {/* Table — collapsible */}
+      {!collapsed && (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <th style={{ ...TH, textAlign: 'left', minWidth: 160 }}>
+                  {Y_DIMS.find(d => d.key === yDim)?.label}
+                </th>
+                {METRICS.map(m => (
+                  <th key={m.key} style={TH}>{m.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {matrixRows.map((row, i) => {
+                const d = row[cohort]
+                if (!d) return null
+                return (
+                  <tr key={row.dimVal}
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}
+                  >
+                    <td style={{ ...TD, textAlign: 'left', fontWeight: 500, color: '#cbd5e1' }}>
+                      {row.dimVal}
                     </td>
-                  ))}
+                    {METRICS.map(m => (
+                      <td key={m.key} style={{ ...TD, color: metricColor(m.key, d[m.key]) }}>
+                        {d.spend > 0 ? m.fmt(d[m.key]) : '—'}
+                      </td>
+                    ))}
+                  </tr>
+                )
+              })}
+              {matrixRows.length === 0 && (
+                <tr>
+                  <td colSpan={METRICS.length + 1} style={{ ...TD, textAlign: 'center', color: '#475569', padding: 24 }}>
+                    No data for this cohort
+                  </td>
                 </tr>
-              )
-            })}
-            {matrixRows.length === 0 && (
-              <tr><td colSpan={METRICS.length + 1} style={{ ...TD, textAlign: 'center', color: '#475569', padding: 24 }}>
-                No data for this cohort
-              </td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
