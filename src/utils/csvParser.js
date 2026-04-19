@@ -4,7 +4,7 @@ import { parseCreativeName, parseCampaignType, parseSaleTag, isBrandKeyword } fr
 export function detectFileType(headers) {
   const h = headers.map(x => String(x).toLowerCase().trim())
 
-  // Meta Ads Manager export
+  // ── Meta ──────────────────────────────────────────────────────────────────
   const isMetaExport = h.includes('reporting starts') || h.includes('reporting ends')
   if (isMetaExport) {
     if (h.some(x => x.includes('time of day'))) return 'META_HOURLY'
@@ -13,21 +13,42 @@ export function detectFileType(headers) {
   if (h.includes('fb orders') || h.includes('fb revenue') || h.includes('ga orders')) return 'META_DB'
   if ((h.includes('adset name') || h.includes('ad set name')) && h.some(x => x.includes('time'))) return 'META_HOURLY'
 
-  // Google Awareness (YouTube) — has video-specific columns
-  const hasVideoViews = h.some(x => x.includes('video views') || x.includes('video view'))
-  const hasCPV = h.some(x => x.includes('cpv') || x.includes('avg. cpv') || x.includes('avg cpv'))
-  const hasVTR = h.some(x => x.includes('video view rate') || x.includes('vtr'))
-  if ((hasVideoViews || hasCPV) && !h.includes('fb orders')) return 'GOOGLE_AWARENESS'
-
-  // Google conversion campaigns
-  if (h.includes('rowlabels') || (h.includes('cost') && (h.includes('impr.') || h.includes('impressions')) && (h.includes('campaign id') || h.includes('type')))) return 'GOOGLE_DUMP'
-
-  // Google keywords / search terms
-  if (h.some(x => x.includes('search term')) && h.includes('cost')) return 'GOOGLE_SEARCH_TERMS'
-  if (h.some(x => x.includes('keyword')) && h.includes('cost') && h.some(x => x.includes('quality score') || x.includes('impr.'))) return 'GOOGLE_KEYWORDS'
-
-  // GA4
+  // ── GA4 ───────────────────────────────────────────────────────────────────
   if (h.includes('session campaign') || h.includes('session manual term') || h.includes('ecommerce revenue') || h.includes('purchase revenue')) return 'GA4_DUMP'
+
+  // ── Google Awareness / YouTube ─────────────────────────────────────────────
+  // Campaign report with TrueView columns
+  const hasTrueView = h.some(x => x.includes('trueview') || x.includes('true view'))
+  // Device report with TrueView CPV
+  const hasTrueViewCPV = h.some(x => x.includes('trueview avg. cpv') || x.includes('avg. cpv'))
+  // Standalone video views column
+  const hasVideoViews = h.some(x => x === 'video views' || x === 'views')
+  // Video view rate
+  const hasVTR = h.some(x => x.includes('video view rate') || x.includes('view rate'))
+  // Device breakdown report
+  const isDeviceReport = h.includes('device') && (hasTrueView || hasTrueViewCPV)
+  // Channel distribution report
+  const isChannelReport = h.includes('channels') && h.includes('campaigns')
+
+  if (hasTrueView || hasTrueViewCPV || hasVideoViews || isDeviceReport) return 'GOOGLE_AWARENESS'
+  if (isChannelReport) return 'GOOGLE_AWARENESS' // Channel dist maps to awareness
+
+  // ── Google Ad-level report (DemandGen, Pmax, Search ads) ─────────────────
+  // Has 'ad name' or 'ad status' column → ad-level report
+  const isAdReport = h.includes('ad name') || h.includes('ad status')
+  if (isAdReport && h.includes('campaign') && h.includes('cost')) return 'GOOGLE_AD_REPORT'
+
+  // ── Google Keywords / Search Terms ────────────────────────────────────────
+  if (h.some(x => x === 'search term' || x === 'search terms') && h.includes('cost')) return 'GOOGLE_SEARCH_TERMS'
+  if (h.some(x => x === 'keyword' || x === 'search keyword') && h.includes('cost') && h.some(x => x.includes('quality score') || x.includes('impr.'))) return 'GOOGLE_KEYWORDS'
+
+  // ── Google conversion campaigns dump ─────────────────────────────────────
+  // Internal format: RowLabels + Type column
+  if (h.includes('rowlabels') && h.includes('cost')) return 'GOOGLE_DUMP'
+  // Standard Google Ads campaign export: Campaign + Cost + Impr. + CTR
+  if (h.includes('campaign') && h.includes('cost') && (h.includes('impr.') || h.includes('impressions')) && h.includes('ctr')) return 'GOOGLE_DUMP'
+  // Conversion action report
+  if (h.includes('conversion action') && h.includes('campaign') && h.includes('cost')) return 'GOOGLE_DUMP'
 
   return 'UNKNOWN'
 }
@@ -215,14 +236,129 @@ function parseGA4Dump(rows) {
   }).filter(r => r.date)
 }
 
+
+// Google Ad-level report (DemandGen, Pmax, Search ads)
+function parseGoogleAdReport(rows) {
+  return rows.map(r => {
+    const adName      = r['Ad name'] || ''
+    const campaignName = r['Campaign'] || ''
+    return {
+      date: parseDate(r['Date'] || new Date()),
+      adName,
+      campaignName,
+      adgroupName: r['Ad group'] || '',
+      adType: r['Ad type'] || '',
+      adStatus: r['Status'] || r['Ad status'] || '',
+      campaignType: r['Campaign type'] || parseCampaignType(campaignName),
+      cost: num(r['Cost']),
+      impressions: num(r['Impr.'] || r['Impressions']),
+      clicks: num(r['Clicks']),
+      ctr: num(r['CTR']),
+      cpc: num(r['Avg. CPC']),
+      cpm: num(r['Avg. CPM']),
+      transactions: num(r['Conversions'] || r['Conv.'] || 0),
+      revenue: num(r['Conv. value'] || r['Conv. value/cost'] || 0),
+      roas: num(r['Conv. value / cost'] || r['ROAS'] || 0),
+      adStrength: r['Ad strength'] || '',
+      _source: 'GOOGLE_AD_REPORT',
+    }
+  }).filter(r => r.campaignName)
+}
+
+// Google Channel distribution report
+function parseGoogleChannelReport(rows) {
+  return rows.map(r => {
+    const campaignName = r['Campaigns'] || r['Campaign'] || ''
+    return {
+      date: new Date(),
+      channel: r['Channels'] || r['Channel'] || '',
+      campaignName,
+      campaignType: parseCampaignType(campaignName),
+      cost: num(r['Cost']),
+      impressions: num(r['Impr.'] || r['Impressions']),
+      clicks: num(r['Clicks'] || r['Interactions']),
+      transactions: num(r['Conversions'] || r['Conv.']),
+      revenue: num(r['Conv. value']),
+      _source: 'GOOGLE_AWARENESS',
+    }
+  }).filter(r => r.campaignName || r.channel)
+}
+
+// Google Device report (awareness)
+function parseGoogleDeviceReport(rows) {
+  return rows.map(r => {
+    const campaignName = r['Campaign'] || ''
+    return {
+      date: new Date(),
+      device: r['Device'] || '',
+      campaignName,
+      adgroupName: r['Ad group'] || '',
+      cost: num(r['Cost']),
+      impressions: num(r['Impr.'] || r['Impressions']),
+      videoViews: num(r['TrueView views'] || r['Video views'] || 0),
+      cpv: num(r['TrueView avg. CPV'] || r['Avg. CPV'] || 0),
+      cpm: num(r['Avg. CPM'] || 0),
+      vtr: num(r['TrueView view rate (in-stream)'] || r['Video view rate'] || 0),
+      _source: 'GOOGLE_AWARENESS',
+    }
+  }).filter(r => r.campaignName || r.device)
+}
+
+// Google Campaign report (awareness - TrueView)
+function parseGoogleCampaignReport(rows) {
+  return rows.map(r => {
+    const campaignName = r['Campaign'] || ''
+    const hasTrueView = r['TrueView views'] !== undefined
+    return {
+      date: new Date(),
+      campaignName,
+      campaignType: r['Campaign type'] || parseCampaignType(campaignName),
+      cost: num(r['Cost']),
+      impressions: num(r['Impr.'] || r['Impressions']),
+      clicks: num(r['Clicks']),
+      ctr: num(r['CTR']),
+      cpc: num(r['Avg. CPC']),
+      cpm: num(r['Avg. CPM'] || r['CPM']),
+      videoViews: num(r['TrueView views'] || r['Video views'] || 0),
+      vtr: num(r['TrueView view rate (in-stream)'] || r['Video view rate'] || 0),
+      uniqueUsers: num(r['Unique users'] || 0),
+      avgFreq: num(r['Avg. impr. freq. / user'] || 0),
+      transactions: num(r['Conversions'] || r['Conv.'] || 0),
+      revenue: num(r['Conv. value'] || 0),
+      _source: 'GOOGLE_AWARENESS',
+    }
+  }).filter(r => r.campaignName)
+}
+
 export function parseCSV(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
       let text = e.target.result
       const lines = text.split('\n')
-      const firstDataIdx = lines.findIndex(l => !l.trim().startsWith('#') && l.trim().length > 0)
-      text = lines.slice(firstDataIdx).join('\n')
+
+      // Strategy: find the real header row — the first row with 3+ comma-separated values
+      // that looks like column headers (not a title/date-range row).
+      // Google Ads exports have 2 garbage rows at top: "Report name" + "date range"
+      // GA4 exports have # comment lines at top
+      // Meta exports start directly with real headers
+      let headerIdx = 0
+      for (let i = 0; i < Math.min(lines.length, 10); i++) {
+        const line = lines[i].trim()
+        if (!line || line.startsWith('#')) continue
+        // Count comma-separated values — real header rows have many columns
+        const cols = line.split(',').length
+        if (cols >= 3) {
+          // Extra check: if it looks like a report title (single word + "report") or date range, skip it
+          const lc = line.toLowerCase()
+          const isTitle = cols <= 3 && (lc.includes('report') || lc.match(/\d+ \w+ \d{4}/))
+          if (!isTitle) {
+            headerIdx = i
+            break
+          }
+        }
+      }
+      text = lines.slice(headerIdx).join('\n')
 
       Papa.parse(text, {
         header: true,
@@ -238,13 +374,21 @@ export function parseCSV(file) {
           const headers = Object.keys(data[0])
           const fileType = detectFileType(headers)
           let parsed = []
-          if (fileType === 'META_DB')             parsed = parseMetaDB(data)
-          else if (fileType === 'META_HOURLY')    parsed = parseMetaHourly(data)
-          else if (fileType === 'GOOGLE_DUMP')    parsed = parseGoogleDump(data)
-          else if (fileType === 'GOOGLE_AWARENESS') parsed = parseGoogleAwareness(data)
-          else if (fileType === 'GOOGLE_KEYWORDS')  parsed = parseGoogleKeywords(data)
-          else if (fileType === 'GOOGLE_SEARCH_TERMS') parsed = parseGoogleSearchTerms(data)
-          else if (fileType === 'GA4_DUMP')       parsed = parseGA4Dump(data)
+          if (fileType === 'META_DB')               parsed = parseMetaDB(data)
+          else if (fileType === 'META_HOURLY')      parsed = parseMetaHourly(data)
+          else if (fileType === 'GOOGLE_DUMP')      parsed = parseGoogleDump(data)
+          else if (fileType === 'GOOGLE_AD_REPORT') parsed = parseGoogleAdReport(data)
+          else if (fileType === 'GOOGLE_AWARENESS') {
+            // Route to specific parser based on columns
+            const hh = headers.map(x => x.toLowerCase())
+            if (hh.includes('device')) parsed = parseGoogleDeviceReport(data)
+            else if (hh.includes('channels') || hh.includes('channel')) parsed = parseGoogleChannelReport(data)
+            else if (hh.some(x => x.includes('trueview') || x.includes('unique users'))) parsed = parseGoogleCampaignReport(data)
+            else parsed = parseGoogleAwareness(data)
+          }
+          else if (fileType === 'GOOGLE_KEYWORDS')      parsed = parseGoogleKeywords(data)
+          else if (fileType === 'GOOGLE_SEARCH_TERMS')  parsed = parseGoogleSearchTerms(data)
+          else if (fileType === 'GA4_DUMP')             parsed = parseGA4Dump(data)
           else {
             reject(new Error('Unrecognised file format. Headers found: ' + headers.slice(0, 5).join(', ')))
             return
@@ -263,6 +407,8 @@ export function parseWindsorPayload(payload, dataType) {
   if (dataType === 'meta') return parseMetaDB(payload)
   if (dataType === 'google') return parseGoogleDump(payload)
   if (dataType === 'google_awareness') return parseGoogleAwareness(payload)
+  if (dataType === 'google_keywords') return parseGoogleKeywords(payload)
+  if (dataType === 'google_search_terms') return parseGoogleSearchTerms(payload)
   if (dataType === 'ga4') return parseGA4Dump(payload)
   return payload
 }
