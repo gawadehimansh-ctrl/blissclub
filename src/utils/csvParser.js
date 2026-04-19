@@ -235,15 +235,17 @@ function parseGoogleSearchTerms(rows) {
 
 function parseGA4Dump(rows) {
   return rows.map(r => {
-    const term = r['Session manual term'] || r['Session campaign'] || ''
+    // Handle both CSV export format and Windsor API format
+    const term = r['session_manual_term'] || r['Session manual term'] || r['Session campaign'] || r['campaign'] || ''
+    const adContent = r['session_manual_ad_content'] || r['Session manual ad content'] || ''
     return {
-      date: parseDate(r['Date'] || r['Date.1']),
-      sessionCampaign: r['Session campaign'] || term,
+      date: parseDate(r['date'] || r['Date'] || r['Date.1']),
+      sessionCampaign: r['campaign'] || r['Session campaign'] || term,
       manualTerm: term,
-      tag: r['Session manual ad content'] || r['Unnamed: 2'] || r['Tags Review'] || '',
-      sessions: num(r['Sessions']),
-      transactions: num(r['Transactions'] || r['Purchases']),
-      revenue: num(r['Ecommerce revenue'] || r['Purchase revenue']),
+      tag: adContent || r['Unnamed: 2'] || r['Tags Review'] || '',
+      sessions: num(r['sessions'] || r['Sessions']),
+      transactions: num(r['transactions'] || r['Transactions'] || r['Purchases']),
+      revenue: num(r['totalrevenue'] || r['Ecommerce revenue'] || r['Purchase revenue']),
       isBrand: isBrandKeyword(term),
       _source: 'GA4_DUMP'
     }
@@ -381,7 +383,8 @@ function parseWindsorGoogleDaily(rows) {
 //          ad_group_name, clicks, conversions, Cost, Search Terms
 function parseWindsorSearchTerms(rows) {
   return rows.map(r => {
-    const term = r['Search Terms'] || r['search_term'] || r['search terms'] || ''
+    // Windsor returns column as 'Search Terms' (capital) or 'search_term' depending on version
+    const term = r['Search Terms'] || r['search_term'] || r['Search Term'] || r['search terms'] || ''
     const campaignName = r['campaign_name'] || r['campaign'] || ''
     return {
       date:         parseDate(r['date'] || new Date()),
