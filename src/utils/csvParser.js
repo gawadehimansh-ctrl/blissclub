@@ -437,10 +437,11 @@ function parseWindsorKeywords(rows) {
 //          spend, totalrevenue, transactions
 function parseWindsorMetaGA4(rows) {
   return rows.map(r => {
-    const term    = r['session_manual_term'] || r['campaign'] || ''
-    const adContent = r['session_manual_ad_content'] || ''
-    // Parse creative name from session_manual_ad_content (contains ad name)
-    const parsed  = parseCreativeName(adContent || term)
+    // Windsor field names differ from CSV: adset_name, ad_name (snake_case)
+    const term      = r['session_manual_term'] || r['adset_name'] || r['campaign'] || ''
+    const adContent = r['ad_name'] || r['session_manual_ad_content'] || ''
+    // Parse creative name from ad_name (contains full creative naming convention)
+    const parsed    = parseCreativeName(adContent || term)
     const isGA4 = (r['datasource'] || '') === 'googleanalytics4'
     const isMeta = (r['datasource'] || '') === 'facebook' || num(r['spend']) > 0
 
