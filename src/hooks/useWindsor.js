@@ -2,106 +2,104 @@ import { useCallback, useState } from 'react'
 import { useData } from '../data/store.jsx'
 import { parseWindsorPayload } from '../utils/csvParser.js'
 
-const BASE = import.meta.env.VITE_PROXY_URL || ''
+const PROXY = import.meta.env.VITE_WINDSOR_PROXY_URL || ''
 
 export function useWindsor() {
   const { loadData } = useData()
-  const [loading, setLoading]   = useState({})
-  const [error, setError]       = useState(null)
-  const [lastSync, setLastSync] = useState(null)
+  const [syncing, setSyncing]     = useState(false)
+  const [syncStatus, setSyncStatus] = useState(null) // null | 'waking' | 'syncing' | 'done' | 'error'
 
-  const proxyAvailable = !!BASE
+  // Step 1 — wake up Render (free tier sleeps after 15min)
+  const wakeProxy = useCallback(async () => {
+    if (!PROXY) return false
+    try {
+      const res = await fetch(`${PROXY}/ping`, { signal: AbortSignal.timeout(15000) })
+      return res.ok
+    } catch {
+      return false
+    }
+  }, [])
 
-  async function fetchEndpoint(path, params = {}) {
-    const url = new URL(BASE + path)
-    Object.entries(params).forEach(([k, v]) => v && url.searchParams.set(k, v))
-    const res = await fetch(url.toString())
-    if (!res.ok) throw new Error(`Proxy error ${res.status}: ${await res.text()}`)
+  const fetchEndpoint = useCallback(async (path) => {
+    const res = await fetch(`${PROXY}${path}`, { signal: AbortSignal.timeout(60000) })
+    if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`)
     const json = await res.json()
-    if (!json.ok) throw new Error(json.error || 'Unknown proxy error')
+    if (!json.ok) throw new Error(json.error || `${path} failed`)
     return json.data || []
-  }
+  }, [])
 
-  const syncMeta = useCallback(async (preset = 'this_monthT') => {
-    setLoading(l => ({ ...l, meta: true }))
-    setError(null)
+  const syncAll = useCallback(async (preset = 'last_30d') => {
+    if (!PROXY) return { success: [], errors: ['Proxy URL not configured'] }
+    setSyncing(true)
+    setSyncStatus('waking')
+
+    // Wake the proxy first (Render cold start can take 10-30s)
+    await wakeProxy()
+    setSyncStatus('syncing')
+
+    const results = { success: [], errors: [] }
+
+    // ── Meta + GA4 blended ──────────────────────────────────────────────────
     try {
-      const raw = await fetchEndpoint('/api/meta-daily', { preset })
+      const raw = await fetchEndpoint(`/api/meta-daily?preset=${preset}`)
       const parsed = parseWindsorPayload(raw, 'windsor_meta_ga4')
-      loadData(parsed, 'META_DB', true)
-      setLastSync(new Date())
-    } catch (e) { setError(e.message) }
-    finally { setLoading(l => ({ ...l, meta: false })) }
-  }, [loadData])
+      const metaRows = parsed.filter(r =>
+        r.datasource === 'facebook' ||
+        (!r.datasource && r.spend > 0)
+      )
+      const ga4Rows = parsed.filter(r =>
+        r.datasource === 'googleanalytics4' ||
+        (!r.datasource && !r.spend && (r.gaRevenue > 0 || r.sessions > 0))
+      )
+      if (metaRows.length > 0) loadData(metaRows, 'META_DB', true)
+      if (ga4Rows.length > 0)  loadData(ga4Rows,  'GA4_DUMP', false)
+      results.success.push(`Meta (${metaRows.length} rows) + GA4 (${ga4Rows.length} rows)`)
+    } catch (e) { results.errors.push(`Meta/GA4: ${e.message}`) }
 
-  const syncGoogle = useCallback(async (preset = 'this_monthT') => {
-    setLoading(l => ({ ...l, google: true }))
-    setError(null)
+    // ── GA4 standalone ──────────────────────────────────────────────────────
     try {
-      const raw = await fetchEndpoint('/api/google-campaigns', { preset })
-      const parsed = parseWindsorPayload(raw, 'windsor_google')
-      loadData(parsed, 'GOOGLE_DUMP', true)
-      setLastSync(new Date())
-    } catch (e) { setError(e.message) }
-    finally { setLoading(l => ({ ...l, google: false })) }
-  }, [loadData])
+      const data = await fetchEndpoint(`/api/ga4?preset=${preset}`)
+      const parsed = parseWindsorPayload(data, 'ga4')
+      if (parsed.length > 0) loadData(parsed, 'GA4_DUMP', false)
+      results.success.push(`GA4 standalone (${parsed.length} rows)`)
+    } catch (e) { results.errors.push(`GA4: ${e.message}`) }
 
-  const syncSearchTerms = useCallback(async (preset = 'this_monthT') => {
-    setLoading(l => ({ ...l, searchTerms: true }))
-    setError(null)
+    // ── Google campaigns ────────────────────────────────────────────────────
     try {
-      const raw = await fetchEndpoint('/api/google-search-terms', { preset })
-      const parsed = parseWindsorPayload(raw, 'windsor_search_terms')
-      loadData(parsed, 'GOOGLE_SEARCH_TERMS', true)
-      setLastSync(new Date())
-    } catch (e) { setError(e.message) }
-    finally { setLoading(l => ({ ...l, searchTerms: false })) }
-  }, [loadData])
+      const data = await fetchEndpoint(`/api/google-campaigns?preset=${preset}`)
+      const parsed = parseWindsorPayload(data, 'windsor_google')
+      loadData(parsed, 'WINDSOR_GOOGLE_DAILY', true)
+      results.success.push(`Google campaigns (${parsed.length} rows)`)
+    } catch (e) { results.errors.push(`Google campaigns: ${e.message}`) }
 
-  const syncKeywords = useCallback(async (preset = 'this_monthT') => {
-    setLoading(l => ({ ...l, keywords: true }))
-    setError(null)
+    // ── Search terms ────────────────────────────────────────────────────────
     try {
-      const raw = await fetchEndpoint('/api/google-keywords', { preset })
-      const parsed = parseWindsorPayload(raw, 'windsor_keywords')
-      loadData(parsed, 'GOOGLE_KEYWORDS', true)
-      setLastSync(new Date())
-    } catch (e) { setError(e.message) }
-    finally { setLoading(l => ({ ...l, keywords: false })) }
-  }, [loadData])
+      const data = await fetchEndpoint(`/api/google-search-terms?preset=${preset}`)
+      const parsed = parseWindsorPayload(data, 'windsor_search_terms')
+      if (parsed.length > 0) loadData(parsed, 'WINDSOR_SEARCH_TERMS', true)
+      results.success.push(`Search terms (${parsed.length} rows)`)
+    } catch (e) { results.errors.push(`Search terms: ${e.message}`) }
 
-  const syncGA4 = useCallback(async (preset = 'this_monthT') => {
-    setLoading(l => ({ ...l, ga4: true }))
-    setError(null)
+    // ── Keywords ────────────────────────────────────────────────────────────
     try {
-      const raw = await fetchEndpoint('/api/ga4', { preset })
-      const parsed = parseWindsorPayload(raw, 'ga4')
-      loadData(parsed, 'GA4_DUMP', true)
-      setLastSync(new Date())
-    } catch (e) { setError(e.message) }
-    finally { setLoading(l => ({ ...l, ga4: false })) }
-  }, [loadData])
+      const data = await fetchEndpoint(`/api/google-keywords?preset=${preset}`)
+      const parsed = parseWindsorPayload(data, 'windsor_keywords')
+      if (parsed.length > 0) loadData(parsed, 'WINDSOR_KEYWORDS', true)
+      results.success.push(`Keywords (${parsed.length} rows)`)
+    } catch (e) { results.errors.push(`Keywords: ${e.message}`) }
 
-  const syncAll = useCallback(async (preset = 'this_monthT') => {
-    setLoading({ meta: true, google: true, searchTerms: true, keywords: true, ga4: true })
-    setError(null)
+    // ── Awareness ───────────────────────────────────────────────────────────
     try {
-      await Promise.all([
-        syncMeta(preset),
-        syncGoogle(preset),
-        syncSearchTerms(preset),
-        syncKeywords(preset),
-        syncGA4(preset),
-      ])
-      setLastSync(new Date())
-    } catch (e) { setError(e.message) }
-    finally { setLoading({}) }
-  }, [syncMeta, syncGoogle, syncSearchTerms, syncKeywords, syncGA4])
+      const data = await fetchEndpoint(`/api/google-awareness?preset=${preset}`)
+      const parsed = parseWindsorPayload(data, 'windsor_awareness')
+      loadData(parsed, 'GOOGLE_AWARENESS', true)
+      results.success.push(`Awareness (${parsed.length} rows)`)
+    } catch (e) { results.errors.push(`Awareness: ${e.message}`) }
 
-  const isLoading = Object.values(loading).some(Boolean)
+    setSyncing(false)
+    setSyncStatus(results.errors.length === 0 ? 'done' : 'error')
+    return results
+  }, [fetchEndpoint, loadData, wakeProxy])
 
-  return {
-    loading, isLoading, error, lastSync, proxyAvailable,
-    syncAll, syncMeta, syncGoogle, syncSearchTerms, syncKeywords, syncGA4,
-  }
+  return { syncAll, syncing, syncStatus, proxyUrl: PROXY }
 }
