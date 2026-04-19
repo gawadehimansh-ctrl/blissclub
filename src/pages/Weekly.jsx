@@ -150,13 +150,11 @@ export default function Weekly() {
         <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>Meta</span>
-            <span className="pill pill-meta">1DC + GA4</span>
+            <span className="pill pill-meta">GA4</span>
           </div>
           {[
             ['Spend', fmtINRCompact(meta.spend), deltaLabel(meta.spend, metaP.spend), false],
-            ['1DC ROAS', fmtX(meta.roas1dc || calcROAS(meta.fbRevenue, meta.spend)), null, false],
             ['GA4 ROAS', fmtX(meta.roasGA4 || calcROAS(meta.gaRevenue, meta.spend)), deltaLabel(calcROAS(meta.gaRevenue, meta.spend), calcROAS(metaP.gaRevenue, metaP.spend)), false],
-            ['Gap (1DC vs GA4)', meta.roasGap != null ? `+${meta.roasGap?.toFixed(1)}%` : '—', null, true],
             ['CPA (GA4)', fmtINRCompact(meta.cpa), deltaLabel(meta.cpa, metaP.spend > 0 && metaP.gaOrders > 0 ? metaP.spend / metaP.gaOrders : null, true), true],
             ['CTR', fmtPct(meta.ctr), null, false],
             ['CPM', fmtINRCompact(meta.cpm), null, true],
@@ -165,11 +163,7 @@ export default function Weekly() {
               <span style={{ color: 'var(--text2)' }}>{lbl}</span>
               <span style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                 {val}
-                {dl && <span className={dl.positive ? 'up' : 'dn'} style={{ fontSize: 11 }}>{dl.label}</span>}
-                {lbl === 'Gap (1DC vs GA4)' && meta.roasGap != null && (
-                  <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 6, background: 'var(--amber-dim)', color: 'var(--amber)' }}>over-reported</span>
-                )}
-              </span>
+                {dl && <span className={dl.positive ? 'up' : 'dn'} style={{ fontSize: 11 }}>{dl.label}</span>}              </span>
             </div>
           ))}
         </div>
