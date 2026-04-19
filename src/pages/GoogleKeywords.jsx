@@ -10,12 +10,13 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-function aggG(rows) {
-  const cost = rows.reduce((s, r) => s + (r.cost || 0), 0)
+function aggG(rows = []) {
+  if (!Array.isArray(rows)) rows = []
+  const cost = rows.reduce((s, r) => s + (r.cost || r.spend || 0), 0)
   const imp  = rows.reduce((s, r) => s + (r.impressions || 0), 0)
   const cl   = rows.reduce((s, r) => s + (r.clicks || 0), 0)
-  const tx   = rows.reduce((s, r) => s + (r.transactions || 0), 0)
-  const rev  = rows.reduce((s, r) => s + (r.revenue || 0), 0)
+  const tx   = rows.reduce((s, r) => s + (r.transactions || r.conversions || 0), 0)
+  const rev  = rows.reduce((s, r) => s + (r.revenue || r.conversion_value || 0), 0)
   return {
     cost, impressions: imp, clicks: cl, transactions: tx, revenue: rev,
     roas: cost > 0 ? rev / cost : 0,
@@ -88,10 +89,10 @@ export default function GoogleKeywords() {
   const ga4Prev     = useMemo(() => getPrevRows(state.ga4Dump, 'date'), [state.ga4Dump, filters])
 
   // ── Brand/NB split from Google campaigns ─────────────────────────────────
-  const brandCampRows = useMemo(() => googleRows.filter(r => isBrandKeyword(r.campaignName)), [googleRows])
-  const nbCampRows    = useMemo(() => googleRows.filter(r => !isBrandKeyword(r.campaignName)), [googleRows])
-  const brandPrevRows = useMemo(() => googlePrev.filter(r => isBrandKeyword(r.campaignName)), [googlePrev])
-  const nbPrevRows    = useMemo(() => googlePrev.filter(r => !isBrandKeyword(r.campaignName)), [googlePrev])
+  const brandCampRows = useMemo(() => googleRows.filter(r => isBrandKeyword(r.campaignName || r.campaign || '')), [googleRows])
+  const nbCampRows    = useMemo(() => googleRows.filter(r => !isBrandKeyword(r.campaignName || r.campaign || '')), [googleRows])
+  const brandPrevRows = useMemo(() => googlePrev.filter(r => isBrandKeyword(r.campaignName || r.campaign || '')), [googlePrev])
+  const nbPrevRows    = useMemo(() => googlePrev.filter(r => !isBrandKeyword(r.campaignName || r.campaign || '')), [googlePrev])
 
   const totBrand = useMemo(() => aggG(brandCampRows), [brandCampRows])
   const totNB    = useMemo(() => aggG(nbCampRows),    [nbCampRows])
@@ -160,8 +161,8 @@ export default function GoogleKeywords() {
     })
     return months.map(m => {
       const mRows   = state.googleDump.filter(r => { const d = r.date instanceof Date ? r.date : new Date(r.date); return d >= m.start && d <= m.end })
-      const brand   = mRows.filter(r => isBrandKeyword(r.campaignName))
-      const nb      = mRows.filter(r => !isBrandKeyword(r.campaignName))
+      const brand   = mRows.filter(r => isBrandKeyword(r.campaignName || r.campaign || ''))
+      const nb      = mRows.filter(r => !isBrandKeyword(r.campaignName || r.campaign || ''))
       const bAgg    = aggG(brand), nbAgg = aggG(nb)
       const total   = bAgg.cost + nbAgg.cost
       return { label: m.label, brandCost: bAgg.cost, nbCost: nbAgg.cost,
@@ -300,7 +301,7 @@ export default function GoogleKeywords() {
                 <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>Spend split — Brand vs NB</div>
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
-                    <Pie data={[{ name:'Brand', value:totBrand.cost }, { name:'Non-Brand', value:totNB.cost }]}
+                    <Pie data={[{ name:'Brand', value:totBrand.cost || 0 }, { name:'Non-Brand', value:totNB.cost || 0 }]}
                       cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
                       <Cell fill="var(--green)" />
                       <Cell fill="var(--blue)" />
@@ -495,8 +496,11 @@ function Empty({ text='Upload Google data to see trend' }) {
 
 function NoData({ type }) {
   return (
-    <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#ef4444', marginBottom:12 }}>
-      No {type} data — upload the {type} CSV from Upload page (separate from campaigns CSV)
+    <div style={{ background:'var(--bg2)', border:'0.5px dashed var(--border2)', borderRadius:10, padding:'24px', textAlign:'center', fontSize:13, color:'var(--text3)' }}>
+      <div style={{ fontSize:24, marginBottom:8 }}>🔍</div>
+      <div style={{ fontWeight:600, color:'var(--text)', marginBottom:4 }}>No {type} data yet</div>
+      <div>Click <strong>Sync keywords</strong> or <strong>Sync search terms</strong> on the Upload page to pull data from Windsor automatically.</div>
+      <div style={{ marginTop:6, fontSize:11, color:'var(--text3)' }}>Or upload a CSV manually from Google Ads → Keywords section.</div>
     </div>
   )
 }
