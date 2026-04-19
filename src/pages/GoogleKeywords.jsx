@@ -80,8 +80,8 @@ export default function GoogleKeywords() {
   const [bnbFilter, setBnbFilter] = useState('all') // 'all' | 'brand' | 'nb'
 
   // ── Data sources ──────────────────────────────────────────────────────────
-  const keywords    = useMemo(() => state.googleKeywords,    [state.googleKeywords])
-  const searchTerms = useMemo(() => state.googleSearchTerms, [state.googleSearchTerms])
+  const keywords    = useMemo(() => state.googleKeywords || [],    [state.googleKeywords])
+  const searchTerms = useMemo(() => state.googleSearchTerms || [], [state.googleSearchTerms])
   const googleRows  = useMemo(() => filterRows(state.googleDump, 'date'), [state.googleDump, filters])
   const googlePrev  = useMemo(() => getPrevRows(state.googleDump, 'date'), [state.googleDump, filters])
   const ga4Rows     = useMemo(() => filterRows(state.ga4Dump, 'date'), [state.ga4Dump, filters])
