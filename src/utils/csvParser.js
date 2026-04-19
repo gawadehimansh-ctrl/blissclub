@@ -4,6 +4,20 @@ import { parseCreativeName, parseCampaignType, parseSaleTag, isBrandKeyword } fr
 export function detectFileType(headers) {
   const h = headers.map(x => String(x).toLowerCase().trim())
 
+  // ── Windsor Google Sheets formats (detected first — specific column combos) ──
+  // Windsor google_daily: campaign_name + cost + roas + ecr
+  if (h.includes('campaign_name') && h.includes('cost') && (h.includes('roas') || h.includes('ecr'))) return 'WINDSOR_GOOGLE_DAILY'
+
+  // Windsor google_search_terms: "search terms" column (Windsor writes it with capital S and space)
+  if (h.includes('search terms') || (h.includes('search_term') && h.includes('campaign_name'))) return 'WINDSOR_SEARCH_TERMS'
+
+  // Windsor google_keywords: keyword_text + keyword_match_type
+  if (h.includes('keyword_text') && h.includes('keyword_match_type')) return 'WINDSOR_KEYWORDS'
+
+  // Windsor meta/GA4 blended: session_manual_term + totalrevenue + datasource
+  if (h.includes('session_manual_term') && h.includes('totalrevenue')) return 'WINDSOR_META_GA4'
+  if (h.includes('session_manual_term') && h.includes('transactions') && h.includes('datasource')) return 'WINDSOR_META_GA4'
+
   // ── Meta ──────────────────────────────────────────────────────────────────
   const isMetaExport = h.includes('reporting starts') || h.includes('reporting ends')
   if (isMetaExport) {
@@ -330,6 +344,137 @@ function parseGoogleCampaignReport(rows) {
   }).filter(r => r.campaignName)
 }
 
+
+// ── Windsor Google Sheets parsers ────────────────────────────────────────────
+// These handle CSVs downloaded from the BlissClub Windsor Google Sheet
+
+// Windsor: google_daily tab
+// Headers: account_name, ad_name, campaign_name, date, impressions, spend,
+//          average_cpm, clicks, conversion_value, conversions, cost, cpc, ctr,
+//          roas, conv value/cost, ecr
+function parseWindsorGoogleDaily(rows) {
+  return rows.map(r => {
+    const campaignName = r['campaign_name'] || r['campaign'] || ''
+    return {
+      date: parseDate(r['date']),
+      campaignName,
+      campaignType: parseCampaignType(campaignName),
+      cost:         num(r['cost'] || r['spend']),
+      impressions:  num(r['impressions']),
+      clicks:       num(r['clicks']),
+      cpc:          num(r['cpc']),
+      ctr:          num(r['ctr']),
+      cpm:          num(r['average_cpm'] || r['cpm']),
+      transactions: num(r['conversions']),
+      revenue:      num(r['conversion_value']),
+      roas:         num(r['roas'] || r['conv value/cost']),
+      ecr:          num(r['ecr']),
+      adgroupName:  r['ad_group_name'] || '',
+      saleTag:      parseSaleTag(campaignName),
+      _source: 'WINDSOR_GOOGLE_DAILY',
+    }
+  }).filter(r => r.date && r.campaignName)
+}
+
+// Windsor: google_search_terms tab
+// Headers: account_name, ad_name, campaign_name, date, impressions, spend,
+//          ad_group_name, clicks, conversions, Cost, Search Terms
+function parseWindsorSearchTerms(rows) {
+  return rows.map(r => {
+    const term = r['Search Terms'] || r['search_term'] || r['search terms'] || ''
+    const campaignName = r['campaign_name'] || r['campaign'] || ''
+    return {
+      date:         parseDate(r['date'] || new Date()),
+      term,
+      campaignName,
+      adgroupName:  r['ad_group_name'] || '',
+      cost:         num(r['Cost'] || r['cost'] || r['spend']),
+      impressions:  num(r['impressions']),
+      clicks:       num(r['clicks']),
+      ctr:          num(r['ctr'] || 0),
+      cpc:          num(r['cpc'] || 0),
+      transactions: num(r['conversions']),
+      revenue:      num(r['conversion_value'] || 0),
+      isBrand:      isBrandKeyword(term),
+      _source: 'WINDSOR_SEARCH_TERMS',
+    }
+  }).filter(r => r.term)
+}
+
+// Windsor: google_keywords tab
+// Headers: account_name, ad_group_name, campaign_name, clicks, conversions,
+//          cost, date, impressions, keyword_match_type, keyword_text
+function parseWindsorKeywords(rows) {
+  return rows.map(r => {
+    const keyword = r['keyword_text'] || r['keyword'] || ''
+    const campaignName = r['campaign_name'] || r['campaign'] || ''
+    return {
+      date:          parseDate(r['date'] || new Date()),
+      keyword,
+      matchType:     r['keyword_match_type'] || r['match_type'] || '',
+      campaignName,
+      adgroupName:   r['ad_group_name'] || '',
+      cost:          num(r['cost'] || r['spend']),
+      impressions:   num(r['impressions']),
+      clicks:        num(r['clicks']),
+      ctr:           num(r['ctr'] || 0),
+      cpc:           num(r['cpc'] || 0),
+      transactions:  num(r['conversions']),
+      revenue:       num(r['conversion_value'] || 0),
+      roas:          num(r['roas'] || 0),
+      impressionShare: num(r['impression_share'] || r['search_impr_share'] || 0),
+      qualityScore:  num(r['quality_score'] || 0),
+      isBrand:       isBrandKeyword(keyword) || isBrandKeyword(campaignName),
+      _source: 'WINDSOR_KEYWORDS',
+    }
+  }).filter(r => r.keyword)
+}
+
+// Windsor: meta_daily tab (GA4 data joined with Meta)
+// Headers: account_name, campaign, clicks, cost_per_action_type_landing_page_view,
+//          cpc, datasource, date, purchase_roas_omni_purchase,
+//          session_manual_ad_content, session_manual_term, sessions, source,
+//          spend, totalrevenue, transactions
+function parseWindsorMetaGA4(rows) {
+  return rows.map(r => {
+    const term    = r['session_manual_term'] || r['campaign'] || ''
+    const adContent = r['session_manual_ad_content'] || ''
+    // Parse creative name from session_manual_ad_content (contains ad name)
+    const parsed  = parseCreativeName(adContent || term)
+    return {
+      date:           parseDate(r['date']),
+      adsetName:      term,   // session_manual_term = adset name in Meta UTM
+      adName:         adContent,
+      campaignName:   r['campaign'] || '',
+      spend:          num(r['spend']),
+      clicks:         num(r['clicks']),
+      cpc:            num(r['cpc']),
+      sessions:       num(r['sessions']),
+      gaOrders:       num(r['transactions']),
+      gaRevenue:      num(r['totalrevenue']),
+      fbRevenue:      num(r['totalrevenue']),  // use GA4 revenue as primary
+      fbOrders:       num(r['transactions']),
+      reportedROAS:   num(r['purchase_roas_omni_purchase']),
+      cplpv:          num(r['cost_per_action_type_landing_page_view']),
+      datasource:     r['datasource'] || '',
+      source:         r['source'] || '',
+      cohort:         parsed.cohort || '',
+      format:         parsed.format || '',
+      product:        parsed.product || '',
+      contentType:    parsed.contentType || '',
+      creator:        parsed.creator || '',
+      saleTag:        parseSaleTag(term),
+      _source: 'WINDSOR_META_GA4',
+    }
+  }).filter(r => r.date && (r.adsetName || r.campaignName))
+}
+
+// Windsor: Sheet1 (blended Meta + GA4 dump)
+// Same structure as meta_daily — just different sheet name
+function parseWindsorSheet1(rows) {
+  return parseWindsorMetaGA4(rows)
+}
+
 export function parseCSV(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -376,6 +521,10 @@ export function parseCSV(file) {
           let parsed = []
           if (fileType === 'META_DB')               parsed = parseMetaDB(data)
           else if (fileType === 'META_HOURLY')      parsed = parseMetaHourly(data)
+          else if (fileType === 'WINDSOR_META_GA4') parsed = parseWindsorMetaGA4(data)
+          else if (fileType === 'WINDSOR_GOOGLE_DAILY') parsed = parseWindsorGoogleDaily(data)
+          else if (fileType === 'WINDSOR_SEARCH_TERMS') parsed = parseWindsorSearchTerms(data)
+          else if (fileType === 'WINDSOR_KEYWORDS')     parsed = parseWindsorKeywords(data)
           else if (fileType === 'GOOGLE_DUMP')      parsed = parseGoogleDump(data)
           else if (fileType === 'GOOGLE_AD_REPORT') parsed = parseGoogleAdReport(data)
           else if (fileType === 'GOOGLE_AWARENESS') {
