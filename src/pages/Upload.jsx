@@ -122,6 +122,24 @@ const DATA_SOURCES = [
 
 export default function Upload() {
   const { state, dispatch } = useData()
+  const { syncAll } = useWindsor()
+  const [syncing, setSyncing] = React.useState(false)
+  const [syncResult, setSyncResult] = React.useState(null)
+  const [syncPreset, setSyncPreset] = React.useState('last_30d')
+
+  const PROXY_URL = import.meta.env.VITE_WINDSOR_PROXY_URL
+
+  async function handleSync() {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const result = await syncAll(syncPreset)
+      setSyncResult(result)
+    } catch (e) {
+      setSyncResult({ errors: [e.message], success: [] })
+    }
+    setSyncing(false)
+  }
 
   const counts = {
     metaDB: state.metaDB.length,
