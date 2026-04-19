@@ -383,21 +383,23 @@ function parseWindsorGoogleDaily(rows) {
 //          ad_group_name, clicks, conversions, Cost, Search Terms
 function parseWindsorSearchTerms(rows) {
   return rows.map(r => {
-    // Windsor returns column as 'Search Terms' (capital) or 'search_term' depending on version
-    const term = r['Search Terms'] || r['search_term'] || r['Search Term'] || r['search terms'] || ''
-    const campaignName = r['campaign_name'] || r['campaign'] || ''
+    // Windsor API returns: search_term, campaign, spend, clicks, impressions, conversions, conversion_value
+    const term = r['search_term'] || r['Search Term'] || r['Search Terms'] || r['search terms'] || ''
+    const campaignName = r['campaign'] || r['campaign_name'] || ''
     return {
       date:         parseDate(r['date'] || new Date()),
       term,
       campaignName,
       adgroupName:  r['ad_group_name'] || '',
-      cost:         num(r['Cost'] || r['cost'] || r['spend']),
-      impressions:  num(r['impressions']),
-      clicks:       num(r['clicks']),
+      cost:         num(r['spend'] || r['cost'] || r['Cost'] || 0),
+      impressions:  num(r['impressions'] || 0),
+      clicks:       num(r['clicks'] || 0),
       ctr:          num(r['ctr'] || 0),
       cpc:          num(r['cpc'] || 0),
-      transactions: num(r['conversions']),
+      transactions: num(r['conversions'] || 0),
       revenue:      num(r['conversion_value'] || 0),
+      roas:         num(r['conversion_value'] || 0) > 0 && num(r['spend'] || r['cost'] || 0) > 0
+                      ? num(r['conversion_value']) / num(r['spend'] || r['cost']) : 0,
       isBrand:      isBrandKeyword(term),
       _source: 'WINDSOR_SEARCH_TERMS',
     }
@@ -409,22 +411,25 @@ function parseWindsorSearchTerms(rows) {
 //          cost, date, impressions, keyword_match_type, keyword_text
 function parseWindsorKeywords(rows) {
   return rows.map(r => {
+    // Windsor API returns: keyword_text, keyword_match_type, campaign, spend, clicks etc.
     const keyword = r['keyword_text'] || r['keyword'] || ''
-    const campaignName = r['campaign_name'] || r['campaign'] || ''
+    const campaignName = r['campaign'] || r['campaign_name'] || ''
+    const cost = num(r['spend'] || r['cost'] || r['Cost'] || 0)
+    const revenue = num(r['conversion_value'] || 0)
     return {
       date:          parseDate(r['date'] || new Date()),
       keyword,
       matchType:     r['keyword_match_type'] || r['match_type'] || '',
       campaignName,
       adgroupName:   r['ad_group_name'] || '',
-      cost:          num(r['cost'] || r['spend']),
-      impressions:   num(r['impressions']),
-      clicks:        num(r['clicks']),
+      cost,
+      impressions:   num(r['impressions'] || 0),
+      clicks:        num(r['clicks'] || 0),
       ctr:           num(r['ctr'] || 0),
       cpc:           num(r['cpc'] || 0),
-      transactions:  num(r['conversions']),
-      revenue:       num(r['conversion_value'] || 0),
-      roas:          num(r['roas'] || 0),
+      transactions:  num(r['conversions'] || 0),
+      revenue,
+      roas:          cost > 0 ? revenue / cost : 0,
       impressionShare: num(r['impression_share'] || r['search_impr_share'] || 0),
       qualityScore:  num(r['quality_score'] || 0),
       isBrand:       isBrandKeyword(keyword) || isBrandKeyword(campaignName),
