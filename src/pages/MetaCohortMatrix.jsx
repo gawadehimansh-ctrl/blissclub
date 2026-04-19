@@ -234,7 +234,7 @@ export default function MetaCohortMatrix() {
         <div style={{ fontSize: 13, color: '#64748b' }}>ACQ · REM · RET breakdown across all dimensions</div>
       </div>
 
-      <FilterBar filters={filters} />
+      <FilterBar filters={filters} showAdvanced />
 
       {!hasData && (
         <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 10, padding: '14px 18px', margin: '20px 0', color: '#fbbf24', fontSize: 13 }}>
