@@ -1,67 +1,59 @@
-import { useCallback, useState } from 'react';
-import { useData } from '../data/store.jsx';
+import { useCallback } from 'react'
+import { useData } from '../data/store.jsx'
+import { parseWindsorPayload } from '../utils/csvParser.js'
 
-// Vercel serverless functions — same origin, no proxy URL needed
-const ENDPOINTS = {
-  metaDaily:    '/api/meta-daily',
-  metaHourly:   '/api/meta-hourly',
-  googleDaily:  '/api/google-campaigns',
-  ga4Daily:     '/api/ga4-daily',
-};
+const PROXY = import.meta.env.VITE_WINDSOR_PROXY_URL || ''
 
 export function useWindsor() {
-  const { loadData } = useData();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastSync, setLastSync] = useState(null);
+  const { loadData } = useData()
 
-  const fetchAndLoad = useCallback(async (endpoint, fileType, params = {}) => {
-    const url = new URL(endpoint, window.location.origin);
-    Object.entries(params).forEach(([k, v]) => v && url.searchParams.set(k, v));
-    const res = await fetch(url.toString());
-    if (!res.ok) throw new Error(`API error ${res.status}`);
-    const json = await res.json();
-    if (!json.ok) throw new Error(json.error);
-    loadData(json.data, fileType, true);
-    return true;
-  }, [loadData]);
+  const fetchEndpoint = useCallback(async (path) => {
+    const res = await fetch(`${PROXY}${path}`)
+    if (!res.ok) throw new Error(`${path} failed: ${res.status}`)
+    const json = await res.json()
+    return json.data || []
+  }, [])
 
-  const syncAll = useCallback(async (dateParams = {}) => {
-    setLoading(true); setError(null);
+  const syncAll = useCallback(async (preset = 'last_30d') => {
+    const results = { success: [], errors: [] }
+
+    // Meta + GA4
     try {
-      await Promise.all([
-        fetchAndLoad(ENDPOINTS.metaDaily, 'META_DB', dateParams),
-        fetchAndLoad(ENDPOINTS.googleDaily, 'GOOGLE_DUMP', dateParams),
-        fetchAndLoad(ENDPOINTS.ga4Daily, 'GA4_DUMP', dateParams),
-      ]);
-      setLastSync(new Date());
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  }, [fetchAndLoad]);
+      const data = await fetchEndpoint(`/api/meta-daily?preset=${preset}`)
+      loadData(parseWindsorPayload(data, 'windsor_meta_ga4'), 'WINDSOR_META_GA4', true)
+      results.success.push('Meta + GA4')
+    } catch (e) { results.errors.push(`Meta: ${e.message}`) }
 
-  const syncMeta = useCallback(async (dateParams = {}) => {
-    setLoading(true); setError(null);
-    try { await fetchAndLoad(ENDPOINTS.metaDaily, 'META_DB', dateParams); setLastSync(new Date()); }
-    catch (e) { setError(e.message); } finally { setLoading(false); }
-  }, [fetchAndLoad]);
+    // Google campaigns
+    try {
+      const data = await fetchEndpoint(`/api/google-campaigns?preset=${preset}`)
+      loadData(parseWindsorPayload(data, 'windsor_google'), 'WINDSOR_GOOGLE_DAILY', true)
+      results.success.push('Google campaigns')
+    } catch (e) { results.errors.push(`Google: ${e.message}`) }
 
-  const syncMetaHourly = useCallback(async () => {
-    setLoading(true); setError(null);
-    try { await fetchAndLoad(ENDPOINTS.metaHourly, 'META_HOURLY', {}); setLastSync(new Date()); }
-    catch (e) { setError(e.message); } finally { setLoading(false); }
-  }, [fetchAndLoad]);
+    // Search terms
+    try {
+      const data = await fetchEndpoint(`/api/google-search-terms?preset=${preset}`)
+      loadData(parseWindsorPayload(data, 'windsor_search_terms'), 'WINDSOR_SEARCH_TERMS', true)
+      results.success.push('Search terms')
+    } catch (e) { results.errors.push(`Search terms: ${e.message}`) }
 
-  const syncGoogle = useCallback(async (dateParams = {}) => {
-    setLoading(true); setError(null);
-    try { await fetchAndLoad(ENDPOINTS.googleDaily, 'GOOGLE_DUMP', dateParams); setLastSync(new Date()); }
-    catch (e) { setError(e.message); } finally { setLoading(false); }
-  }, [fetchAndLoad]);
+    // Keywords
+    try {
+      const data = await fetchEndpoint(`/api/google-keywords?preset=${preset}`)
+      loadData(parseWindsorPayload(data, 'windsor_keywords'), 'WINDSOR_KEYWORDS', true)
+      results.success.push('Keywords')
+    } catch (e) { results.errors.push(`Keywords: ${e.message}`) }
 
-  const syncGA4 = useCallback(async (dateParams = {}) => {
-    setLoading(true); setError(null);
-    try { await fetchAndLoad(ENDPOINTS.ga4Daily, 'GA4_DUMP', dateParams); setLastSync(new Date()); }
-    catch (e) { setError(e.message); } finally { setLoading(false); }
-  }, [fetchAndLoad]);
+    // Awareness
+    try {
+      const data = await fetchEndpoint(`/api/google-awareness?preset=${preset}`)
+      loadData(parseWindsorPayload(data, 'windsor_awareness'), 'GOOGLE_AWARENESS', true)
+      results.success.push('Awareness')
+    } catch (e) { results.errors.push(`Awareness: ${e.message}`) }
 
-  return { loading, error, lastSync, proxyAvailable: true, syncAll, syncMeta, syncMetaHourly, syncGoogle, syncGA4 };
+    return results
+  }, [fetchEndpoint, loadData])
+
+  return { syncAll }
 }
