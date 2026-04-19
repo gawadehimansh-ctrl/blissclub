@@ -167,7 +167,8 @@ export default function GoogleKeywords() {
       return { label: m.label, brandCost: bAgg.cost, nbCost: nbAgg.cost,
         brandPct: total>0 ? Math.round(bAgg.cost/total*100) : 0,
         nbPct: total>0 ? Math.round(nbAgg.cost/total*100) : 0,
-        brandROAS: bAgg.roas, nbROAS: nbAgg.roas }
+        brandROAS: isFinite(bAgg.roas) ? bAgg.roas : 0,
+        nbROAS: isFinite(nbAgg.roas) ? nbAgg.roas : 0 }
     })
   }, [state.googleDump])
 
@@ -434,8 +435,8 @@ export default function GoogleKeywords() {
                 <LineChart data={momTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize:11, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize:11, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
-                  <Tooltip {...TIP} formatter={(v,n) => [fmtX(v), n]} />
+                  <YAxis tick={{ fontSize:11, fill:'var(--text3)' }} axisLine={false} tickLine={false} tickFormatter={v => isFinite(v) ? fmtX(v) : '—'} />
+                  <Tooltip {...TIP} formatter={(v,n) => [isFinite(v) ? fmtX(v) : '—', n]} />
                   <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ fontSize:11, color:'var(--text2)' }}>{v}</span>} />
                   <Line dataKey="brandROAS" stroke="var(--green)" name="Brand ROAS" strokeWidth={2} dot={{ r:3 }} />
                   <Line dataKey="nbROAS" stroke="var(--blue)" name="NB ROAS" strokeWidth={2} dot={{ r:3 }} />
