@@ -48,7 +48,7 @@ export default function MetaCampaigns() {
 
   // Adset groups
   const adsetGroups = useMemo(() => {
-    const source = drillKey && level === 'Ad set' ? rows.filter(r => r.cohort === drillKey) : rows
+    const source = drillKey && level === 'Ad set' ? rows.filter(r => r.campaignName === drillKey) : rows
     const g = groupBy(source, 'adsetName')
     return Object.entries(g).map(([name, rs]) => {
       const agg = aggregateRows(rs)
@@ -61,9 +61,7 @@ export default function MetaCampaigns() {
     const source = drillKey && level === 'Ad' ? rows.filter(r => r.adsetName === drillKey) : rows
     return source.map(r => ({
       ...r,
-      roas1dc: calcROAS(r.fbRevenue, r.spend),
       roasGA4: calcROAS(r.gaRevenue, r.spend),
-      roasGap: calcROASGap(calcROAS(r.fbRevenue, r.spend), calcROAS(r.gaRevenue, r.spend)),
       ctr: r.impressions > 0 ? r.clicks / r.impressions : 0,
       cpm: r.impressions > 0 ? (r.spend / r.impressions) * 1000 : 0,
       cpc: r.clicks > 0 ? r.spend / r.clicks : 0,
@@ -72,15 +70,13 @@ export default function MetaCampaigns() {
   }, [rows, drillKey, level])
 
   const campaignCols = [
-    { key: 'cohort', label: 'Cohort', align: 'left', bold: true },
+    { key: 'campaignName', label: 'Campaign', align: 'left', bold: true },
     { key: 'spend', label: 'Spend', render: v => fmtINRCompact(v) },
     { key: 'impressions', label: 'Impr.', render: v => fmtNum(v) },
     { key: 'clicks', label: 'Clicks', render: v => fmtNum(v) },
     { key: 'ctr', label: 'CTR', render: v => fmtPct(v) },
     { key: 'cpm', label: 'CPM', render: v => fmtINRCompact(v) },
-    { key: 'fbRevenue', label: '1DC Rev', render: v => fmtINRCompact(v) },
     { key: 'gaRevenue', label: 'GA4 Rev', render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
-    { key: 'roas1dc', label: '1DC ROAS', render: v => fmtX(v) },
     { key: 'roasGA4', label: 'GA4 ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
     { key: 'roasGap', label: 'Gap %', render: v => v != null ? `+${v?.toFixed(1)}%` : '—', color: v => v > 30 ? 'var(--red)' : v > 15 ? 'var(--amber)' : 'var(--text2)' },
     { key: 'gaOrders', label: 'Orders', render: v => fmtNum(v) },
@@ -94,7 +90,7 @@ export default function MetaCampaigns() {
 
   const adCols = [
     { key: 'adName', label: 'Ad name', align: 'left', bold: true },
-    { key: 'cohort', label: 'Cohort', render: v => <span className="pill pill-meta">{v}</span> },
+    { key: 'cohort', label: 'Cohort', render: v => v ? <span className="pill pill-meta">{v}</span> : '—' },
     { key: 'format', label: 'Format' },
     { key: 'product', label: 'Product' },
     { key: 'contentType', label: 'Type' },
@@ -104,7 +100,6 @@ export default function MetaCampaigns() {
     { key: 'ctr', label: 'CTR', render: v => fmtPct(v), color: v => v > 0.02 ? 'var(--green)' : v > 0.01 ? 'var(--amber)' : 'var(--red)' },
     { key: 'cpc', label: 'CPC', render: v => fmtINRCompact(v) },
     { key: 'cpm', label: 'CPM', render: v => fmtINRCompact(v) },
-    { key: 'roas1dc', label: '1DC ROAS', render: v => fmtX(v) },
     { key: 'roasGA4', label: 'GA4 ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
     { key: 'roasGap', label: 'Gap %', render: v => v != null ? `+${v?.toFixed(1)}%` : '—', color: v => v > 30 ? 'var(--red)' : v > 15 ? 'var(--amber)' : 'var(--text2)' },
     { key: 'gaRevenue', label: 'GA4 Rev', render: v => fmtINRCompact(v) },
@@ -120,16 +115,14 @@ export default function MetaCampaigns() {
     <div>
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Meta campaigns</h1>
-        <div style={{ fontSize: 12, color: 'var(--text3)' }}>1DC ROAS · GA4 ROAS · Gap — all three always visible</div>
+        <div style={{ fontSize: 12, color: 'var(--text3)' }}>GA4 ROAS — source of truth</div>
       </div>
       <FilterBar filters={filters} showAdvanced />
 
       {/* Totals */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 10, marginBottom: 16 }}>
         <MetricCard label="Spend" value={fmtINRCompact(totals.spend)} accent="var(--pink)" />
-        <MetricCard label="1DC ROAS" value={fmtX(totals.roas1dc)} accent="var(--pink)" sublabel="Meta reported" />
         <MetricCard label="GA4 ROAS" value={fmtX(totals.roasGA4)} accent="var(--purple)" sublabel="Source of truth" />
-        <MetricCard label="Gap" value={totals.roasGap != null ? `+${totals.roasGap?.toFixed(1)}%` : '—'} accent="var(--amber)" sublabel="1DC over-reporting" />
         <MetricCard label="CPA (GA4)" value={fmtINRCompact(totals.cpa)} accent="var(--pink)" />
       </div>
 
@@ -160,7 +153,7 @@ export default function MetaCampaigns() {
         data={tableData}
         defaultSort={{ key: 'spend', dir: 'desc' }}
         onRowClick={row => {
-          if (level === 'Campaign') { setDrillKey(row.cohort); setLevel('Ad set') }
+          if (level === 'Campaign') { setDrillKey(row.campaignName); setLevel('Ad set') }
           if (level === 'Ad set') { setDrillKey(row.adsetName); setLevel('Ad') }
         }}
       />
