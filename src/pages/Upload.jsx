@@ -1,5 +1,6 @@
 import React from 'react'
 import CSVUploader from '../components/CSVUploader.jsx'
+import { useWindsor } from '../hooks/useWindsor.js'
 import { useData } from '../data/store.jsx'
 import { fmtNum } from '../utils/formatters.js'
 import { format } from 'date-fns'
@@ -133,6 +134,40 @@ export default function Upload() {
 
   return (
     <div>
+
+      {/* Windsor Auto-Sync */}
+      <div style={{ background: PROXY_URL ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${PROXY_URL ? 'rgba(34,197,94,0.25)' : 'var(--border)'}`, borderRadius: 10, padding: '16px 20px', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>
+              {PROXY_URL ? '⚡ Windsor Auto-Sync' : '⚡ Windsor Auto-Sync'}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text3)' }}>
+              {PROXY_URL ? 'Proxy connected — pulls Meta + Google + GA4 in one click' : 'Add VITE_WINDSOR_PROXY_URL to Vercel env vars to enable'}
+            </div>
+          </div>
+          {PROXY_URL && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <select value={syncPreset} onChange={e => setSyncPreset(e.target.value)} style={{ background: 'var(--bg3)', border: '0.5px solid var(--border2)', borderRadius: 6, padding: '5px 8px', color: 'var(--text)', fontSize: 12, outline: 'none' }}>
+                <option value="last_7d">Last 7 days</option>
+                <option value="last_14d">Last 14 days</option>
+                <option value="last_30d">Last 30 days</option>
+                <option value="this_monthT">This month</option>
+              </select>
+              <button onClick={handleSync} disabled={syncing} style={{ padding: '7px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: 'none', cursor: syncing ? 'default' : 'pointer', background: syncing ? 'var(--bg3)' : 'var(--green)', color: syncing ? 'var(--text3)' : '#fff', opacity: syncing ? 0.7 : 1 }}>
+                {syncing ? '⏳ Syncing...' : '🔄 Sync everything'}
+              </button>
+            </div>
+          )}
+        </div>
+        {syncResult && (
+          <div style={{ fontSize: 12, marginTop: 8 }}>
+            {syncResult.success?.length > 0 && <div style={{ color: 'var(--green)', marginBottom: 4 }}>✅ Synced: {syncResult.success.join(', ')}</div>}
+            {syncResult.errors?.length > 0 && <div style={{ color: 'var(--red)' }}>❌ Failed: {syncResult.errors.join(', ')}</div>}
+          </div>
+        )}
+      </div>
+
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Data upload</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>
