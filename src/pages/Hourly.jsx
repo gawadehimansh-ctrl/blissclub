@@ -1,344 +1,359 @@
 import React, { useMemo, useState } from 'react'
 import { useData } from '../data/store.jsx'
-import { fmtINRCompact, fmtPct, fmtNum } from '../utils/formatters.js'
-import { subDays } from 'date-fns'
-
-const TIME_SLOTS = [
-  { key: '09', label: '9 AM upload' },
-  { key: '12', label: '12 PM upload' },
-  { key: '15', label: '3 PM upload' },
-  { key: '17', label: '5 PM upload' },
-]
-
-const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+import CSVUploader from '../components/CSVUploader.jsx'
+import DatePicker from '../components/DatePicker.jsx'
+import { format, subDays } from 'date-fns'
 
 function parseHour(timeStr) {
   if (!timeStr) return null
   const m = String(timeStr).match(/(\d{1,2}):\d{2}/)
-  return m ? String(parseInt(m[1])).padStart(2, '0') : null
+  return m ? parseInt(m[1]) : null
 }
 
-function buildHourly(rows) {
-  const byHour = {}
-  for (const r of rows) {
-    const h = parseHour(r.timeSlot || r.hour)
-    if (h === null) continue
-    if (!byHour[h]) byHour[h] = { hour: h, spend: 0, clicks: 0, impressions: 0, fbOrders: 0, fbRevenue: 0, sessions: 0, gaOrders: 0 }
-    byHour[h].spend       += Number(r.spend || 0)
-    byHour[h].clicks      += Number(r.clicks || r.linkClicks || 0)
-    byHour[h].impressions += Number(r.impressions || 0)
-    byHour[h].fbOrders    += Number(r.fbOrders || r['1dcOrders'] || 0)
-    byHour[h].fbRevenue   += Number(r.fbRevenue || r['1dcRevenue'] || 0)
-    byHour[h].sessions    += Number(r.sessions || r.ga4Sessions || 0)
-    byHour[h].gaOrders    += Number(r.gaOrders || r.ga4Orders || 0)
-  }
-  return Object.values(byHour).map(h => ({
-    ...h,
-    cpc:    h.clicks      > 0 ? h.spend / h.clicks      : 0,
-    ctr:    h.impressions > 0 ? h.clicks / h.impressions : 0,
-    cpm:    h.impressions > 0 ? (h.spend / h.impressions) * 1000 : 0,
-    roas1dc:h.fbRevenue   > 0 && h.spend > 0 ? h.fbRevenue / h.spend : 0,
-  })).sort((a, b) => a.hour.localeCompare(b.hour))
+function fmtINR(v) {
+  if (!v || isNaN(v)) return '—'
+  return `₹${Math.round(v).toLocaleString('en-IN')}`
 }
 
-function buildByProduct(rows) {
-  const byProd = {}
-  const totalSpend = rows.reduce((s, r) => s + Number(r.spend || 0), 0)
-  for (const r of rows) {
-    const p = r.product || 'Other'
-    if (!byProd[p]) byProd[p] = { product: p, spend: 0, clicks: 0, impressions: 0, fbOrders: 0 }
-    byProd[p].spend       += Number(r.spend || 0)
-    byProd[p].clicks      += Number(r.clicks || r.linkClicks || 0)
-    byProd[p].impressions += Number(r.impressions || 0)
-    byProd[p].fbOrders    += Number(r.fbOrders || 0)
-  }
-  return Object.values(byProd).map(p => ({
-    ...p,
-    spendMix: totalSpend > 0 ? (p.spend / totalSpend) * 100 : 0,
-    cpc:      p.clicks > 0 ? p.spend / p.clicks : 0,
-    ctr:      p.impressions > 0 ? p.clicks / p.impressions : 0,
-  })).sort((a, b) => b.spend - a.spend)
+function fmtPct(v) {
+  if (v == null || isNaN(v)) return '—'
+  return `${(v * 100).toFixed(1)}%`
 }
 
-// Cumulative up to an hour
-function cumulative(hourlyData, upToHour) {
-  const h = parseInt(upToHour)
-  return hourlyData
-    .filter(r => parseInt(r.hour) <= h)
-    .reduce((acc, r) => ({
-      spend:       acc.spend       + r.spend,
-      clicks:      acc.clicks      + r.clicks,
-      impressions: acc.impressions + r.impressions,
-      fbOrders:    acc.fbOrders    + r.fbOrders,
-      fbRevenue:   acc.fbRevenue   + r.fbRevenue,
-    }), { spend: 0, clicks: 0, impressions: 0, fbOrders: 0, fbRevenue: 0 })
+function delta(curr, prev) {
+  if (!prev || !curr || prev === 0) return null
+  return ((curr - prev) / Math.abs(prev)) * 100
 }
 
-// Mini spend bar (inline)
-function SpendBar({ pct, color = '#f472b6' }) {
+function DeltaBadge({ curr, prev, lowerBetter = false }) {
+  const d = delta(curr, prev)
+  if (d === null) return <span style={{ color: 'var(--text3)', fontSize: 11 }}>—</span>
+  const good = lowerBetter ? d <= 0 : d >= 0
+  const sign = d >= 0 ? '+' : ''
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <div style={{ width: 60, height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: color, borderRadius: 2 }} />
-      </div>
-      <span style={{ fontSize: 10, color: '#64748b', minWidth: 32 }}>{pct.toFixed(1)}%</span>
-    </div>
+    <span style={{
+      fontSize: 11, fontWeight: 500, padding: '1px 5px', borderRadius: 4,
+      background: good ? 'var(--green-dim)' : 'var(--red-dim)',
+      color: good ? 'var(--green)' : 'var(--red)',
+    }}>
+      {sign}{d.toFixed(1)}%
+    </span>
   )
 }
 
-const TH = {
-  padding: '8px 12px', fontSize: 10, fontWeight: 600, color: '#64748b',
-  textTransform: 'uppercase', letterSpacing: 0.6, whiteSpace: 'nowrap',
-  textAlign: 'right', borderBottom: '1px solid rgba(255,255,255,0.07)',
-  position: 'sticky', top: 0, background: 'rgba(9,14,26,0.97)', zIndex: 2,
+function getRowsForDate(metaHourly, date) {
+  const d = new Date(date); d.setHours(0,0,0,0)
+  return metaHourly.filter(r => {
+    if (!r.date) return false
+    const rd = r.date instanceof Date ? new Date(r.date) : new Date(r.date)
+    rd.setHours(0,0,0,0)
+    return rd.getTime() === d.getTime()
+  })
 }
-const TD = { padding: '9px 12px', whiteSpace: 'nowrap', textAlign: 'right', fontSize: 12, color: '#94a3b8' }
+
+function aggregateByProduct(rows) {
+  const map = {}
+  for (const r of rows) {
+    const k = r.product || r.adsetName || 'Unknown'
+    if (!map[k]) map[k] = { product: k, spend: 0, clicks: 0, impressions: 0, fbOrders: 0, fbRevenue: 0 }
+    map[k].spend      += r.spend || 0
+    map[k].clicks     += r.clicks || 0
+    map[k].impressions+= r.impressions || 0
+    map[k].fbOrders   += r.fbOrders || 0
+    map[k].fbRevenue  += r.fbRevenue || 0
+  }
+  return Object.values(map)
+}
 
 export default function Hourly() {
   const { state } = useData()
-  const [selectedSlot, setSelectedSlot] = useState('17')
-  const [viewDate, setViewDate] = useState('today')
 
-  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const today     = new Date(); today.setHours(0,0,0,0)
   const yesterday = subDays(today, 1)
-  const targetDate = viewDate === 'today' ? today : yesterday
 
-  const hourlyRows = useMemo(() => {
-    return state.metaHourly.filter(r => {
-      if (!r.date) return viewDate === 'today'
-      const d = r.date instanceof Date ? r.date : new Date(r.date)
-      d.setHours(0, 0, 0, 0)
-      return d.getTime() === targetDate.getTime()
-    })
-  }, [state.metaHourly, viewDate, targetDate])
+  // Primary date
+  const [primaryDate, setPrimaryDate] = useState(today)
+  // Compare date
+  const [compareDate, setCompareDate] = useState(yesterday)
+  const [compareOn, setCompareOn]     = useState(true)
+  // Show comparison columns
+  const [showComp, setShowComp]       = useState(false)
+  // Picker open state
+  const [pickerOpen, setPickerOpen]   = useState(false)
 
-  const prevRows = useMemo(() => {
-    const prev = subDays(targetDate, 1)
-    return state.metaHourly.filter(r => {
-      if (!r.date) return false
-      const d = r.date instanceof Date ? r.date : new Date(r.date)
-      d.setHours(0, 0, 0, 0)
-      return d.getTime() === prev.getTime()
-    })
-  }, [state.metaHourly, viewDate, targetDate])
+  const primaryRows = useMemo(() => getRowsForDate(state.metaHourly, primaryDate), [state.metaHourly, primaryDate])
+  const compareRows = useMemo(() => getRowsForDate(state.metaHourly, compareDate), [state.metaHourly, compareDate])
 
-  const hourlyData     = useMemo(() => buildHourly(hourlyRows), [hourlyRows])
-  const prevHourlyData = useMemo(() => buildHourly(prevRows),   [prevRows])
-  const byProduct      = useMemo(() => buildByProduct(hourlyRows), [hourlyRows])
+  const primaryByProd = useMemo(() => aggregateByProduct(primaryRows), [primaryRows])
+  const compareByProd = useMemo(() => {
+    const map = {}
+    for (const r of aggregateByProduct(compareRows)) map[r.product] = r
+    return map
+  }, [compareRows])
 
-  // Cumulative up to selected time slot
-  const cum     = useMemo(() => cumulative(hourlyData, selectedSlot),     [hourlyData, selectedSlot])
-  const prevCum = useMemo(() => cumulative(prevHourlyData, selectedSlot), [prevHourlyData, selectedSlot])
+  const totalPrimary = useMemo(() => primaryByProd.reduce((s,r) => s + r.spend, 0), [primaryByProd])
+  const totalCompare = useMemo(() => compareRows.reduce((s,r) => s + (r.spend||0), 0), [compareRows])
 
-  const hasData = state.metaHourly.length > 0
+  const tableRows = useMemo(() => {
+    return primaryByProd
+      .map(r => ({
+        ...r,
+        spendMix: totalPrimary > 0 ? r.spend / totalPrimary * 100 : 0,
+        cpc: r.clicks > 0 ? r.spend / r.clicks : 0,
+        comp: compareByProd[r.product] || null,
+      }))
+      .sort((a,b) => b.spend - a.spend)
+  }, [primaryByProd, compareByProd, totalPrimary])
 
-  // Delta vs previous
-  const delta = (cur, prev) => {
-    if (!prev || prev === 0) return null
-    const d = ((cur - prev) / prev) * 100
-    return { pct: d, up: d >= 0 }
-  }
+  const hasData = primaryRows.length > 0
 
-  function DeltaBadge({ cur, prev }) {
-    const d = delta(cur, prev)
-    if (!d) return null
-    return (
-      <span style={{
-        fontSize: 10, marginLeft: 6,
-        color: d.up ? '#22c55e' : '#ef4444',
-        background: d.up ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-        borderRadius: 8, padding: '1px 6px',
-      }}>
-        {d.up ? '▲' : '▼'} {Math.abs(d.pct).toFixed(1)}%
-      </span>
-    )
-  }
+  const currentHour   = new Date().getHours()
+  const spendPerHour  = currentHour > 0 ? totalPrimary / currentHour : 0
+  const projectedSpend = spendPerHour * 24
+
+  const primaryLabel  = format(primaryDate, 'd MMM yyyy')
+  const compareLabel  = format(compareDate, 'd MMM yyyy')
 
   return (
-    <div style={{ padding: '24px 28px', background: '#090e1a', minHeight: '100vh', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif' }}>
-
+    <div style={{ padding: '20px 24px' }}>
       {/* Header */}
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Hourly Pulse</h1>
-        <div style={{ fontSize: 13, color: '#64748b' }}>Upload Meta hourly CSV 4x daily — 9AM · 12PM · 3PM · 5PM</div>
-      </div>
-
-      {/* Controls */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* Date toggle */}
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 2 }}>
-          {['today', 'yesterday'].map(d => (
-            <button key={d} onClick={() => setViewDate(d)} style={{
-              background: viewDate === d ? 'rgba(244,114,182,0.2)' : 'transparent',
-              border: viewDate === d ? '1px solid rgba(244,114,182,0.4)' : '1px solid transparent',
-              color: viewDate === d ? '#f472b6' : '#64748b',
-              borderRadius: 6, padding: '5px 14px', fontSize: 12, cursor: 'pointer',
-            }}>{d === 'today' ? 'Today' : 'Yesterday'}</button>
-          ))}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div>
+          <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Hourly pulse</h1>
+          <div style={{ fontSize: 12, color: 'var(--text3)' }}>Intraday product spend pacing · 1DC orders · CSV upload only</div>
         </div>
-
-        {/* Time slot toggles */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          {TIME_SLOTS.map(slot => (
-            <button key={slot.key} onClick={() => setSelectedSlot(slot.key)} style={{
-              background: selectedSlot === slot.key ? 'rgba(244,114,182,0.2)' : 'rgba(255,255,255,0.05)',
-              border: selectedSlot === slot.key ? '1px solid rgba(244,114,182,0.5)' : '1px solid rgba(255,255,255,0.1)',
-              color: selectedSlot === slot.key ? '#f472b6' : '#94a3b8',
-              borderRadius: 20, padding: '5px 14px', fontSize: 12, cursor: 'pointer',
-            }}>{slot.label}</button>
-          ))}
-        </div>
-      </div>
-
-      {!hasData && (
-        <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 10, padding: '14px 18px', marginBottom: 24, color: '#fbbf24', fontSize: 13 }}>
-          ⚠️ No hourly data yet — upload a Meta hourly CSV (Breakdown → By Time → Hour of Day)
-        </div>
-      )}
-
-      {/* Cumulative snapshot cards */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
-        {[
-          { label: `Spend (cumul. to ${selectedSlot}:00)`, cur: cum.spend,      prev: prevCum.spend,      fmt: fmtINRCompact },
-          { label: 'Impressions',  cur: cum.impressions, prev: prevCum.impressions, fmt: fmtNum },
-          { label: 'Clicks',       cur: cum.clicks,      prev: prevCum.clicks,      fmt: fmtNum },
-          { label: '1DC Orders',   cur: cum.fbOrders,    prev: prevCum.fbOrders,    fmt: v => fmtNum(Math.round(v)) },
-          { label: '1DC Revenue',  cur: cum.fbRevenue,   prev: prevCum.fbRevenue,   fmt: fmtINRCompact },
-        ].map(({ label, cur, prev, fmt }) => (
-          <div key={label} style={{
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 10, padding: '14px 18px', flex: 1, minWidth: 140,
-          }}>
-            <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{label}</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 0 }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>{fmt(cur)}</span>
-              <DeltaBadge cur={cur} prev={prev} />
+        {/* Date controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Primary date picker */}
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setPickerOpen(o => !o)} style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
+              fontSize: 12, fontWeight: 500, borderRadius: 8, cursor: 'pointer',
+              background: 'var(--bg2)', border: '0.5px solid var(--border2)', color: 'var(--text)',
+            }}>
+              📅 {primaryLabel} ▾
+            </button>
+            {pickerOpen && (
+              <HourlyDatePanel
+                primaryDate={primaryDate} compareDate={compareDate}
+                compareOn={compareOn}
+                onApply={(p, c, cOn) => { setPrimaryDate(p); setCompareDate(c); setCompareOn(cOn); setPickerOpen(false) }}
+                onClose={() => setPickerOpen(false)}
+              />
+            )}
+          </div>
+          {/* Compare toggle */}
+          {compareOn && (
+            <div style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              vs <span style={{ color: 'var(--blue)' }}>{compareLabel}</span>
             </div>
-            {prev > 0 && <div style={{ fontSize: 10, color: '#475569', marginTop: 3 }}>Prev: {fmt(prev)}</div>}
+          )}
+        </div>
+      </div>
+
+      {/* Upload strip */}
+      <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 500 }}>Upload Meta hourly export</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)' }}>Drop hourly CSV from Ads Manager · do this at 9 AM, 12 PM, 5 PM</div>
+        </div>
+        <CSVUploader compact />
+      </div>
+
+      {/* KPI strip */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 16 }}>
+        {[
+          { label: 'Spend so far', val: totalPrimary, comp: totalCompare, fmt: fmtINR },
+          { label: 'Projected day', val: projectedSpend, comp: null, fmt: fmtINR, sub: `Based on ${currentHour}h run rate` },
+          { label: '1DC Orders', val: primaryRows.reduce((s,r) => s+(r.fbOrders||0),0), comp: compareRows.reduce((s,r)=>s+(r.fbOrders||0),0), fmt: v => v ? Math.round(v).toLocaleString('en-IN') : '0' },
+          { label: 'Clicks', val: primaryRows.reduce((s,r) => s+(r.clicks||0),0), comp: compareRows.reduce((s,r)=>s+(r.clicks||0),0), fmt: v => v ? Math.round(v).toLocaleString('en-IN') : '0' },
+        ].map(({ label, val, comp, fmt, sub }) => (
+          <div key={label} style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+            <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, fontWeight: 600 }}>{label}</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{fmt(val)}</div>
+            {comp != null && compareOn ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>{fmt(comp)}</span>
+                <DeltaBadge curr={val} prev={comp} />
+              </div>
+            ) : sub ? (
+              <div style={{ fontSize: 11, color: 'var(--text3)' }}>{sub}</div>
+            ) : null}
           </div>
         ))}
       </div>
 
-      {/* Two columns: hourly table + product spend mix */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
+      {/* Table header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>Product breakdown</div>
+        {compareOn && (
+          <button onClick={() => setShowComp(o => !o)} style={{
+            padding: '4px 10px', fontSize: 11, borderRadius: 5, cursor: 'pointer',
+            background: showComp ? 'var(--blue-dim)' : 'var(--bg3)',
+            color: showComp ? 'var(--blue)' : 'var(--text2)',
+            border: `0.5px solid ${showComp ? 'var(--blue-border)' : 'var(--border2)'}`,
+            fontWeight: showComp ? 500 : 400,
+          }}>
+            {showComp ? '▼ Hide comparison' : '▶ Show comparison'}
+          </button>
+        )}
+      </div>
 
-        {/* Hourly breakdown table */}
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', fontSize: 13, fontWeight: 600, color: '#94a3b8' }}>
-            Hour-by-hour breakdown
-          </div>
-          <div style={{ overflowX: 'auto', maxHeight: 600, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={{ ...TH, textAlign: 'left', paddingLeft: 16 }}>Hour</th>
-                  <th style={TH}>Spend</th>
-                  <th style={TH}>Impr.</th>
-                  <th style={TH}>Clicks</th>
-                  <th style={TH}>CTR</th>
-                  <th style={TH}>CPC</th>
-                  <th style={TH}>CPM</th>
-                  <th style={TH}>1DC Orders</th>
-                  <th style={TH}>1DC Rev</th>
-                  <th style={TH}>1DC ROAS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hourlyData.length === 0 ? (
-                  <tr><td colSpan={10} style={{ padding: 32, textAlign: 'center', color: '#475569' }}>No hourly data</td></tr>
-                ) : hourlyData.map((h, i) => {
-                  const isCurrent = h.hour === selectedSlot
-                  const prevH = prevHourlyData.find(p => p.hour === h.hour)
-                  return (
-                    <tr key={h.hour} style={{
-                      borderBottom: '1px solid rgba(255,255,255,0.04)',
-                      background: isCurrent ? 'rgba(244,114,182,0.06)' : i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
-                    }}>
-                      <td style={{ ...TD, textAlign: 'left', paddingLeft: 16, fontWeight: isCurrent ? 700 : 400 }}>
-                        <span style={{ color: isCurrent ? '#f472b6' : '#94a3b8' }}>
-                          {h.hour}:00 {isCurrent ? '◀' : ''}
-                        </span>
-                      </td>
-                      <td style={{ ...TD, color: '#e2e8f0' }}>
-                        {fmtINRCompact(h.spend)}
-                        {prevH && <div style={{ fontSize: 10, color: '#475569' }}>Prev: {fmtINRCompact(prevH.spend)}</div>}
-                      </td>
-                      <td style={TD}>{fmtNum(h.impressions)}</td>
-                      <td style={TD}>{fmtNum(h.clicks)}</td>
-                      <td style={{ ...TD, color: h.ctr >= 0.02 ? '#22c55e' : h.ctr >= 0.01 ? '#fbbf24' : '#94a3b8' }}>
-                        {h.ctr > 0 ? fmtPct(h.ctr) : '—'}
-                      </td>
-                      <td style={TD}>{h.cpc > 0 ? fmtINRCompact(h.cpc) : '—'}</td>
-                      <td style={TD}>{h.cpm > 0 ? fmtINRCompact(h.cpm) : '—'}</td>
-                      <td style={TD}>{h.fbOrders > 0 ? fmtNum(h.fbOrders) : '—'}</td>
-                      <td style={TD}>{h.fbRevenue > 0 ? fmtINRCompact(h.fbRevenue) : '—'}</td>
-                      <td style={{ ...TD, color: h.roas1dc >= 3 ? '#22c55e' : h.roas1dc >= 1.5 ? '#fbbf24' : h.roas1dc > 0 ? '#ef4444' : '#475569' }}>
-                        {h.roas1dc > 0 ? `${h.roas1dc.toFixed(2)}x` : '—'}
-                      </td>
-                    </tr>
-                  )
-                })}
-                {/* Totals row */}
-                {hourlyData.length > 0 && (() => {
-                  const tot = hourlyData.reduce((acc, h) => ({
-                    spend:       acc.spend + h.spend,
-                    impressions: acc.impressions + h.impressions,
-                    clicks:      acc.clicks + h.clicks,
-                    fbOrders:    acc.fbOrders + h.fbOrders,
-                    fbRevenue:   acc.fbRevenue + h.fbRevenue,
-                  }), { spend: 0, impressions: 0, clicks: 0, fbOrders: 0, fbRevenue: 0 })
-                  const totCtr  = tot.impressions > 0 ? tot.clicks / tot.impressions : 0
-                  const totCpc  = tot.clicks > 0 ? tot.spend / tot.clicks : 0
-                  const totRoas = tot.fbRevenue > 0 && tot.spend > 0 ? tot.fbRevenue / tot.spend : 0
-                  return (
-                    <tr style={{ background: 'rgba(244,114,182,0.06)', borderTop: '1px solid rgba(244,114,182,0.2)' }}>
-                      <td style={{ ...TD, textAlign: 'left', paddingLeft: 16, color: '#f472b6', fontWeight: 700 }}>TOTAL</td>
-                      <td style={{ ...TD, color: '#f1f5f9', fontWeight: 700 }}>{fmtINRCompact(tot.spend)}</td>
-                      <td style={{ ...TD, fontWeight: 600 }}>{fmtNum(tot.impressions)}</td>
-                      <td style={{ ...TD, fontWeight: 600 }}>{fmtNum(tot.clicks)}</td>
-                      <td style={{ ...TD, fontWeight: 600 }}>{totCtr > 0 ? fmtPct(totCtr) : '—'}</td>
-                      <td style={{ ...TD, fontWeight: 600 }}>{totCpc > 0 ? fmtINRCompact(totCpc) : '—'}</td>
-                      <td style={TD}>—</td>
-                      <td style={{ ...TD, fontWeight: 600 }}>{tot.fbOrders > 0 ? fmtNum(tot.fbOrders) : '—'}</td>
-                      <td style={{ ...TD, fontWeight: 600 }}>{tot.fbRevenue > 0 ? fmtINRCompact(tot.fbRevenue) : '—'}</td>
-                      <td style={{ ...TD, fontWeight: 600 }}>{totRoas > 0 ? `${totRoas.toFixed(2)}x` : '—'}</td>
-                    </tr>
-                  )
-                })()}
-              </tbody>
-            </table>
-          </div>
+      {/* Table */}
+      {!hasData ? (
+        <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 8, padding: '40px 20px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+          Upload the Meta hourly CSV to see intraday product spend
         </div>
+      ) : (
+        <div style={{ overflowX: 'auto', borderRadius: 8, border: '0.5px solid var(--border)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={th({ align: 'left' })}>Product</th>
+                <th style={th()}>Spend ({primaryLabel})</th>
+                <th style={th()}>Spend Mix</th>
+                <th style={th()}>CPC</th>
+                <th style={th()}>1DC Orders</th>
+                {showComp && compareOn && <>
+                  <th style={th({ comp: true })}>Spend ({compareLabel})</th>
+                  <th style={th({ comp: true })}>Spend Mix</th>
+                  <th style={th({ comp: true })}>CPC</th>
+                  <th style={th({ comp: true })}>Δ Spend</th>
+                  <th style={th({ comp: true })}>Δ CPC</th>
+                </>}
+              </tr>
+            </thead>
+            <tbody>
+              {tableRows.map((r, i) => {
+                const compRow = r.comp
+                const compMix = compRow && totalCompare > 0 ? compRow.spend / totalCompare * 100 : null
+                const compCpc = compRow?.clicks > 0 ? compRow.spend / compRow.clicks : null
+                return (
+                  <tr key={r.product}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <td style={td({ align: 'left', bold: true })}>{r.product}</td>
+                    <td style={td()}>{fmtINR(r.spend)}</td>
+                    <td style={td()}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                        <div style={{ width: 40, height: 4, background: 'var(--bg4)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.min(r.spendMix, 100)}%`, height: '100%', background: 'var(--pink)', borderRadius: 2 }} />
+                        </div>
+                        <span>{r.spendMix.toFixed(1)}%</span>
+                      </div>
+                    </td>
+                    <td style={td()}>₹{r.cpc > 0 ? Math.round(r.cpc).toLocaleString('en-IN') : '—'}</td>
+                    <td style={td()}>{r.fbOrders > 0 ? r.fbOrders.toLocaleString('en-IN') : '—'}</td>
+                    {showComp && compareOn && <>
+                      <td style={td({ comp: true })}>{compRow ? fmtINR(compRow.spend) : '—'}</td>
+                      <td style={td({ comp: true })}>{compMix != null ? `${compMix.toFixed(1)}%` : '—'}</td>
+                      <td style={td({ comp: true })}>{compCpc ? `₹${Math.round(compCpc).toLocaleString('en-IN')}` : '—'}</td>
+                      <td style={td({ comp: true })}><DeltaBadge curr={r.spend} prev={compRow?.spend} /></td>
+                      <td style={td({ comp: true })}><DeltaBadge curr={r.cpc} prev={compCpc} lowerBetter /></td>
+                    </>}
+                  </tr>
+                )
+              })}
+              {/* Grand total */}
+              <tr style={{ borderTop: '1px solid var(--border2)', background: 'var(--bg3)' }}>
+                <td style={td({ align: 'left', bold: true })}>Grand Total</td>
+                <td style={td({ bold: true })}>{fmtINR(totalPrimary)}</td>
+                <td style={td()}>100%</td>
+                <td style={td()}>
+                  {(() => { const tc = primaryRows.reduce((s,r)=>s+(r.clicks||0),0); return tc > 0 ? `₹${Math.round(totalPrimary/tc).toLocaleString('en-IN')}` : '—' })()}
+                </td>
+                <td style={td({ bold: true })}>{primaryRows.reduce((s,r)=>s+(r.fbOrders||0),0).toLocaleString('en-IN')}</td>
+                {showComp && compareOn && <>
+                  <td style={td({ comp: true, bold: true })}>{fmtINR(totalCompare)}</td>
+                  <td style={td({ comp: true })}>100%</td>
+                  <td style={td({ comp: true })}>
+                    {(() => { const tc = compareRows.reduce((s,r)=>s+(r.clicks||0),0); return tc > 0 ? `₹${Math.round(totalCompare/tc).toLocaleString('en-IN')}` : '—' })()}
+                  </td>
+                  <td style={td({ comp: true })}><DeltaBadge curr={totalPrimary} prev={totalCompare} /></td>
+                  <td style={td({ comp: true })}>—</td>
+                </>}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
 
-        {/* Product spend mix */}
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', fontSize: 13, fontWeight: 600, color: '#94a3b8' }}>
-            Spend mix by product
-          </div>
-          <div style={{ padding: '8px 0' }}>
-            {byProduct.length === 0 ? (
-              <div style={{ padding: '24px 16px', textAlign: 'center', color: '#475569', fontSize: 13 }}>No data</div>
-            ) : byProduct.map((p, i) => (
-              <div key={p.product} style={{
-                display: 'flex', flexDirection: 'column', gap: 4,
-                padding: '10px 16px',
-                borderBottom: i < byProduct.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, color: '#cbd5e1', fontWeight: 500 }}>{p.product}</span>
-                  <span style={{ fontSize: 12, color: '#f1f5f9', fontWeight: 600 }}>{fmtINRCompact(p.spend)}</span>
-                </div>
-                <SpendBar pct={p.spendMix} color={i === 0 ? '#f472b6' : i === 1 ? '#3b82f6' : i === 2 ? '#22c55e' : '#64748b'} />
-                <div style={{ display: 'flex', gap: 12, fontSize: 10, color: '#475569' }}>
-                  <span>CPC {p.cpc > 0 ? fmtINRCompact(p.cpc) : '—'}</span>
-                  <span>CTR {p.ctr > 0 ? fmtPct(p.ctr) : '—'}</span>
-                  <span>{fmtNum(p.clicks)} clicks</span>
-                </div>
-              </div>
-            ))}
-          </div>
+// Simple inline date panel for hourly page
+function HourlyDatePanel({ primaryDate, compareDate, compareOn, onApply, onClose }) {
+  const [pDate, setPDate] = useState(primaryDate)
+  const [cDate, setCDate] = useState(compareDate)
+  const [cOn, setCOn]     = useState(compareOn)
+
+  const QUICK = [
+    { label: 'Today',     fn: () => { setPDate(new Date()); setCDate(subDays(new Date(),1)) } },
+    { label: 'Yesterday', fn: () => { const y=subDays(new Date(),1); setPDate(y); setCDate(subDays(new Date(),2)) } },
+    { label: '2 days ago',fn: () => { const d=subDays(new Date(),2); setPDate(d); setCDate(subDays(new Date(),3)) } },
+  ]
+
+  return (
+    <div style={{
+      position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 9999,
+      background: 'var(--bg2)', border: '0.5px solid var(--border2)', borderRadius: 10,
+      boxShadow: '0 8px 30px rgba(0,0,0,0.5)', padding: 14, minWidth: 240,
+    }}>
+      <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Quick select</div>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+        {QUICK.map(q => (
+          <button key={q.label} onClick={q.fn} style={{
+            padding: '4px 8px', fontSize: 11, borderRadius: 4, cursor: 'pointer',
+            background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text2)',
+          }}
+            onMouseEnter={e=>e.currentTarget.style.color='var(--text)'}
+            onMouseLeave={e=>e.currentTarget.style.color='var(--text2)'}
+          >{q.label}</button>
+        ))}
+      </div>
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Primary date</div>
+        <input type="date" value={format(pDate, 'yyyy-MM-dd')}
+          onChange={e => setPDate(new Date(e.target.value + 'T00:00:00'))}
+          style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text)', outline: 'none' }}
+        />
+      </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', marginBottom: 8 }}>
+        <input type="checkbox" checked={cOn} onChange={e=>setCOn(e.target.checked)} style={{ accentColor: 'var(--blue)' }} />
+        <span style={{ color: 'var(--text2)' }}>Compare with</span>
+      </label>
+      {cOn && (
+        <div style={{ marginBottom: 8 }}>
+          <input type="date" value={format(cDate, 'yyyy-MM-dd')}
+            onChange={e => setCDate(new Date(e.target.value + 'T00:00:00'))}
+            style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text)', outline: 'none' }}
+          />
         </div>
+      )}
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+        <button onClick={onClose} style={{ padding: '4px 10px', fontSize: 12, borderRadius: 5, background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text2)', cursor: 'pointer' }}>Cancel</button>
+        <button onClick={() => onApply(pDate, cDate, cOn)} style={{ padding: '4px 10px', fontSize: 12, borderRadius: 5, background: 'var(--pink)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>Apply</button>
       </div>
     </div>
   )
+}
+
+function th({ align = 'right', comp = false } = {}) {
+  return {
+    padding: '8px 12px', fontSize: 10, fontWeight: 600, color: comp ? 'var(--blue)' : 'var(--text3)',
+    textTransform: 'uppercase', letterSpacing: '0.05em',
+    borderBottom: '0.5px solid var(--border2)',
+    background: comp ? 'var(--blue-dim)' : 'var(--bg3)',
+    textAlign: align, whiteSpace: 'nowrap',
+    borderLeft: comp ? '1px solid var(--blue-border)' : 'none',
+  }
+}
+
+function td({ align = 'right', bold = false, comp = false } = {}) {
+  return {
+    padding: '8px 12px', fontSize: 13, borderBottom: '0.5px solid var(--border)',
+    textAlign: align, fontWeight: bold ? 600 : 400, color: 'var(--text)',
+    borderLeft: comp ? '1px solid rgba(66,133,244,0.1)' : 'none',
+  }
 }

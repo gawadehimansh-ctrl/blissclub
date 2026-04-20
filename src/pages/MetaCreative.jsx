@@ -31,7 +31,7 @@ function groupAndAggregate(rows, dim) {
       cpc: agg.clicks > 0 ? agg.spend / agg.clicks : 0,
       cpa: agg.gaOrders > 0 ? agg.spend / agg.gaOrders : 0,
       ecr: agg.sessions > 0 ? agg.gaOrders / agg.sessions : 0,
-      creativeCount: [...new Set(rs.map(r => r.creativeName))].length,
+      creativeCount: [...new Set(rs.map(r => r.adId || r.adName || r.creativeName))].filter(Boolean).length,
     }
   }).sort((a, b) => b.spend - a.spend)
 }
@@ -74,7 +74,7 @@ export default function MetaCreative() {
 
   const cols = [
     { key: pivotDim, label: PIVOT_LABELS[pivotDim], align: 'left', bold: true },
-    { key: 'spend', label: 'Spend', render: v => fmtINRCompact(v) },
+    { key: 'spend', label: 'Spend', render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
     { key: 'spendMix', label: 'Spend %', render: v => `${v.toFixed(1)}%` },
     { key: 'creativeCount', label: 'Creatives', render: v => fmtNum(v) },
     { key: 'impressions', label: 'Impr.', render: v => fmtNum(v) },
@@ -95,7 +95,7 @@ export default function MetaCreative() {
     { key: 'contentType', label: 'Type' },
     { key: 'creator', label: 'Creator' },
     { key: 'cohort', label: 'Cohort' },
-    { key: 'spend', label: 'Spend', render: v => fmtINRCompact(v) },
+    { key: 'spend', label: 'Spend', render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
     { key: 'ctr', label: 'CTR', render: v => fmtPct(v), color: v => v > 0.02 ? 'var(--green)' : v > 0.01 ? 'var(--amber)' : 'var(--red)' },
     { key: 'roasGA4', label: 'GA4 ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
     { key: 'gaRevenue', label: 'GA4 Rev', render: v => fmtINRCompact(v) },
@@ -117,7 +117,7 @@ export default function MetaCreative() {
         <MetricCard label="Total spend" value={fmtINRCompact(totals.spend)} accent="var(--pink)" />
         <MetricCard label="GA4 revenue" value={fmtINRCompact(totals.gaRevenue)} accent="var(--purple)" />
         <MetricCard label="GA4 ROAS" value={fmtX(calcROAS(totals.gaRevenue, totals.spend))} accent="var(--purple)" />
-        <MetricCard label="Unique creatives" value={fmtNum([...new Set(rows.map(r => r.creativeName))].length)} />
+        <MetricCard label="Unique creatives" value={fmtNum([...new Set(rows.map(r => r.adId || r.adName || r.creativeName).filter(Boolean))].length)} />
       </div>
 
       {/* Pivot selector */}
