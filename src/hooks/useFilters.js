@@ -44,6 +44,8 @@ export function useFilters(initialPreset = 'last7') {
   const [dateFrom, setDateFrom]         = useState(preset.from)
   const [dateTo, setDateTo]             = useState(preset.to)
   const [dateLabel, setDateLabel]       = useState(preset.label)
+  const [compFrom, setCompFrom]         = useState(null)
+  const [compTo, setCompTo]             = useState(null)
   const [cohorts, setCohorts]           = useState([])   // [] = all
   const [formats, setFormats]           = useState([])
   const [products, setProducts]         = useState([])
@@ -144,14 +146,35 @@ export function useFilters(initialPreset = 'last7') {
     })
   }
 
+  function filterCompRows(rows, dateField = 'date') {
+    if (!compFrom || !compTo || !rows || !Array.isArray(rows)) return []
+    return rows.filter(r => {
+      const d = r[dateField] instanceof Date ? r[dateField] : new Date(r[dateField])
+      if (isNaN(d)) return false
+      const cf = new Date(compFrom); cf.setHours(0,0,0,0)
+      const ct = new Date(compTo);   ct.setHours(23,59,59,999)
+      if (d < cf || d > ct) return false
+      if (cohorts.length && !cohorts.includes(r.cohort)) return false
+      if (formats.length && !formats.includes(r.format)) return false
+      if (products.length && !products.includes(r.product)) return false
+      if (contentTypes.length && !contentTypes.includes(r.contentType)) return false
+      if (saleTag && r.saleTag !== saleTag) return false
+      if (campaignTypes.length && !campaignTypes.includes(r.campaignType)) return false
+      if (segment !== 'all') { if (getSegment(r) !== segment) return false }
+      return true
+    })
+  }
+
   return {
     dateFrom, dateTo, dateLabel,
+    compFrom, compTo,
     cohorts, formats, products, contentTypes, saleTag, campaignTypes, segment,
     metricFilters,
     setDateFrom, setDateTo,
+    setCompFrom, setCompTo,
     setCohorts, setFormats, setProducts, setContentTypes,
     setSaleTag, setCampaignTypes, setSegment,
-    applyPreset, filterRows, getPrevRows,
+    applyPreset, filterRows, getPrevRows, filterCompRows,
     addMetricFilter, removeMetricFilter, clearMetricFilters,
   }
 }
