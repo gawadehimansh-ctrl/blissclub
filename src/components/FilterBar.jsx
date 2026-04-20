@@ -5,6 +5,7 @@ import AdvancedFilters from './AdvancedFilters.jsx'
 export default function FilterBar({ filters, extras, showSegment = true, showCohort = true, showSaleTag = true, showAdvanced = false }) {
   const {
     dateFrom, dateTo, setDateFrom, setDateTo,
+    compFrom, compTo, setCompFrom, setCompTo,
     segment, setSegment,
     saleTag, setSaleTag,
     cohorts, setCohorts,
@@ -16,6 +17,10 @@ export default function FilterBar({ filters, extras, showSegment = true, showCoh
   function handleDateChange(from, to) {
     setDateFrom(from)
     setDateTo(to)
+  }
+  function handleCompChange(cf, ct) {
+    setCompFrom(cf || null)
+    setCompTo(ct || null)
   }
 
   return (
@@ -85,7 +90,8 @@ export default function FilterBar({ filters, extras, showSegment = true, showCoh
 
       {/* Date picker — always right */}
       <div style={{ marginLeft: 'auto' }}>
-        <DatePicker from={dateFrom} to={dateTo} onChange={handleDateChange} />
+        <DatePicker from={dateFrom} to={dateTo} onChange={handleDateChange}
+        compFrom={compFrom} compTo={compTo} onCompChange={handleCompChange} showComp={true} />
       </div>
     </div>
   )
