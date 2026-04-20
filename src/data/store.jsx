@@ -30,8 +30,16 @@ function reducer(state, action) {
     case 'LOAD_META_DB':
       next = { ...state, metaDB: action.replace ? action.data : [...state.metaDB, ...action.data], lastUpdated: { ...state.lastUpdated, metaDB: new Date() }, uploadLog: [{ type: 'META_DB', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
       return enrichState(next)
-    case 'LOAD_META_HOURLY':
-      return { ...state, metaHourly: action.data, lastUpdated: { ...state.lastUpdated, metaHourly: new Date() }, uploadLog: [{ type: 'META_HOURLY', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
+    case 'LOAD_META_HOURLY': {
+      const incoming = action.data.map(r => ({ ...r, uploadSlot: action.slot || 'manual', uploadTime: new Date() }))
+      const existing = state.metaHourly.filter(r => {
+        const incomingDates = new Set(incoming.map(i => i.date instanceof Date ? i.date.toDateString() : new Date(i.date).toDateString()))
+        const rDate = r.date instanceof Date ? r.date.toDateString() : new Date(r.date).toDateString()
+        return !incomingDates.has(rDate)
+      })
+      const merged = [...existing, ...incoming]
+      return { ...state, metaHourly: merged, lastUpdated: { ...state.lastUpdated, metaHourly: new Date() }, uploadLog: [{ type: 'META_HOURLY', count: incoming.length, slot: action.slot, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
+    }
     case 'LOAD_GOOGLE':
       return { ...state, googleDump: action.replace ? action.data : [...state.googleDump, ...action.data], lastUpdated: { ...state.lastUpdated, google: new Date() }, uploadLog: [{ type: 'GOOGLE_DUMP', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
     case 'LOAD_GOOGLE_AWARENESS':
