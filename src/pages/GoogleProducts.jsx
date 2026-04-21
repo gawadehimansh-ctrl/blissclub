@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import DrillTable from '../components/DrillTable.jsx'
 import { useData } from '../data/store.jsx'
 import { useFilters } from '../hooks/useFilters.js'
 import FilterBar from '../components/FilterBar.jsx'
@@ -172,6 +173,7 @@ export default function GoogleProducts() {
   const { filterRows, getPrevRows } = filters
   const [campaignFilter, setCampaignFilter] = useState('all')
   const [expandedProduct, setExpandedProduct] = useState(null)
+  const [activeTab, setActiveTab] = useState('products') // 'products' | 'cohort'
   const [sortKey, setSortKey] = useState('cost')
   const [sortDir, setSortDir] = useState('desc')
 
@@ -188,6 +190,62 @@ export default function GoogleProducts() {
   }, [state.googleProducts, filters])
 
   const campaigns = useMemo(() => [...new Set(allRows.map(r => r.campaignName).filter(Boolean))].sort(), [allRows])
+
+  // Search terms for cohort view
+  const allSearchTerms = useMemo(() => {
+    const stRows = filterRows(state.googleSearchTerms || [], 'date')
+    return campaignFilter === 'all' ? stRows : stRows.filter(r => r.campaignName === campaignFilter)
+  }, [state.googleSearchTerms, filters, campaignFilter])
+
+  // Cohort: for each campaign, products + search terms side by side
+  const cohortData = useMemo(() => {
+    const campNames = campaignFilter === 'all'
+      ? [...new Set([...rows.map(r => r.campaignName), ...allSearchTerms.map(r => r.campaignName)].filter(Boolean))].sort()
+      : [campaignFilter]
+
+    return campNames.map(camp => {
+      const campProducts = rows.filter(r => r.campaignName === camp)
+      const campTerms    = allSearchTerms.filter(r => r.campaignName === camp)
+      const prodAgg      = aggProd(campProducts)
+      const termSpend    = campTerms.reduce((s,r) => s+(r.cost||0), 0)
+      const termClicks   = campTerms.reduce((s,r) => s+(r.clicks||0), 0)
+      const termConv     = campTerms.reduce((s,r) => s+(r.transactions||0), 0)
+      const termRev      = campTerms.reduce((s,r) => s+(r.revenue||0), 0)
+
+      // Top products by spend
+      const topProds = Object.values(campProducts.reduce((map, r) => {
+        const k = r.productName || 'Unknown'
+        if (!map[k]) map[k] = []
+        map[k].push(r)
+        return map
+      }, {})).map(rs => ({ name: rs[0].productName, ...aggProd(rs) }))
+        .sort((a,b) => b.cost - a.cost).slice(0, 5)
+
+      // Top search terms by spend
+      const topTerms = Object.values(campTerms.reduce((map, r) => {
+        const k = r.term || 'Unknown'
+        if (!map[k]) map[k] = []
+        map[k].push(r)
+        return map
+      }, {})).map(rs => ({
+        term: rs[0].term,
+        cost: rs.reduce((s,r)=>s+(r.cost||0),0),
+        clicks: rs.reduce((s,r)=>s+(r.clicks||0),0),
+        conversions: rs.reduce((s,r)=>s+(r.transactions||0),0),
+        revenue: rs.reduce((s,r)=>s+(r.revenue||0),0),
+        isBrand: rs[0].isBrand,
+      })).sort((a,b) => b.cost - a.cost).slice(0, 10)
+
+      return {
+        campaign: camp,
+        productCount: [...new Set(campProducts.map(r => r.productName))].length,
+        termCount: [...new Set(campTerms.map(r => r.term))].length,
+        prodSpend: prodAgg.cost, prodRevenue: prodAgg.revenue, prodROAS: prodAgg.roas,
+        termSpend, termClicks, termConv, termRev,
+        topProds, topTerms,
+      }
+    }).filter(c => c.productCount > 0 || c.termCount > 0)
+  }, [rows, allSearchTerms, campaignFilter])
 
   const rows = useMemo(() => campaignFilter === 'all' ? allRows : allRows.filter(r => r.campaignName === campaignFilter), [allRows, campaignFilter])
   const prev = useMemo(() => campaignFilter === 'all' ? prevAllRows : prevAllRows.filter(r => r.campaignName === campaignFilter), [prevAllRows, campaignFilter])
@@ -306,6 +364,33 @@ export default function GoogleProducts() {
         </div>
       )}
 
+      {/* Tab bar */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '0.5px solid var(--border)' }}>
+        {[['products', 'Products'], ['cohort', 'Products x Search Terms']].map(([key, label]) => (
+          <button key={key} onClick={() => setActiveTab(key)} style={{
+            padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontWeight: activeTab === key ? 600 : 400,
+            background: 'transparent', border: 'none',
+            color: activeTab === key ? 'var(--blue)' : 'var(--text2)',
+            borderBottom: `2px solid ${activeTab === key ? 'var(--blue)' : 'transparent'}`,
+            marginBottom: -1,
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {/* Cohort view */}
+      {activeTab === 'cohort' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {cohortData.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+              No data — sync Windsor and select a date range
+            </div>
+          ) : cohortData.map(c => (
+            <CohortCard key={c.campaign} data={c} />
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'products' && <>
       {/* Table header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 600 }}>{sorted.length} products</div>
@@ -375,6 +460,108 @@ export default function GoogleProducts() {
           </tbody>
         </table>
       </div>
+    </>}
+    </div>
+  )
+}
+
+function CohortCard({ data: c }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+      {/* Campaign header */}
+      <div onClick={() => setOpen(o => !o)} style={{
+        padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        borderBottom: open ? '0.5px solid var(--border)' : 'none',
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 10, color: 'var(--text3)', transform: open ? 'rotate(90deg)' : 'rotate(0)', display: 'inline-block', transition: 'transform .15s' }}>▶</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{c.campaign}</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+              {c.productCount} products · {c.termCount} search terms
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 20 }}>
+          {[
+            { label: 'Prod Spend', val: `₹${Math.round(c.prodSpend).toLocaleString('en-IN')}` },
+            { label: 'Prod ROAS',  val: c.prodROAS > 0 ? `${c.prodROAS.toFixed(2)}x` : '—', color: c.prodROAS >= 4 ? 'var(--green)' : c.prodROAS >= 2 ? 'var(--amber)' : 'var(--red)' },
+            { label: 'Term Spend', val: `₹${Math.round(c.termSpend).toLocaleString('en-IN')}` },
+            { label: 'Term Conv',  val: c.termConv > 0 ? Math.round(c.termConv).toLocaleString('en-IN') : '—' },
+          ].map(m => (
+            <div key={m.label} style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: m.color || 'var(--text)' }}>{m.val}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {open && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+          {/* Products side */}
+          <div style={{ padding: '12px 16px', borderRight: '0.5px solid var(--border)' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+              Top Products
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr>
+                  {['Product','Spend','Revenue','ROAS'].map((h,i) => (
+                    <th key={h} style={{ padding: '4px 8px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textAlign: i===0?'left':'right', textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:'0.5px solid var(--border)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {c.topProds.map((p, i) => (
+                  <tr key={i} onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <td style={{ padding:'5px 8px', color:'var(--text)', fontWeight:500, maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</td>
+                    <td style={{ padding:'5px 8px', textAlign:'right', color:'var(--text)' }}>₹{Math.round(p.cost).toLocaleString('en-IN')}</td>
+                    <td style={{ padding:'5px 8px', textAlign:'right', color:'var(--green)' }}>₹{Math.round(p.revenue).toLocaleString('en-IN')}</td>
+                    <td style={{ padding:'5px 8px', textAlign:'right', color: p.roas>=4?'var(--green)':p.roas>=2?'var(--amber)':'var(--red)', fontWeight:500 }}>{p.roas.toFixed(2)}x</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Search terms side */}
+          <div style={{ padding: '12px 16px' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+              Top Search Terms
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr>
+                  {['Search Term','Spend','Clicks','Conv.'].map((h,i) => (
+                    <th key={h} style={{ padding: '4px 8px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textAlign: i===0?'left':'right', textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:'0.5px solid var(--border)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {c.topTerms.map((t, i) => (
+                  <tr key={i} onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <td style={{ padding:'5px 8px', color:'var(--text)', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {t.isBrand && <span style={{ fontSize:9, padding:'1px 5px', borderRadius:3, background:'var(--blue-dim)', color:'var(--blue)', marginRight:5, fontWeight:600 }}>B</span>}
+                      {t.term}
+                    </td>
+                    <td style={{ padding:'5px 8px', textAlign:'right', color:'var(--text)' }}>₹{Math.round(t.cost).toLocaleString('en-IN')}</td>
+                    <td style={{ padding:'5px 8px', textAlign:'right', color:'var(--text)' }}>{t.clicks.toLocaleString('en-IN')}</td>
+                    <td style={{ padding:'5px 8px', textAlign:'right', color: t.conversions>0?'var(--green)':'var(--text3)' }}>{t.conversions > 0 ? Math.round(t.conversions) : '—'}</td>
+                  </tr>
+                ))}
+                {c.topTerms.length === 0 && (
+                  <tr><td colSpan={4} style={{ padding:'10px 8px', color:'var(--text3)', fontSize:11 }}>No search terms data for this campaign</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
