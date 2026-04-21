@@ -12,6 +12,7 @@ const initialState = {
   googleSearchTerms: [],
   googleAdReport: [],
   googleProducts: [],
+  googleDemandGen: [],
   ga4Dump: [],
   lastUpdated: {},
   uploadLog: [],
@@ -32,8 +33,10 @@ function reducer(state, action) {
       next = { ...state, metaDB: action.replace ? action.data : [...state.metaDB, ...action.data], lastUpdated: { ...state.lastUpdated, metaDB: new Date() }, uploadLog: [{ type: 'META_DB', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
       return enrichState(next)
     case 'LOAD_META_HOURLY': {
+      // Merge by date+hour+product — new upload overwrites same slots, keeps others
       const incoming = action.data.map(r => ({ ...r, uploadSlot: action.slot || 'manual', uploadTime: new Date() }))
       const existing = state.metaHourly.filter(r => {
+        // Remove rows that match same date as incoming (full day replacement per date)
         const incomingDates = new Set(incoming.map(i => i.date instanceof Date ? i.date.toDateString() : new Date(i.date).toDateString()))
         const rDate = r.date instanceof Date ? r.date.toDateString() : new Date(r.date).toDateString()
         return !incomingDates.has(rDate)
@@ -45,6 +48,8 @@ function reducer(state, action) {
       return { ...state, googleDump: action.replace ? action.data : [...state.googleDump, ...action.data], lastUpdated: { ...state.lastUpdated, google: new Date() }, uploadLog: [{ type: 'GOOGLE_DUMP', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
     case 'LOAD_GOOGLE_AWARENESS':
       return { ...state, googleAwareness: action.replace ? action.data : [...state.googleAwareness, ...action.data], lastUpdated: { ...state.lastUpdated, googleAwareness: new Date() }, uploadLog: [{ type: 'GOOGLE_AWARENESS', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
+    case 'LOAD_GOOGLE_DEMANDGEN':
+      return { ...state, googleDemandGen: action.replace ? action.data : [...state.googleDemandGen, ...action.data], lastUpdated: { ...state.lastUpdated, googleDemandGen: new Date() }, uploadLog: [{ type: 'GOOGLE_DEMANDGEN', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
     case 'LOAD_GOOGLE_PRODUCTS':
       return { ...state, googleProducts: action.replace ? action.data : [...state.googleProducts, ...action.data], lastUpdated: { ...state.lastUpdated, googleProducts: new Date() }, uploadLog: [{ type: 'GOOGLE_PRODUCTS', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
     case 'LOAD_GOOGLE_AD_REPORT':
@@ -77,6 +82,7 @@ export function DataProvider({ children }) {
     else if (fileType === 'WINDSOR_SEARCH_TERMS') dispatch({ type: 'LOAD_GOOGLE_SEARCH_TERMS', data, replace })
     else if (fileType === 'WINDSOR_KEYWORDS')     dispatch({ type: 'LOAD_GOOGLE_KEYWORDS', data, replace })
     else if (fileType === 'GOOGLE_PRODUCTS')  dispatch({ type: 'LOAD_GOOGLE_PRODUCTS', data, replace })
+    else if (fileType === 'GOOGLE_DEMANDGEN') dispatch({ type: 'LOAD_GOOGLE_DEMANDGEN', data, replace })
     else if (fileType === 'GOOGLE_AD_REPORT') dispatch({ type: 'LOAD_GOOGLE_AD_REPORT', data, replace })
     else if (fileType === 'GOOGLE_KEYWORDS')  dispatch({ type: 'LOAD_GOOGLE_KEYWORDS', data, replace })
     else if (fileType === 'GOOGLE_SEARCH_TERMS') dispatch({ type: 'LOAD_GOOGLE_SEARCH_TERMS', data, replace })
