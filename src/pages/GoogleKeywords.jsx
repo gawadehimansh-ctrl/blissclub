@@ -78,10 +78,25 @@ export default function GoogleKeywords() {
   const [tab, setTab]     = useState('overview')
   const [segCut, setSegCut] = useState('all')
   const [bnbFilter, setBnbFilter] = useState('all') // 'all' | 'brand' | 'nb'
+  const [campFilter, setCampFilter] = useState('all') // campaign filter
 
   // ── Data sources ──────────────────────────────────────────────────────────
-  const keywords    = useMemo(() => filterRows(state.googleKeywords || [],    'date'), [state.googleKeywords, filters])
-  const searchTerms = useMemo(() => filterRows(state.googleSearchTerms || [], 'date'), [state.googleSearchTerms, filters])
+  // All campaigns for dropdown
+  const allCampaigns = useMemo(() => {
+    const kw = (state.googleKeywords || []).map(r => r.campaignName).filter(Boolean)
+    const st = (state.googleSearchTerms || []).map(r => r.campaignName).filter(Boolean)
+    return [...new Set([...kw, ...st])].sort()
+  }, [state.googleKeywords, state.googleSearchTerms])
+
+  const keywords    = useMemo(() => {
+    const rows = filterRows(state.googleKeywords || [], 'date')
+    return campFilter === 'all' ? rows : rows.filter(r => r.campaignName === campFilter)
+  }, [state.googleKeywords, filters, campFilter])
+
+  const searchTerms = useMemo(() => {
+    const rows = filterRows(state.googleSearchTerms || [], 'date')
+    return campFilter === 'all' ? rows : rows.filter(r => r.campaignName === campFilter)
+  }, [state.googleSearchTerms, filters, campFilter])
   const googleRows  = useMemo(() => filterRows(state.googleDump, 'date'), [state.googleDump, filters])
   const googlePrev  = useMemo(() => getPrevRows(state.googleDump, 'date'), [state.googleDump, filters])
   const ga4Rows     = useMemo(() => filterRows(state.ga4Dump, 'date'), [state.ga4Dump, filters])
