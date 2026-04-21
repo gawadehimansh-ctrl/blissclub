@@ -191,6 +191,9 @@ export default function GoogleProducts() {
 
   const campaigns = useMemo(() => [...new Set(allRows.map(r => r.campaignName).filter(Boolean))].sort(), [allRows])
 
+  const rows = useMemo(() => campaignFilter === 'all' ? allRows : allRows.filter(r => r.campaignName === campaignFilter), [allRows, campaignFilter])
+  const prev = useMemo(() => campaignFilter === 'all' ? prevAllRows : prevAllRows.filter(r => r.campaignName === campaignFilter), [prevAllRows, campaignFilter])
+
   // Search terms for cohort view
   const allSearchTerms = useMemo(() => {
     const stRows = filterRows(state.googleSearchTerms || [], 'date')
@@ -247,8 +250,7 @@ export default function GoogleProducts() {
     }).filter(c => c.productCount > 0 || c.termCount > 0)
   }, [rows, allSearchTerms, campaignFilter])
 
-  const rows = useMemo(() => campaignFilter === 'all' ? allRows : allRows.filter(r => r.campaignName === campaignFilter), [allRows, campaignFilter])
-  const prev = useMemo(() => campaignFilter === 'all' ? prevAllRows : prevAllRows.filter(r => r.campaignName === campaignFilter), [prevAllRows, campaignFilter])
+
 
   const totals     = useMemo(() => aggProd(rows), [rows])
   const prevTotals = useMemo(() => aggProd(prev), [prev])
