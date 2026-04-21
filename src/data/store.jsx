@@ -11,6 +11,7 @@ const initialState = {
   googleKeywords: [],
   googleSearchTerms: [],
   googleAdReport: [],
+  googleProducts: [],
   ga4Dump: [],
   lastUpdated: {},
   uploadLog: [],
@@ -44,6 +45,8 @@ function reducer(state, action) {
       return { ...state, googleDump: action.replace ? action.data : [...state.googleDump, ...action.data], lastUpdated: { ...state.lastUpdated, google: new Date() }, uploadLog: [{ type: 'GOOGLE_DUMP', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
     case 'LOAD_GOOGLE_AWARENESS':
       return { ...state, googleAwareness: action.replace ? action.data : [...state.googleAwareness, ...action.data], lastUpdated: { ...state.lastUpdated, googleAwareness: new Date() }, uploadLog: [{ type: 'GOOGLE_AWARENESS', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
+    case 'LOAD_GOOGLE_PRODUCTS':
+      return { ...state, googleProducts: action.replace ? action.data : [...state.googleProducts, ...action.data], lastUpdated: { ...state.lastUpdated, googleProducts: new Date() }, uploadLog: [{ type: 'GOOGLE_PRODUCTS', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
     case 'LOAD_GOOGLE_AD_REPORT':
       return { ...state, googleAdReport: action.replace ? action.data : [...state.googleAdReport, ...action.data], lastUpdated: { ...state.lastUpdated, googleAdReport: new Date() }, uploadLog: [{ type: 'GOOGLE_AD_REPORT', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)] }
     case 'LOAD_GOOGLE_KEYWORDS':
@@ -73,6 +76,7 @@ export function DataProvider({ children }) {
     else if (fileType === 'WINDSOR_GOOGLE_DAILY') dispatch({ type: 'LOAD_GOOGLE', data, replace })
     else if (fileType === 'WINDSOR_SEARCH_TERMS') dispatch({ type: 'LOAD_GOOGLE_SEARCH_TERMS', data, replace })
     else if (fileType === 'WINDSOR_KEYWORDS')     dispatch({ type: 'LOAD_GOOGLE_KEYWORDS', data, replace })
+    else if (fileType === 'GOOGLE_PRODUCTS')  dispatch({ type: 'LOAD_GOOGLE_PRODUCTS', data, replace })
     else if (fileType === 'GOOGLE_AD_REPORT') dispatch({ type: 'LOAD_GOOGLE_AD_REPORT', data, replace })
     else if (fileType === 'GOOGLE_KEYWORDS')  dispatch({ type: 'LOAD_GOOGLE_KEYWORDS', data, replace })
     else if (fileType === 'GOOGLE_SEARCH_TERMS') dispatch({ type: 'LOAD_GOOGLE_SEARCH_TERMS', data, replace })
