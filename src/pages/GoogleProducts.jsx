@@ -189,11 +189,8 @@ export default function GoogleProducts() {
 
   const campaigns = useMemo(() => [...new Set(allRows.map(r => r.campaignName).filter(Boolean))].sort(), [allRows])
 
-  const rows = useMemo(() => campFilter === 'all' ? allRows : allRows.filter(r => r.campaignName === campFilter), [allRows, campaignFilter])
-  const prev = useMemo(() => campFilter === 'all' ? prevAllRows : prevAllRows.filter(r => r.campaignName === campFilter), [prevAllRows, campaignFilter])
-
-  // fix: use campaignFilter not campFilter
-  const campFilter = campaignFilter
+  const rows = useMemo(() => campaignFilter === 'all' ? allRows : allRows.filter(r => r.campaignName === campaignFilter), [allRows, campaignFilter])
+  const prev = useMemo(() => campaignFilter === 'all' ? prevAllRows : prevAllRows.filter(r => r.campaignName === campaignFilter), [prevAllRows, campaignFilter])
 
   const totals     = useMemo(() => aggProd(rows), [rows])
   const prevTotals = useMemo(() => aggProd(prev), [prev])
