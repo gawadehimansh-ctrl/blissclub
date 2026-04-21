@@ -10,6 +10,7 @@ import MetaCohortMatrix from './pages/MetaCohortMatrix.jsx'
 import GoogleCampaigns from './pages/GoogleCampaigns.jsx'
 import GoogleKeywords from './pages/GoogleKeywords.jsx'
 import GoogleAwareness from './pages/GoogleAwareness.jsx'
+import GoogleProducts from './pages/GoogleProducts.jsx'
 import Hourly from './pages/Hourly.jsx'
 import BlendedHealth from './pages/BlendedHealth.jsx'
 import Upload from './pages/Upload.jsx'
@@ -25,6 +26,7 @@ const NAV = [
   { path: '/google/campaigns',  label: 'Campaigns',         icon: '▤', group: 'Google' },
   { path: '/google/keywords',   label: 'Brand vs NB',       icon: '⌕', group: 'Google' },
   { path: '/google/awareness',  label: 'Awareness',         icon: '▶', group: 'Google' },
+  { path: '/google/products',   label: 'Products',          icon: '◫', group: 'Google' },
   { path: '/upload',            label: 'Upload data',       icon: '⬆', group: 'Data' },
 ]
 
@@ -128,6 +130,7 @@ function Layout() {
           <Route path="/google/campaigns" element={<GoogleCampaigns />} />
           <Route path="/google/keywords"  element={<GoogleKeywords />} />
           <Route path="/google/awareness" element={<GoogleAwareness />} />
+          <Route path="/google/products"  element={<GoogleProducts />} />
           <Route path="/upload"           element={<Upload />} />
         </Routes>
       </main>
