@@ -151,7 +151,7 @@ export default function Upload() {
   const mandatoryDone = counts.metaDB > 0 && counts.google > 0 && counts.ga4 > 0
 
   return (
-    <div>
+    <div style={{ padding: '24px 28px', width: '100%' }}>
 
       {/* Windsor Auto-Sync */}
       <div style={{ background: PROXY_URL ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${PROXY_URL ? 'rgba(34,197,94,0.25)' : 'var(--border)'}`, borderRadius: 10, padding: '24px 28px', marginBottom: 20 }}>
@@ -210,7 +210,7 @@ export default function Upload() {
                 <div style={{ width: 7, height: 7, borderRadius: '50%', background: hasData ? src.color : 'var(--bg4)' }} />
                 <span style={{ fontSize: 12, fontWeight: 500, color: hasData ? src.color : 'var(--text2)' }}>{src.label}</span>
               </div>
-              <div style={{ fontSize: 20, fontWeight: 600, color: hasData ? 'var(--text)' : 'var(--text3)' }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: hasData ? 'var(--text)' : 'var(--text3)' }}>
                 {hasData ? fmtNum(count) : '—'}
               </div>
               <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
