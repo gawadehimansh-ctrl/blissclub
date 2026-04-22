@@ -385,7 +385,7 @@ function parseWindsorSearchTerms(rows) {
   return rows.map(r => {
     // Windsor returns column as 'Search Terms' (capital) or 'search_term' depending on version
     const term = r['Search Terms'] || r['search_term'] || r['Search Term'] || r['search terms'] || ''
-    const campaignName = r['campaign_name'] || r['campaign'] || ''
+    const campaignName = r['campaign_name'] || r['campaign'] || r['Campaign'] || ''
     return {
       date:         parseDate(r['date'] || new Date()),
       term,
