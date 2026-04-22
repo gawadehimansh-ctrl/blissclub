@@ -184,7 +184,7 @@ export default function GoogleCampaigns() {
   ]
 
   return (
-    <div>
+    <div style={{ padding: '24px 28px', width: '100%' }}>
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize:18, fontWeight:600, marginBottom:2 }}>Google — Campaigns</h1>
         <div style={{ fontSize:12, color:'var(--text3)' }}>7 account cuts · daily / weekly / monthly · campaign drill-down</div>
