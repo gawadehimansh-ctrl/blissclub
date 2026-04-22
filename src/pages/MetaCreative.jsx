@@ -106,7 +106,7 @@ export default function MetaCreative() {
   const COLORS = ['var(--pink)', 'var(--blue)', 'var(--amber)', 'var(--green)', 'var(--purple)']
 
   return (
-    <div>
+    <div style={{ padding: '24px 28px', width: '100%' }}>
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Meta creative lookback</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>Product · Format · Content type · Creator · Cohort breakdown</div>
