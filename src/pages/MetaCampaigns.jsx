@@ -112,7 +112,7 @@ export default function MetaCampaigns() {
   const tableCols = level === 'Campaign' ? campaignCols : level === 'Ad set' ? adsetCols : adCols
 
   return (
-    <div>
+    <div style={{ padding: '24px 28px', width: '100%' }}>
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Meta campaigns</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>GA4 ROAS — source of truth</div>
