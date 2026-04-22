@@ -303,9 +303,9 @@ export default function GoogleProducts() {
   }))
 
   return (
-    <div style={{ padding: '20px 24px' }}>
+    <div style={{ padding: '24px 28px' }}>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Google — Product Performance</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Google — Product Performance</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>Shopping & PMax · click any product to drill into color, size, fit, height</div>
       </div>
 
