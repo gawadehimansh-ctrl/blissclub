@@ -184,7 +184,7 @@ export default function Weekly() {
   const noData = !state.metaDB.length && !state.googleDump.length
 
   return (
-    <div style={{ padding: '24px 28px' }}>
+    <div style={{ padding: '24px 28px', width: '100%', boxSizing: 'border-box' }}>
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2, letterSpacing: '-0.02em' }}>Weekly dashboard</h1>
@@ -202,7 +202,7 @@ export default function Weekly() {
 
       {/* ── Blended commercial health ── */}
       <SectionLabel>Blended commercial health</SectionLabel>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 10, width: '100%' }}>
         <KPI label="Blended ROAS" value={fmtX(blendedROAS)} color={C.green}
           sublabel="GA4 rev ÷ all paid spend"
           delta={prevBlendedROAS ? deltaLabel(blendedROAS, prevBlendedROAS) : null} />
@@ -217,7 +217,7 @@ export default function Weekly() {
           delta={deltaLabel(ga4.revenue, ga4P.revenue)} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 20, width: '100%' }}>
         <KPI label="GA4 orders" value={fmtNum(ga4.transactions)} color={C.text3}
           sublabel="Transactions"
           delta={deltaLabel(ga4.transactions, ga4P.transactions)} />
@@ -231,7 +231,7 @@ export default function Weekly() {
       </div>
 
       {/* ── Channel breakdown ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20, width: '100%' }}>
         {/* Meta card */}
         <div style={{ background: C.bg2, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
