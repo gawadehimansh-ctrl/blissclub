@@ -70,25 +70,30 @@ export default function Hourly() {
   const [showComp, setShowComp]       = useState(false)
   const [pickerOpen, setPickerOpen]   = useState(false)
   const [uploading, setUploading]     = useState(false)
-  const [activeSlot, setActiveSlot]   = useState(null)
-  const [hourFrom, setHourFrom]       = useState(0)
-  const [hourTo, setHourTo]           = useState(23)
+  const [activeSlot, setActiveSlot]   = useState(null) // which slot is being uploaded
+  // Hour filter: null = all hours, or { from, to }
+  const [hourFrom, setHourFrom] = useState(0)
+  const [hourTo, setHourTo]     = useState(23)
   const [hourFilterOn, setHourFilterOn] = useState(false)
 
+  // All rows for primary date
   const allPrimaryRows = useMemo(() => getRowsForDate(state.metaHourly, primaryDate), [state.metaHourly, primaryDate])
   const allCompareRows = useMemo(() => getRowsForDate(state.metaHourly, compareDate), [state.metaHourly, compareDate])
 
+  // Which upload slots exist for primary date
   const uploadedSlots = useMemo(() => {
     const slots = new Set(allPrimaryRows.map(r => r.uploadSlot).filter(Boolean))
     return slots
   }, [allPrimaryRows])
 
+  // Latest upload time for primary date
   const lastUploadTime = useMemo(() => {
     const times = allPrimaryRows.map(r => r.uploadTime).filter(Boolean)
     if (!times.length) return null
     return times.sort((a,b) => b - a)[0]
   }, [allPrimaryRows])
 
+  // Filtered by hour range
   const primaryRows = useMemo(() => {
     if (!hourFilterOn) return allPrimaryRows
     return allPrimaryRows.filter(r => {
@@ -136,6 +141,7 @@ export default function Hourly() {
   const primaryLabel = format(primaryDate, 'd MMM yyyy')
   const compareLabel = format(compareDate, 'd MMM yyyy')
 
+  // Upload handler — tagged with slot
   async function handleUpload(slot, file) {
     if (!file) return
     setUploading(true)
@@ -151,11 +157,11 @@ export default function Hourly() {
   }
 
   return (
-    <div style={{ padding: '20px 24px' }}>
+    <div style={{ padding: '24px 28px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Hourly pulse</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Hourly pulse</h1>
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>
             Intraday product spend · 1DC orders · CSV upload only
             {lastUploadTime && (
@@ -166,6 +172,7 @@ export default function Hourly() {
             )}
           </div>
         </div>
+        {/* Date picker button */}
         <div style={{ position: 'relative' }}>
           <button onClick={() => setPickerOpen(o => !o)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
@@ -186,7 +193,7 @@ export default function Hourly() {
         </div>
       </div>
 
-      {/* Upload strip */}
+      {/* Upload strip — one button per time slot */}
       <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8 }}>Upload Meta hourly CSV</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -320,9 +327,9 @@ export default function Hourly() {
             </thead>
             <tbody>
               {tableRows.map(r => {
-                const compRow = r.comp
-                const compMix = compRow && totalCompare > 0 ? compRow.spend / totalCompare * 100 : null
-                const compCpc = compRow?.clicks > 0 ? compRow.spend / compRow.clicks : null
+                const compRow  = r.comp
+                const compMix  = compRow && totalCompare > 0 ? compRow.spend / totalCompare * 100 : null
+                const compCpc  = compRow?.clicks > 0 ? compRow.spend / compRow.clicks : null
                 return (
                   <tr key={r.product}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
@@ -350,6 +357,7 @@ export default function Hourly() {
                   </tr>
                 )
               })}
+              {/* Grand total */}
               <tr style={{ borderTop: '1px solid var(--border2)', background: 'var(--bg3)' }}>
                 <td style={td({ align: 'left', bold: true })}>Grand Total</td>
                 <td style={td({ bold: true })}>{fmtINR(totalPrimary)}</td>
