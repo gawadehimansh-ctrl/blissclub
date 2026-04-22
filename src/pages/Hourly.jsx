@@ -163,7 +163,7 @@ export default function Hourly() {
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Hourly pulse</h1>
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-            Intraday product spend · 1DC orders · CSV upload only
+            Intraday product spend · 1DC orders · CSV upload only · Last upload
             {lastUploadTime && (
               <span style={{ marginLeft: 8, color: 'var(--green)' }}>
                 · Last upload {format(lastUploadTime, 'h:mm a')}
@@ -263,7 +263,7 @@ export default function Hourly() {
         {[
           { label: 'Spend so far', val: totalPrimary, comp: totalCompare },
           { label: 'Projected day', val: projectedSpend, comp: null, sub: `Based on ${effectiveHours}h run rate` },
-          { label: '1DC Orders', val: primaryRows.reduce((s,r)=>s+(r.fbOrders||0),0), comp: compareRows.reduce((s,r)=>s+(r.fbOrders||0),0), isNum: true },
+
           { label: 'Clicks', val: primaryRows.reduce((s,r)=>s+(r.clicks||0),0), comp: compareRows.reduce((s,r)=>s+(r.clicks||0),0), isNum: true },
         ].map(({ label, val, comp, sub, isNum }) => (
           <div key={label} style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
@@ -315,7 +315,7 @@ export default function Hourly() {
                 <th style={th()}>Spend ({primaryLabel}{hourFilterOn ? ` · ${hourFrom.toString().padStart(2,'0')}–${hourTo.toString().padStart(2,'0')}h` : ''})</th>
                 <th style={th()}>Spend Mix</th>
                 <th style={th()}>CPC</th>
-                <th style={th()}>1DC Orders</th>
+
                 {showComp && compareOn && <>
                   <th style={th({ comp: true })}>Spend ({compareLabel})</th>
                   <th style={th({ comp: true })}>Mix</th>
@@ -346,7 +346,7 @@ export default function Hourly() {
                       </div>
                     </td>
                     <td style={td()}>₹{r.cpc > 0 ? Math.round(r.cpc).toLocaleString('en-IN') : '—'}</td>
-                    <td style={td()}>{r.fbOrders > 0 ? r.fbOrders.toLocaleString('en-IN') : '—'}</td>
+
                     {showComp && compareOn && <>
                       <td style={td({ comp: true })}>{compRow ? fmtINR(compRow.spend) : '—'}</td>
                       <td style={td({ comp: true })}>{compMix != null ? `${compMix.toFixed(1)}%` : '—'}</td>
@@ -363,7 +363,7 @@ export default function Hourly() {
                 <td style={td({ bold: true })}>{fmtINR(totalPrimary)}</td>
                 <td style={td()}>100%</td>
                 <td style={td()}>{(() => { const tc = primaryRows.reduce((s,r)=>s+(r.clicks||0),0); return tc > 0 ? `₹${Math.round(totalPrimary/tc).toLocaleString('en-IN')}` : '—' })()}</td>
-                <td style={td({ bold: true })}>{primaryRows.reduce((s,r)=>s+(r.fbOrders||0),0).toLocaleString('en-IN')}</td>
+
                 {showComp && compareOn && <>
                   <td style={td({ comp: true, bold: true })}>{fmtINR(totalCompare)}</td>
                   <td style={td({ comp: true })}>100%</td>
