@@ -132,7 +132,7 @@ export default function BlendedHealth() {
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Blended health</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Blended health</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>True blended ROAS and CAC · GA4 as revenue source of truth</div>
       </div>
       <FilterBar filters={filters} />
