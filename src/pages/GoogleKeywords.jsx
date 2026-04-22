@@ -81,12 +81,13 @@ export default function GoogleKeywords() {
   const [campFilter, setCampFilter] = useState('all') // campaign filter
 
   // ── Data sources ──────────────────────────────────────────────────────────
-  // All campaigns for dropdown
+  // All campaigns for dropdown — include googleDump so PMax shows up
   const allCampaigns = useMemo(() => {
     const kw = (state.googleKeywords || []).map(r => r.campaignName).filter(Boolean)
     const st = (state.googleSearchTerms || []).map(r => r.campaignName).filter(Boolean)
-    return [...new Set([...kw, ...st])].sort()
-  }, [state.googleKeywords, state.googleSearchTerms])
+    const gc = (state.googleDump || []).map(r => r.campaignName).filter(Boolean)
+    return [...new Set([...kw, ...st, ...gc])].sort()
+  }, [state.googleKeywords, state.googleSearchTerms, state.googleDump])
 
   const keywords    = useMemo(() => {
     const rows = filterRows(state.googleKeywords || [], 'date')
