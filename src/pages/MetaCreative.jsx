@@ -108,7 +108,7 @@ export default function MetaCreative() {
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Meta creative lookback</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Meta creative lookback</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>Product · Format · Content type · Creator · Cohort breakdown</div>
       </div>
       <FilterBar filters={filters} showAdvanced />
