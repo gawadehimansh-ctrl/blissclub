@@ -129,22 +129,38 @@ function KPICard({ label, actual, target, formatter=fmt, higher=true }) {
   const daysElapsed = getDaysElapsed()
   const cumTarget   = target * daysElapsed
   const status      = rag(actual, cumTarget, higher)
+  const pct         = cumTarget > 0 ? Math.min((actual / cumTarget) * 100, 120) : 0
   const remaining   = Math.max(PACING_CONFIG.totalDays - daysElapsed, 1)
   const deficit     = cumTarget - actual
   const runRate     = deficit > 0 ? deficit / remaining : 0
+  const barColor    = C[status].text
 
   return (
     <div style={{
-      background:'rgba(255,255,255,0.025)', border:`0.5px solid rgba(255,255,255,0.07)`,
-      borderRadius:10, padding:'14px 16px', flex:1, minWidth:130,
+      background:'var(--bg2)', border:'0.5px solid var(--border)',
+      borderRadius:12, padding:'18px 20px', flex:1, minWidth:150,
     }}>
-      <div style={{ fontSize:10, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6 }}>{label}</div>
-      <div style={{ fontSize:20, fontWeight:700, color:C[status].text, marginBottom:2 }}>{formatter(actual)}</div>
-      <div style={{ fontSize:10, color:'#475569', marginBottom:6 }}>MTD target {formatter(cumTarget)}</div>
-      <PaceBar actual={actual} target={cumTarget} higher={higher} />
+      {/* Label */}
+      <div style={{ fontSize:10, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:10 }}>
+        {label}
+      </div>
+      {/* Value */}
+      <div style={{ fontSize:28, fontWeight:700, color:barColor, letterSpacing:'-0.02em', lineHeight:1.1, marginBottom:8 }}>
+        {formatter(actual)}
+      </div>
+      {/* Target row */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+        <span style={{ fontSize:11, color:'var(--text3)' }}>MTD target {formatter(cumTarget)}</span>
+        <span style={{ fontSize:11, fontWeight:700, color:barColor }}>{pct.toFixed(0)}%</span>
+      </div>
+      {/* Progress bar */}
+      <div style={{ height:4, background:'rgba(255,255,255,0.07)', borderRadius:2, overflow:'hidden', marginBottom:6 }}>
+        <div style={{ width:`${Math.min(pct,100)}%`, height:'100%', background:barColor, borderRadius:2 }} />
+      </div>
+      {/* Run rate */}
       {runRate > 0 && (
-        <div style={{ fontSize:10, color:'#64748b', marginTop:5 }}>
-          Need: <span style={{ color:'#f472b6' }}>{formatter(runRate)}/day</span>
+        <div style={{ fontSize:11, color:'var(--text3)', marginTop:6 }}>
+          Need: <span style={{ color:'#f472b6', fontWeight:600 }}>{formatter(runRate)}/day</span>
         </div>
       )}
     </div>
@@ -387,7 +403,7 @@ export default function PacingTracker() {
     <div style={{ padding: '24px 28px', width: '100%' }}>
       {/* Header */}
       <div style={{ marginBottom:16 }}>
-        <h1 style={{ fontSize:18, fontWeight:600, marginBottom:2 }}>Pacing tracker</h1>
+        <h1 style={{ fontSize:22, fontWeight:700, marginBottom:4, letterSpacing:'-0.01em' }}>Pacing tracker</h1>
         <div style={{ fontSize:12, color:'var(--text3)' }}>
           Meta GA4 revenue · {PACING_CONFIG.month} · Day {daysElapsed} of {PACING_CONFIG.totalDays} ·
           Targets are <strong style={{ color:'#f472b6' }}>daily benchmarks</strong> — cumulative shown vs days elapsed
