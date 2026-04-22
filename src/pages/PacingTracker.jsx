@@ -138,10 +138,10 @@ function KPICard({ label, actual, target, formatter=fmt, higher=true }) {
   return (
     <div style={{
       background:'var(--bg2)', border:'0.5px solid var(--border)',
-      borderRadius:12, padding:'18px 20px', flex:1, minWidth:150,
+      borderRadius:12, padding:'20px 22px', flex:1, minWidth:180,
     }}>
       {/* Label */}
-      <div style={{ fontSize:10, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:10 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:10, whiteSpace:'nowrap' }}>
         {label}
       </div>
       {/* Value */}
@@ -421,7 +421,7 @@ export default function PacingTracker() {
       )}
 
       {/* KPI summary strip */}
-      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(5, minmax(0,1fr))', gap:10, marginBottom:20 }}>
         <KPICard label="Meta GA4 Revenue" actual={totals.ga4Revenue} target={accountTgt.ga4Revenue} formatter={fmt} higher={true} />
         <KPICard label="Total Spend"      actual={totals.spend}      target={accountTgt.spends}     formatter={fmt} higher={true} />
         <KPICard label="GA4 ROAS"         actual={totals.ga4ROAS}    target={1.70}                  formatter={fmtX} higher={true} />
