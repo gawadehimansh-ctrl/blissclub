@@ -60,7 +60,7 @@ function CohortCard({ cohort, data, totalSpend }) {
   return (
     <div style={{
       background: bg, border: `1px solid ${border}`,
-      borderRadius: 12, padding: '16px 20px', flex: 1, minWidth: 200,
+      borderRadius: 12, padding: '24px 28px', flex: 1, minWidth: 200,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
