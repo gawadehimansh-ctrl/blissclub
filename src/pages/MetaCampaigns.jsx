@@ -37,12 +37,13 @@ export default function MetaCampaigns() {
   // Summary totals
   const totals = useMemo(() => aggregateRows(rows), [rows])
 
-  // Campaign groups — derive from adset name prefix (ACQ/REM/RET + product)
+  // Campaign groups — group by actual campaign name
   const campaignGroups = useMemo(() => {
-    const g = groupBy(rows, 'cohort')
-    return Object.entries(g).map(([cohort, rs]) => {
+    const g = groupBy(rows, 'campaignName')
+    return Object.entries(g).map(([campaignName, rs]) => {
       const agg = aggregateRows(rs)
-      return { ...agg, cohort, _rows: rs }
+      const cohorts = [...new Set(rs.map(r => r.cohort).filter(Boolean))]
+      return { ...agg, campaignName, cohort: cohorts.join('/'), _rows: rs }
     }).sort((a, b) => b.spend - a.spend)
   }, [rows])
 
