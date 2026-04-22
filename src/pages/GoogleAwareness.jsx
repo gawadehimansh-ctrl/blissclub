@@ -36,7 +36,7 @@ function aggAwr(rows) {
 const TABS = [
   { key: 'overview',  label: 'Overview' },
   { key: 'campaign',  label: 'Campaign' },
-  { key: 'product',   label: 'Product' },
+  { key: 'device',    label: 'Device' },
   { key: 'location',  label: 'Location' },
   { key: 'gender',    label: 'Gender' },
 ]
@@ -259,37 +259,40 @@ export default function GoogleAwareness() {
         <DrillTable columns={campCols} data={byCampaign} defaultSort={{ key:'cost', dir:'desc' }} />
       )}
 
-      {/* ── PRODUCT TAB ──────────────────────────────────────────────────────── */}
-      {tab === 'product' && (() => {
-        const byProduct = Object.values(rows.reduce((map, r) => {
-          const k = r.product || 'Unknown'
+      {/* ── DEVICE TAB ───────────────────────────────────────────────────────── */}
+      {tab === 'device' && (() => {
+        const byDevice = Object.values(rows.reduce((map, r) => {
+          const k = r.device || 'Unknown'
           if (!map[k]) map[k] = []
           map[k].push(r)
           return map
-        }, {})).map(rs => ({ product: rs[0].product, ...aggAwr(rs) })).sort((a,b) => b.cost - a.cost)
+        }, {})).map(rs => ({ device: rs[0].device || 'Unknown', ...aggAwr(rs) })).sort((a,b) => b.impressions - a.impressions)
         return (
           <>
             <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
-              <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>Spend by product</div>
+              <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>Impressions by device</div>
               <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={byProduct.slice(0,8).map(p => ({ name: p.product, spend: +p.cost.toFixed(0), cpm: +p.cpm.toFixed(0) }))} barSize={28}>
+                <BarChart data={byDevice.map(d => ({ name: d.device, impressions: d.impressions, spend: +d.cost.toFixed(0), cpm: +d.cpm.toFixed(0) }))} barSize={48}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize:10, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="name" tick={{ fontSize:11, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize:10, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
-                  <Tooltip {...TIP} formatter={(v,n) => [n==='spend'?`₹${v.toLocaleString('en-IN')}`:v, n]} />
-                  <Bar dataKey="spend" fill="var(--blue)" radius={[3,3,0,0]} name="Spend" />
+                  <Tooltip {...TIP} formatter={(v,n) => [n==='spend'?`₹${v.toLocaleString('en-IN')}`:fmtNum(v), n]} />
+                  <Bar dataKey="impressions" fill="var(--blue)" radius={[3,3,0,0]} name="Impressions" />
+                  <Bar dataKey="spend" fill="var(--pink)" radius={[3,3,0,0]} name="Spend" fillOpacity={0.7} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             <DrillTable columns={[
-              { key:'product',     label:'Product',    align:'left', bold:true },
-              { key:'cost',        label:'Spend',      render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
-              { key:'impressions', label:'Impressions',render: fmtNum },
-              { key:'clicks',      label:'Clicks',     render: fmtNum },
-              { key:'ctr',         label:'CTR',        render: fmtPct, color: v => v>=0.02?'var(--green)':v>=0.01?'var(--amber)':'var(--red)' },
-              { key:'cpm',         label:'CPM',        render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
-              { key:'cpc',         label:'CPC',        render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
-            ]} data={byProduct} defaultSort={{ key:'cost', dir:'desc' }} />
+              { key:'device',      label:'Device',      align:'left', bold:true },
+              { key:'cost',        label:'Spend',       render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+              { key:'impressions', label:'Impressions', render: fmtNum },
+              { key:'videoViews',  label:'Views',       render: v => v > 0 ? fmtNum(v) : '—', color: v => v > 0 ? 'var(--blue)' : 'var(--text3)' },
+              { key:'vtr',         label:'VTR',         render: v => v > 0 ? fmtPct(v) : '—' },
+              { key:'clicks',      label:'Clicks',      render: fmtNum },
+              { key:'ctr',         label:'CTR',         render: fmtPct, color: v => v>=0.02?'var(--green)':v>=0.01?'var(--amber)':'var(--red)' },
+              { key:'cpm',         label:'CPM',         render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+              { key:'cpv',         label:'CPV',         render: v => v > 0 ? `₹${v.toFixed(2)}` : '—' },
+            ]} data={byDevice} defaultSort={{ key:'impressions', dir:'desc' }} />
           </>
         )
       })()}
