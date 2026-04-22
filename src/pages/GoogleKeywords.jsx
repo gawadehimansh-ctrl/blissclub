@@ -230,7 +230,7 @@ export default function GoogleKeywords() {
   const hasGoogle      = googleRows.length > 0
 
   return (
-    <div>
+    <div style={{ padding: '24px 28px', width: '100%' }}>
       <div style={{ marginBottom:16 }}>
         <h1 style={{ fontSize:18, fontWeight:600, marginBottom:2 }}>Google — Keywords & Search Terms</h1>
         <div style={{ fontSize:12, color:'var(--text3)' }}>Brand vs NB · Burning keywords · Irrelevant search terms · MoM trend</div>
