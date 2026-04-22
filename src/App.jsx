@@ -16,6 +16,106 @@ import Hourly           from './pages/Hourly.jsx'
 import BlendedHealth    from './pages/BlendedHealth.jsx'
 import Upload           from './pages/Upload.jsx'
 
+// ── Auth Gate ─────────────────────────────────────────────────────────────────
+function AuthGate({ children }) {
+  const [authed, setAuthed] = React.useState(() => sessionStorage.getItem('bc_auth') === 'ok')
+  const [user, setUser] = React.useState('')
+  const [pass, setPass] = React.useState('')
+  const [error, setError] = React.useState(false)
+
+  if (authed) return children
+
+  function handleLogin() {
+    if (user === 'test' && pass === 'Blissclub1234') {
+      sessionStorage.setItem('bc_auth', 'ok')
+      setAuthed(true)
+    } else {
+      setError(true)
+      setTimeout(() => setError(false), 2000)
+    }
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh', background: '#0d0d0d',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        background: '#161616', border: '0.5px solid rgba(255,255,255,0.08)',
+        borderRadius: 16, padding: '40px 44px', width: 360,
+      }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>BlissClub</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>Performance dashboard</div>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Sign in</div>
+        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 28 }}>Enter your credentials to continue</div>
+
+        {/* Username */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 6 }}>Username</label>
+          <input
+            value={user}
+            onChange={e => setUser(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            placeholder="Enter username"
+            style={{
+              width: '100%', padding: '10px 14px', fontSize: 13,
+              background: '#1e1e1e', border: `0.5px solid ${error ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)'}`,
+              borderRadius: 8, color: '#fff', outline: 'none',
+            }}
+          />
+        </div>
+
+        {/* Password */}
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 6 }}>Password</label>
+          <input
+            type="password"
+            value={pass}
+            onChange={e => setPass(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            placeholder="Enter password"
+            style={{
+              width: '100%', padding: '10px 14px', fontSize: 13,
+              background: '#1e1e1e', border: `0.5px solid ${error ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)'}`,
+              borderRadius: 8, color: '#fff', outline: 'none',
+            }}
+          />
+          {error && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 6 }}>Invalid username or password</div>}
+        </div>
+
+        <button
+          onClick={handleLogin}
+          style={{
+            width: '100%', padding: '11px', fontSize: 14, fontWeight: 600,
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer',
+          }}
+        >
+          Sign in
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // SVG Icons matching Figma sidebar exactly
 const Icons = {
   pacing:   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
@@ -176,8 +276,10 @@ function Layout() {
 
 export default function App() {
   return (
-    <DataProvider>
-      <Layout />
-    </DataProvider>
+    <AuthGate>
+      <DataProvider>
+        <Layout />
+      </DataProvider>
+    </AuthGate>
   )
 }
