@@ -114,7 +114,7 @@ export default function MetaCampaigns() {
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Meta campaigns</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Meta campaigns</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>GA4 ROAS — source of truth</div>
       </div>
       <FilterBar filters={filters} showAdvanced />
