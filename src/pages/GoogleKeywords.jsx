@@ -238,6 +238,32 @@ export default function GoogleKeywords() {
 
       <FilterBar filters={filters} showAdvanced showCohort={false} showSaleTag={false} />
 
+      {/* Campaign filter */}
+      {allCampaigns.length > 0 && (
+        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12, flexWrap:'wrap' }}>
+          <span style={{ fontSize:12, color:'var(--text3)', fontWeight:500 }}>Campaign</span>
+          <select value={campFilter} onChange={e => setCampFilter(e.target.value)} style={{
+            padding:'5px 12px', fontSize:12, borderRadius:6, cursor:'pointer',
+            background:'var(--bg2)', border:'0.5px solid var(--border2)',
+            color:'var(--text)', outline:'none', maxWidth:480,
+          }}>
+            <option value="all">All campaigns ({allCampaigns.length})</option>
+            {allCampaigns.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {campFilter !== 'all' && (
+            <button onClick={() => setCampFilter('all')} style={{
+              padding:'4px 8px', fontSize:11, borderRadius:4, cursor:'pointer',
+              background:'var(--bg3)', border:'0.5px solid var(--border2)', color:'var(--text2)',
+            }}>✕ Clear</button>
+          )}
+          {campFilter !== 'all' && (
+            <span style={{ fontSize:11, color:'var(--blue)' }}>
+              {keywords.length} keywords · {searchTerms.length} search terms
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Tab bar */}
       <div style={{ display:'flex', gap:0, marginBottom:16, borderBottom:'0.5px solid var(--border)' }}>
         {TABS.map(t => {
