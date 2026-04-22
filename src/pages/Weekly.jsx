@@ -30,7 +30,7 @@ function KPI({ label, value, sublabel, delta, color = C.text, lowerBetter = fals
   return (
     <div style={{
       background: C.bg2, border: '0.5px solid var(--border)',
-      borderRadius: 'var(--radius-lg)', padding: '16px 18px',
+      borderRadius: 'var(--radius-lg)', padding: '22px 24px', minHeight: 140,
     }}>
       <div style={{ fontSize: 10, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
         {label}
@@ -66,7 +66,7 @@ function MetricRow({ label, value, delta, last = false }) {
   return (
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '8px 0', borderBottom: last ? 'none' : '0.5px solid var(--border)',
+      padding: '10px 0', borderBottom: last ? 'none' : '0.5px solid var(--border)',
       fontSize: 13,
     }}>
       <span style={{ color: C.text2 }}>{label}</span>
@@ -233,7 +233,7 @@ export default function Weekly() {
       {/* ── Channel breakdown ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20, width: '100%' }}>
         {/* Meta card */}
-        <div style={{ background: C.bg2, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 18px' }}>
+        <div style={{ background: C.bg2, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '22px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{ fontSize: 15, fontWeight: 700 }}>Meta</span>
             <span className="pill pill-meta">GA4</span>
@@ -246,7 +246,7 @@ export default function Weekly() {
         </div>
 
         {/* Google card */}
-        <div style={{ background: C.bg2, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 18px' }}>
+        <div style={{ background: C.bg2, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '22px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{ fontSize: 15, fontWeight: 700 }}>Google</span>
             <span className="pill pill-google">GA4 sourced</span>
@@ -263,7 +263,7 @@ export default function Weekly() {
 
       {/* ── Daily trend chart ── */}
       {dailyTrend.length > 1 && (
-        <div style={{ background: C.bg2, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 18px', marginBottom: 20 }}>
+        <div style={{ background: C.bg2, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '22px 24px', marginBottom: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Daily spend + revenue trend</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={dailyTrend} barSize={12}>
@@ -282,7 +282,7 @@ export default function Weekly() {
 
       {/* ── Top products ── */}
       {topProducts.length > 0 && (
-        <div style={{ background: C.bg2, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px 18px' }}>
+        <div style={{ background: C.bg2, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '22px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>Top products</span>
             <span className="pill pill-meta">Meta · GA4 revenue</span>
