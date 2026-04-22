@@ -15,13 +15,17 @@ function aggAwr(rows) {
   const imp   = rows.reduce((s, r) => s + (r.impressions || 0), 0)
   const cl    = rows.reduce((s, r) => s + (r.clicks || 0), 0)
   const views = rows.reduce((s, r) => s + (r.videoViews || 0), 0)
+  // Use Windsor's average_cpm if available, else calculate
+  const cpmSum = rows.reduce((s, r) => s + (r.cpm || 0), 0)
+  const cpmAvg = rows.length > 0 && cpmSum > 0 ? cpmSum / rows.length : (imp > 0 ? (cost / imp) * 1000 : 0)
+  const hasVideo = views > 0
   return {
     cost, impressions: imp, clicks: cl, videoViews: views,
-    cpm:  imp   > 0 ? (cost / imp) * 1000  : 0,
-    cpc:  cl    > 0 ? cost / cl             : 0,
-    ctr:  imp   > 0 ? cl / imp              : 0,
-    cpv:  views > 0 ? cost / views          : 0,
-    vtr:  imp   > 0 ? views / imp           : 0,
+    cpm:  cpmAvg,
+    cpc:  cl    > 0 ? cost / cl    : 0,
+    ctr:  imp   > 0 ? cl   / imp   : 0,
+    cpv:  hasVideo ? cost / views  : 0,
+    vtr:  hasVideo && imp > 0 ? views / imp : 0,
     p25:  rows.reduce((s, r) => s + (r.videoPlayed25  || 0), 0) / Math.max(rows.length, 1),
     p50:  rows.reduce((s, r) => s + (r.videoPlayed50  || 0), 0) / Math.max(rows.length, 1),
     p75:  rows.reduce((s, r) => s + (r.videoPlayed75  || 0), 0) / Math.max(rows.length, 1),
@@ -30,11 +34,11 @@ function aggAwr(rows) {
 }
 
 const TABS = [
-  { key: 'overview',   label: 'Overview' },
-  { key: 'videos',     label: 'Video-wise' },
-  { key: 'device',     label: 'Device' },
-  { key: 'location',   label: 'Location' },
-  { key: 'placement',  label: 'Placement' },
+  { key: 'overview',  label: 'Overview' },
+  { key: 'campaign',  label: 'Campaign' },
+  { key: 'product',   label: 'Product' },
+  { key: 'location',  label: 'Location' },
+  { key: 'gender',    label: 'Gender' },
 ]
 
 const TIP = { contentStyle: { background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12, borderRadius: 6 } }
@@ -45,8 +49,32 @@ export default function GoogleAwareness() {
   const { filterRows, getPrevRows } = filters
   const [tab, setTab] = useState('overview')
 
-  const rows     = useMemo(() => filterRows(state.googleAwareness || [], 'date'), [state.googleAwareness, filters])
-  const prevRows = useMemo(() => getPrevRows(state.googleAwareness || [], 'date'), [state.googleAwareness, filters])
+  // Only AWR campaigns + parse dimensions from name
+  function parseAWRName(name = '') {
+    const n = name.toLowerCase()
+    return {
+      gender:   n.includes('women') ? 'Women' : n.includes('men') ? 'Men' : 'All',
+      product:  (() => {
+        const parts = name.split('_')
+        // product is after 'awr' segment: hvs_google_awr_womens_PRODUCT_...
+        const awrIdx = parts.findIndex(p => p.toLowerCase() === 'awr')
+        return awrIdx >= 0 && parts[awrIdx + 2] ? parts[awrIdx + 2] : 'Unknown'
+      })(),
+      location: (() => {
+        const locs = ['mumbai','delhi','banglore','bangalore','pune','hyderabad','chennai','kolkata']
+        const found = locs.find(l => name.toLowerCase().includes(l))
+        return found ? found.charAt(0).toUpperCase() + found.slice(1) : 'All'
+      })(),
+      funnel: n.includes('tof') ? 'TOF' : n.includes('mof') ? 'MOF' : n.includes('bof') ? 'BOF' : '—',
+    }
+  }
+
+  const allAwareness = useMemo(() => (state.googleAwareness || []).filter(r =>
+    r.campaignName && r.campaignName.toLowerCase().includes('_awr_')
+  ).map(r => ({ ...r, ...parseAWRName(r.campaignName) })), [state.googleAwareness])
+
+  const rows     = useMemo(() => filterRows(allAwareness, 'date'), [allAwareness, filters])
+  const prevRows = useMemo(() => getPrevRows(allAwareness, 'date'), [allAwareness, filters])
 
   const totals     = useMemo(() => aggAwr(rows),     [rows])
   const prevTotals = useMemo(() => aggAwr(prevRows),  [prevRows])
@@ -141,7 +169,7 @@ export default function GoogleAwareness() {
     <div>
       <div style={{ marginBottom:16 }}>
         <h1 style={{ fontSize:18, fontWeight:600, marginBottom:2 }}>Google — Awareness</h1>
-        <div style={{ fontSize:12, color:'var(--text3)' }}>YouTube campaigns · VTR, CPV, CPM, view completion funnel</div>
+        <div style={{ fontSize:12, color:'var(--text3)' }}>YouTube awareness campaigns only (AWR) · Spend, Impressions, CPM, CTR · breakdown by product, city, gender</div>
       </div>
 
       <FilterBar filters={filters} showAdvanced showCohort={false} showSaleTag={false} />
@@ -161,7 +189,7 @@ export default function GoogleAwareness() {
 
       {!hasData && (
         <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:12, color:'#ef4444' }}>
-          No awareness data — upload Google awareness/YouTube CSV from Upload page
+          No awareness data — sync Windsor data from the Upload page (AWR campaigns only)
         </div>
       )}
 
@@ -226,110 +254,125 @@ export default function GoogleAwareness() {
         </>
       )}
 
-      {/* ── VIDEOS TAB ───────────────────────────────────────────────────────── */}
-      {tab === 'videos' && (
-        <>
-          <div style={{ marginBottom:8 }}>
-            <div style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>Video-wise performance</div>
-            <div style={{ fontSize:11, color:'var(--text3)', marginBottom:12 }}>Individual creatives sorted by views · VTR threshold: green ≥30%, amber ≥15%</div>
-          </div>
-          <DrillTable columns={videoCols} data={byVideo} defaultSort={{ key:'videoViews', dir:'desc' }} />
-        </>
+      {/* ── CAMPAIGN TAB ─────────────────────────────────────────────────────── */}
+      {tab === 'campaign' && (
+        <DrillTable columns={campCols} data={byCampaign} defaultSort={{ key:'cost', dir:'desc' }} />
       )}
 
-      {/* ── DEVICE TAB ───────────────────────────────────────────────────────── */}
-      {tab === 'device' && (
-        <>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-            <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
-              <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>Impressions by device</div>
-              {byDevice.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={byDevice.map(d => ({ name: d.device, value: d.impressions }))}
-                      cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={3}>
-                      {byDevice.map((_, i) => <Cell key={i} fill={['var(--blue)','var(--green)','var(--amber)','var(--purple)','#64748b'][i%5]} />)}
-                    </Pie>
-                    <Tooltip {...TIP} formatter={v => [fmtNum(v), 'Impressions']} />
-                    <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ fontSize:11, color:'var(--text2)' }}>{v}</span>} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : <Empty />}
-            </div>
-            <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
-              <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>VTR by device</div>
-              {byDevice.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={byDevice.map(d => ({ name: d.device, vtr: +(d.vtr*100).toFixed(1), cpv: +d.cpv.toFixed(2) }))} barSize={28}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize:10, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize:10, fill:'var(--text3)' }} axisLine={false} tickLine={false} unit="%" />
-                    <Tooltip {...TIP} formatter={(v,n) => [n==='vtr'?`${v}%`:`₹${v}`, n==='vtr'?'VTR':'CPV']} />
-                    <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ fontSize:11, color:'var(--text2)' }}>{v}</span>} />
-                    <Bar dataKey="vtr" fill="var(--blue)" name="VTR %" radius={[3,3,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : <Empty />}
-            </div>
-          </div>
-          <DrillTable
-            columns={[
-              { key:'device',      label:'Device',    align:'left', bold:true },
-              { key:'cost',        label:'Spend',     render: fmtINRCompact },
-              { key:'impressions', label:'Impr.',     render: fmtNum },
-              { key:'videoViews',  label:'Views',     render: fmtNum },
-              { key:'vtr',         label:'VTR',       render: v => `${(v*100).toFixed(1)}%`, color: v => v>=0.3?'var(--green)':v>=0.15?'var(--amber)':'var(--red)' },
-              { key:'cpv',         label:'CPV',       render: v => `₹${v.toFixed(2)}` },
-              { key:'cpm',         label:'CPM',       render: fmtINRCompact },
-              { key:'ctr',         label:'CTR',       render: fmtPct },
-            ]}
-            data={byDevice} defaultSort={{ key:'impressions', dir:'desc' }}
-          />
-        </>
-      )}
-
-      {/* ── LOCATION TAB ─────────────────────────────────────────────────────── */}
-      {tab === 'location' && (
-        <>
-          <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
-            <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>Spend & impressions by city (top 10)</div>
-            {byLocation.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={byLocation.slice(0,10).map(l => ({ name: l.location, impressions: l.impressions, cost: l.cost }))} barSize={16}>
+      {/* ── PRODUCT TAB ──────────────────────────────────────────────────────── */}
+      {tab === 'product' && (() => {
+        const byProduct = Object.values(rows.reduce((map, r) => {
+          const k = r.product || 'Unknown'
+          if (!map[k]) map[k] = []
+          map[k].push(r)
+          return map
+        }, {})).map(rs => ({ product: rs[0].product, ...aggAwr(rs) })).sort((a,b) => b.cost - a.cost)
+        return (
+          <>
+            <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
+              <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>Spend by product</div>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={byProduct.slice(0,8).map(p => ({ name: p.product, spend: +p.cost.toFixed(0), cpm: +p.cpm.toFixed(0) }))} barSize={28}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize:10, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="left" tick={{ fontSize:10, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize:10, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
-                  <Tooltip {...TIP} formatter={(v,n) => [n==='Impressions'?fmtNum(v):fmtINRCompact(v), n]} />
-                  <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ fontSize:11, color:'var(--text2)' }}>{v}</span>} />
-                  <Bar yAxisId="left" dataKey="impressions" fill="var(--blue)" fillOpacity={0.7} name="Impressions" radius={[3,3,0,0]} />
-                  <Bar yAxisId="right" dataKey="cost" fill="var(--green)" fillOpacity={0.7} name="Spend" radius={[3,3,0,0]} />
+                  <YAxis tick={{ fontSize:10, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
+                  <Tooltip {...TIP} formatter={(v,n) => [n==='spend'?`₹${v.toLocaleString('en-IN')}`:v, n]} />
+                  <Bar dataKey="spend" fill="var(--blue)" radius={[3,3,0,0]} name="Spend" />
                 </BarChart>
               </ResponsiveContainer>
-            ) : <Empty />}
-          </div>
-          <DrillTable
-            columns={[
-              { key:'location',    label:'City/Location', align:'left', bold:true },
-              { key:'cost',        label:'Spend',         render: fmtINRCompact },
-              { key:'impressions', label:'Impressions',   render: fmtNum },
-              { key:'videoViews',  label:'Views',         render: fmtNum },
-              { key:'vtr',         label:'VTR',           render: v => `${(v*100).toFixed(1)}%`, color: v => v>=0.3?'var(--green)':v>=0.15?'var(--amber)':'var(--red)' },
-              { key:'cpm',         label:'CPM',           render: fmtINRCompact },
-              { key:'cpv',         label:'CPV',           render: v => `₹${v.toFixed(2)}` },
-            ]}
-            data={byLocation} defaultSort={{ key:'impressions', dir:'desc' }}
-          />
-        </>
-      )}
+            </div>
+            <DrillTable columns={[
+              { key:'product',     label:'Product',    align:'left', bold:true },
+              { key:'cost',        label:'Spend',      render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+              { key:'impressions', label:'Impressions',render: fmtNum },
+              { key:'clicks',      label:'Clicks',     render: fmtNum },
+              { key:'ctr',         label:'CTR',        render: fmtPct, color: v => v>=0.02?'var(--green)':v>=0.01?'var(--amber)':'var(--red)' },
+              { key:'cpm',         label:'CPM',        render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+              { key:'cpc',         label:'CPC',        render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+            ]} data={byProduct} defaultSort={{ key:'cost', dir:'desc' }} />
+          </>
+        )
+      })()}
 
-      {/* ── PLACEMENT TAB ────────────────────────────────────────────────────── */}
-      {tab === 'placement' && (
-        <div style={{ padding:'32px', textAlign:'center', color:'var(--text3)', fontSize:13,
-          background:'var(--bg2)', borderRadius:10, border:'0.5px dashed var(--border2)' }}>
-          Upload Google Ads placement report CSV to see Instream / Feed / Shorts breakdown
-        </div>
-      )}
+      {/* ── LOCATION TAB ─────────────────────────────────────────────────────── */}
+      {tab === 'location' && (() => {
+        const byLoc = Object.values(rows.reduce((map, r) => {
+          const k = r.location || 'Unknown'
+          if (!map[k]) map[k] = []
+          map[k].push(r)
+          return map
+        }, {})).map(rs => ({ location: rs[0].location, ...aggAwr(rs) })).sort((a,b) => b.cost - a.cost)
+        return (
+          <>
+            <div style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
+              <div style={{ fontSize:12, color:'var(--text3)', marginBottom:10, fontWeight:500 }}>Spend & CPM by city</div>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={byLoc.map(l => ({ name: l.location, spend: +l.cost.toFixed(0), cpm: +l.cpm.toFixed(0) }))} barSize={28}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize:10, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize:10, fill:'var(--text3)' }} axisLine={false} tickLine={false} />
+                  <Tooltip {...TIP} formatter={(v,n) => [`₹${v.toLocaleString('en-IN')}`, n]} />
+                  <Bar dataKey="spend" fill="var(--blue)" radius={[3,3,0,0]} name="Spend" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <DrillTable columns={[
+              { key:'location',    label:'City',       align:'left', bold:true },
+              { key:'cost',        label:'Spend',      render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+              { key:'impressions', label:'Impressions',render: fmtNum },
+              { key:'clicks',      label:'Clicks',     render: fmtNum },
+              { key:'ctr',         label:'CTR',        render: fmtPct },
+              { key:'cpm',         label:'CPM',        render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+              { key:'cpc',         label:'CPC',        render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+            ]} data={byLoc} defaultSort={{ key:'cost', dir:'desc' }} />
+          </>
+        )
+      })()}
+
+      {/* ── GENDER TAB ───────────────────────────────────────────────────────── */}
+      {tab === 'gender' && (() => {
+        const byGender = Object.values(rows.reduce((map, r) => {
+          const k = r.gender || 'All'
+          if (!map[k]) map[k] = []
+          map[k].push(r)
+          return map
+        }, {})).map(rs => ({ gender: rs[0].gender, ...aggAwr(rs) })).sort((a,b) => b.cost - a.cost)
+        return (
+          <>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10, marginBottom:16 }}>
+              {byGender.map(g => (
+                <div key={g.gender} style={{ background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
+                  <div style={{ fontSize:13, fontWeight:600, marginBottom:10 }}>{g.gender}</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+                    {[
+                      { label:'Spend',       val:`₹${Math.round(g.cost).toLocaleString('en-IN')}` },
+                      { label:'Impressions', val:fmtNum(g.impressions) },
+                      { label:'Clicks',      val:fmtNum(g.clicks) },
+                      { label:'CTR',         val:fmtPct(g.ctr) },
+                      { label:'CPM',         val:`₹${Math.round(g.cpm).toLocaleString('en-IN')}` },
+                      { label:'CPC',         val:`₹${Math.round(g.cpc).toLocaleString('en-IN')}` },
+                    ].map(m => (
+                      <div key={m.label}>
+                        <div style={{ fontSize:10, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:2 }}>{m.label}</div>
+                        <div style={{ fontSize:16, fontWeight:600 }}>{m.val}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <DrillTable columns={[
+              { key:'gender',      label:'Gender',     align:'left', bold:true },
+              { key:'cost',        label:'Spend',      render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+              { key:'impressions', label:'Impressions',render: fmtNum },
+              { key:'clicks',      label:'Clicks',     render: fmtNum },
+              { key:'ctr',         label:'CTR',        render: fmtPct },
+              { key:'cpm',         label:'CPM',        render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+              { key:'cpc',         label:'CPC',        render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+            ]} data={byGender} defaultSort={{ key:'cost', dir:'desc' }} />
+          </>
+        )
+      })()}
     </div>
   )
 }
