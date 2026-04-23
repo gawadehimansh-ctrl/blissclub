@@ -82,6 +82,7 @@ function parseMetaDB(rows) {
       impressions: num(r['Impressions'] || 0),
       clicks: num(r['Link clicks'] || r['Link Clicks'] || 0),
       spend, fbOrders, fbRevenue,
+      reach: num(r['Reach'] || r['reach'] || 0),
       reportedROAS: num(r['Purchase ROAS (return on ad spend)'] || r['ROAS'] || 0),
       sessions: num(r['Sessions'] || 0),
       gaOrders: num(r['GA Orders'] || 0),
