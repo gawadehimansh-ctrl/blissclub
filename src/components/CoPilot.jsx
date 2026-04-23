@@ -12,6 +12,11 @@ const MODELS = [
   { id: 'anthropic/claude-3-haiku',        label: 'Claude 3 Haiku' },
   { id: 'anthropic/claude-3.5-sonnet',     label: 'Claude 3.5 Sonnet' },
   { id: 'meta-llama/llama-3.1-8b-instruct:free', label: 'Llama 3.1 8B (free)' },
+  { id: 'nvidia/nemotron-super-49b-v1:free',       label: 'Nvidia Nemotron 49B (free)' },
+  { id: 'nvidia/llama-3.1-nemotron-70b-instruct:free', label: 'Nvidia Nemotron 70B (free)' },
+  { id: 'deepseek/deepseek-r1:free',               label: 'DeepSeek R1 (free)' },
+  { id: 'deepseek/deepseek-chat:free',             label: 'DeepSeek Chat (free)' },
+  { id: 'mistralai/mistral-7b-instruct:free',      label: 'Mistral 7B (free)' },
 ]
 
 const SUGGESTED = [
