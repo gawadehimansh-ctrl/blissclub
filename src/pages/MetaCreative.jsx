@@ -11,16 +11,16 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 const PIVOT_DIMS = ['product', 'format', 'contentType', 'cohort', 'creator']
 const PIVOT_LABELS = { product: 'Product', format: 'Format', contentType: 'Content type', cohort: 'Cohort', creator: 'Creator' }
 
-function groupAndAggregate(rows, dim) {
+function groupAndAggregate(rows, dim, totalRows) {
   const map = {}
   for (const r of rows) {
     const k = r[dim] || 'Unknown'
     if (!map[k]) map[k] = []
     map[k].push(r)
   }
+  const spendTotal = (totalRows || rows).reduce((s, r) => s + (r.spend || 0), 0)
   return Object.entries(map).map(([key, rs]) => {
     const agg = aggregateRows(rs)
-    const spendTotal = rows.reduce((s, r) => s + r.spend, 0)
     return {
       [dim]: key,
       ...agg,
@@ -41,6 +41,14 @@ export default function MetaCreative() {
   const filters = useFilters('last30')
   const { filterRows } = filters
   const [pivotDim, setPivotDim] = useState('product')
+  const [drillCreator, setDrillCreator] = useState(null)
+
+  // When creator is selected, show product breakdown for that creator
+  const creatorProducts = useMemo(() => {
+    if (!drillCreator || pivotDim !== 'creator') return null
+    const creatorRows = rows.filter(r => (r.creator || 'Unknown') === drillCreator)
+    return groupAndAggregate(creatorRows, 'product', creatorRows)
+  }, [rows, drillCreator, pivotDim])
 
   const rows = useMemo(() => filterRows(state.metaDB || []), [state.metaDB, filters])
   const pivoted = useMemo(() => groupAndAggregate(rows, pivotDim), [rows, pivotDim])
@@ -68,7 +76,7 @@ export default function MetaCreative() {
         ctr: agg.impressions > 0 ? agg.clicks / agg.impressions : 0,
         cpa: agg.gaOrders > 0 ? agg.spend / agg.gaOrders : 0,
       }
-    }).filter(c => c.spend > 1000)
+    }).filter(c => c && c.spend > 1000)
       .sort((a, b) => b.gaRevenue - a.gaRevenue)
   }, [rows])
 
@@ -77,6 +85,7 @@ export default function MetaCreative() {
     { key: 'spend', label: 'Spend', render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
     { key: 'spendMix', label: 'Spend %', render: v => `${v.toFixed(1)}%` },
     { key: 'creativeCount', label: 'Creatives', render: v => fmtNum(v) },
+    { key: 'reach', label: 'Reach', render: v => v > 0 ? fmtNum(v) : '—' },
     { key: 'impressions', label: 'Impr.', render: v => fmtNum(v) },
     { key: 'ctr', label: 'CTR', render: v => fmtPct(v), color: v => v > 0.02 ? 'var(--green)' : v > 0.01 ? 'var(--amber)' : 'var(--red)' },
     { key: 'cpm', label: 'CPM', render: v => fmtINRCompact(v) },
@@ -154,7 +163,34 @@ export default function MetaCreative() {
         </div>
       )}
 
-      <DrillTable columns={cols} data={pivoted} defaultSort={{ key: 'spend', dir: 'desc' }} />
+      <DrillTable columns={cols} data={pivoted} defaultSort={{ key: 'spend', dir: 'desc' }}
+        onRowClick={pivotDim === 'creator' ? row => setDrillCreator(row.creator === drillCreator ? null : row.creator) : undefined}
+      />
+
+      {/* Creator drill-down into products */}
+      {drillCreator && creatorProducts && (
+        <div style={{ marginTop: 16, background: 'var(--bg2)', border: '0.5px solid var(--blue-border)', borderRadius: 10, padding: '16px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>{drillCreator}</span>
+              <span style={{ fontSize: 12, color: 'var(--text3)', marginLeft: 8 }}>→ Product breakdown</span>
+            </div>
+            <button onClick={() => setDrillCreator(null)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text2)', cursor: 'pointer' }}>✕ Close</button>
+          </div>
+          <DrillTable columns={[
+            { key: 'product',    label: 'Product',  align: 'left', bold: true },
+            { key: 'spend',      label: 'Spend',    render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+            { key: 'spendMix',   label: 'Mix %',    render: v => `${v.toFixed(1)}%` },
+            { key: 'reach',      label: 'Reach',    render: v => v > 0 ? fmtNum(v) : '—' },
+            { key: 'impressions',label: 'Impr.',    render: v => fmtNum(v) },
+            { key: 'ctr',        label: 'CTR',      render: v => fmtPct(v), color: v => v>0.02?'var(--green)':v>0.01?'var(--amber)':'var(--red)' },
+            { key: 'cpm',        label: 'CPM',      render: v => fmtINRCompact(v) },
+            { key: 'gaRevenue',  label: 'GA4 Rev',  render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
+            { key: 'roasGA4',    label: 'GA4 ROAS', render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
+            { key: 'gaOrders',   label: 'Orders',   render: v => fmtNum(v) },
+          ]} data={creatorProducts} defaultSort={{ key: 'spend', dir: 'desc' }} compact />
+        </div>
+      )}
 
       <div style={{ marginTop: 24, marginBottom: 8 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>All creatives</div>
