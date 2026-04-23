@@ -4,7 +4,7 @@ import { fmtINRCompact, fmtX, fmtPct, fmtNum } from '../utils/formatters.js'
 import { aggregateRows } from '../utils/metrics.js'
 
 const OPENROUTER_KEY = 'sk-or-v1-placeholder' // user sets this
-const MODEL = 'anthropic/claude-3.5-sonnet'
+const MODEL = 'anthropic/claude-3.5-sonnet:beta'
 
 const SUGGESTED = [
   'Why is ROAS dropping on ACQ campaigns?',
