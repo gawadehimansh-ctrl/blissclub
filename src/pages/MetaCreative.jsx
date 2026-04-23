@@ -43,6 +43,8 @@ export default function MetaCreative() {
   const [pivotDim, setPivotDim] = useState('product')
   const [drillCreator, setDrillCreator] = useState(null)
 
+  function switchPivot(dim) { setPivotDim(dim); setDrillCreator(null) }
+
   // When creator is selected, show product breakdown for that creator
   const creatorProducts = useMemo(() => {
     if (!drillCreator || pivotDim !== 'creator') return null
@@ -133,7 +135,7 @@ export default function MetaCreative() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--text2)', marginRight: 4 }}>Breakdown by:</span>
         {PIVOT_DIMS.map(d => (
-          <button key={d} onClick={() => setPivotDim(d)}
+          <button key={d} onClick={() => switchPivot(d)}
             style={{
               padding: '4px 12px', fontSize: 12, borderRadius: 20, cursor: 'pointer',
               background: pivotDim === d ? 'var(--pink-dim)' : 'var(--bg3)',
@@ -164,7 +166,7 @@ export default function MetaCreative() {
       )}
 
       <DrillTable columns={cols} data={pivoted} defaultSort={{ key: 'spend', dir: 'desc' }}
-        onRowClick={pivotDim === 'creator' ? row => setDrillCreator(row.creator === drillCreator ? null : row.creator) : undefined}
+        onRowClick={row => { if (pivotDim === 'creator') setDrillCreator(prev => prev === (row.creator || 'Unknown') ? null : (row.creator || 'Unknown')) }}
       />
 
       {/* Creator drill-down into products */}
