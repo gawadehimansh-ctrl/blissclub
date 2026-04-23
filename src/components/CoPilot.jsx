@@ -4,7 +4,15 @@ import { fmtINRCompact, fmtX, fmtPct, fmtNum } from '../utils/formatters.js'
 import { aggregateRows } from '../utils/metrics.js'
 
 const OPENROUTER_KEY = 'sk-or-v1-placeholder' // user sets this
-const MODEL = 'anthropic/claude-3.5-sonnet:beta'
+const MODELS = [
+  { id: 'openai/gpt-4o-mini',              label: 'GPT-4o Mini (fast, cheap)' },
+  { id: 'openai/gpt-4o',                   label: 'GPT-4o (best)' },
+  { id: 'google/gemini-flash-1.5',         label: 'Gemini Flash 1.5' },
+  { id: 'google/gemini-pro-1.5',           label: 'Gemini Pro 1.5' },
+  { id: 'anthropic/claude-3-haiku',        label: 'Claude 3 Haiku' },
+  { id: 'anthropic/claude-3.5-sonnet',     label: 'Claude 3.5 Sonnet' },
+  { id: 'meta-llama/llama-3.1-8b-instruct:free', label: 'Llama 3.1 8B (free)' },
+]
 
 const SUGGESTED = [
   'Why is ROAS dropping on ACQ campaigns?',
@@ -65,7 +73,7 @@ async function callOpenRouter(messages, systemPrompt, apiKey) {
       'X-Title': 'BlissClub Co-pilot',
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: localStorage.getItem('bc_model') || 'openai/gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         ...messages,
@@ -363,7 +371,7 @@ function PanelContent({
       {showKeyInput && (
         <div style={{ padding: '12px 16px', background: 'rgba(99,102,241,0.05)', borderBottom: '0.5px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>OpenRouter API key — get it from openrouter.ai</div>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             <input
               type="password" value={apiKey}
               onChange={e => setApiKey(e.target.value)}
@@ -375,6 +383,12 @@ function PanelContent({
               background: '#6366f1', color: '#fff', border: 'none', fontWeight: 600,
             }}>Save</button>
           </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>Model</div>
+          <select defaultValue={localStorage.getItem('bc_model') || 'openai/gpt-4o-mini'}
+            onChange={e => localStorage.setItem('bc_model', e.target.value)}
+            style={{ width: '100%', padding: '7px 10px', fontSize: 12, borderRadius: 6, background: '#1e1e1e', border: '0.5px solid rgba(255,255,255,0.12)', color: '#fff', outline: 'none' }}>
+            {MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+          </select>
         </div>
       )}
 
