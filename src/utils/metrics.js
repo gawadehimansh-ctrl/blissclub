@@ -62,7 +62,7 @@ export function calcBlendedCAC({ totalSpend, ga4Orders }) {
 // Aggregate rows - sum numeric fields, recompute derived metrics
 export function aggregateRows(rows, fields = {}) {
   const sums = {}
-  const numFields = fields.sum || ['spend', 'impressions', 'clicks', 'sessions', 'fbOrders', 'fbRevenue', 'gaOrders', 'gaRevenue', 'transactions', 'revenue', 'cost']
+  const numFields = fields.sum || ['spend', 'impressions', 'clicks', 'sessions', 'fbOrders', 'fbRevenue', 'gaOrders', 'gaRevenue', 'transactions', 'revenue', 'cost', 'reach']
 
   for (const f of numFields) {
     sums[f] = rows.reduce((acc, r) => acc + (Number(r[f]) || 0), 0)
