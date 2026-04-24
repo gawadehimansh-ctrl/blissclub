@@ -10,27 +10,28 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 
 const PIVOT_DIMS = ['product', 'format', 'contentType', 'cohort', 'creator']
 const PIVOT_LABELS = { product: 'Product', format: 'Format', contentType: 'Content type', cohort: 'Cohort', creator: 'Creator' }
+const COLORS = ['var(--pink)', 'var(--blue)', 'var(--amber)', 'var(--green)', 'var(--purple)']
 
-function groupAndAggregate(rows, dim, totalRows) {
+function groupAndAggregate(rows, dim) {
   const map = {}
   for (const r of rows) {
     const k = r[dim] || 'Unknown'
     if (!map[k]) map[k] = []
     map[k].push(r)
   }
-  const spendTotal = (totalRows || rows).reduce((s, r) => s + (r.spend || 0), 0)
+  const spendTotal = rows.reduce((s, r) => s + (r.spend || 0), 0)
   return Object.entries(map).map(([key, rs]) => {
     const agg = aggregateRows(rs)
     return {
       [dim]: key,
       ...agg,
-      roasGA4: calcROAS(agg.gaRevenue, agg.spend),
-      spendMix: spendTotal > 0 ? (agg.spend / spendTotal) * 100 : 0,
-      ctr: agg.impressions > 0 ? agg.clicks / agg.impressions : 0,
-      cpm: agg.impressions > 0 ? (agg.spend / agg.impressions) * 1000 : 0,
-      cpc: agg.clicks > 0 ? agg.spend / agg.clicks : 0,
-      cpa: agg.gaOrders > 0 ? agg.spend / agg.gaOrders : 0,
-      ecr: agg.sessions > 0 ? agg.gaOrders / agg.sessions : 0,
+      roasGA4:      calcROAS(agg.gaRevenue, agg.spend),
+      spendMix:     spendTotal > 0 ? (agg.spend / spendTotal) * 100 : 0,
+      ctr:          agg.impressions > 0 ? agg.clicks / agg.impressions : 0,
+      cpm:          agg.impressions > 0 ? (agg.spend / agg.impressions) * 1000 : 0,
+      cpc:          agg.clicks > 0 ? agg.spend / agg.clicks : 0,
+      cpa:          agg.gaOrders > 0 ? agg.spend / agg.gaOrders : 0,
+      ecr:          agg.sessions > 0 ? agg.gaOrders / agg.sessions : 0,
       creativeCount: [...new Set(rs.map(r => r.adId || r.adName || r.creativeName))].filter(Boolean).length,
     }
   }).sort((a, b) => b.spend - a.spend)
@@ -40,27 +41,26 @@ export default function MetaCreative() {
   const { state } = useData()
   const filters = useFilters('last30')
   const { filterRows } = filters
-  const [pivotDim, setPivotDim] = useState('product')
+  const [pivotDim, setPivotDim]       = useState('product')
   const [drillCreator, setDrillCreator] = useState(null)
 
-  function switchPivot(dim) { setPivotDim(dim); setDrillCreator(null) }
-
-  // When creator is selected, show product breakdown for that creator
-  const creatorProducts = useMemo(() => {
-    if (!drillCreator || pivotDim !== 'creator') return null
-    const creatorRows = rows.filter(r => (r.creator || 'Unknown') === drillCreator)
-    return groupAndAggregate(creatorRows, 'product', creatorRows)
-  }, [rows, drillCreator, pivotDim])
-
-  const rows = useMemo(() => filterRows(state.metaDB || []), [state.metaDB, filters])
+  // rows must be declared BEFORE anything that uses it
+  const rows   = useMemo(() => filterRows(state.metaDB || []), [state.metaDB, filters])
   const pivoted = useMemo(() => groupAndAggregate(rows, pivotDim), [rows, pivotDim])
-  const totals = useMemo(() => aggregateRows(rows), [rows])
+  const totals  = useMemo(() => aggregateRows(rows), [rows])
 
-  // Top creatives by GA4 ROAS
+  // Creator → product drill-down
+  const creatorProducts = useMemo(() => {
+    if (!drillCreator) return null
+    const creatorRows = rows.filter(r => (r.creator || 'Unknown') === drillCreator)
+    return groupAndAggregate(creatorRows, 'product')
+  }, [rows, drillCreator])
+
+  // All creatives table
   const topCreatives = useMemo(() => {
     const byCreative = {}
     for (const r of rows) {
-      const k = r.creativeName || r.adName
+      const k = r.creativeName || r.adName || 'Unknown'
       if (!byCreative[k]) byCreative[k] = []
       byCreative[k].push(r)
     }
@@ -68,53 +68,69 @@ export default function MetaCreative() {
       const agg = aggregateRows(rs)
       return {
         creativeName: name,
-        format: rs[0]?.format,
-        product: rs[0]?.product,
+        format:      rs[0]?.format,
+        product:     rs[0]?.product,
         contentType: rs[0]?.contentType,
-        creator: rs[0]?.creator,
-        cohort: rs[0]?.cohort,
+        creator:     rs[0]?.creator,
+        cohort:      rs[0]?.cohort,
         ...agg,
-          roasGA4: calcROAS(agg.gaRevenue, agg.spend),
+        roasGA4: calcROAS(agg.gaRevenue, agg.spend),
         ctr: agg.impressions > 0 ? agg.clicks / agg.impressions : 0,
         cpa: agg.gaOrders > 0 ? agg.spend / agg.gaOrders : 0,
       }
-    }).filter(c => c && c.spend > 1000)
-      .sort((a, b) => b.gaRevenue - a.gaRevenue)
+    }).filter(c => c.spend > 1000).sort((a, b) => b.gaRevenue - a.gaRevenue)
   }, [rows])
 
+  function switchPivot(dim) {
+    setPivotDim(dim)
+    setDrillCreator(null)
+  }
+
   const cols = [
-    { key: pivotDim, label: PIVOT_LABELS[pivotDim], align: 'left', bold: true },
-    { key: 'spend', label: 'Spend', render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
-    { key: 'spendMix', label: 'Spend %', render: v => `${v.toFixed(1)}%` },
-    { key: 'creativeCount', label: 'Creatives', render: v => fmtNum(v) },
-    { key: 'reach', label: 'Reach', render: v => v > 0 ? fmtNum(v) : '—' },
-    { key: 'impressions', label: 'Impr.', render: v => fmtNum(v) },
-    { key: 'ctr', label: 'CTR', render: v => fmtPct(v), color: v => v > 0.02 ? 'var(--green)' : v > 0.01 ? 'var(--amber)' : 'var(--red)' },
-    { key: 'cpm', label: 'CPM', render: v => fmtINRCompact(v) },
-    { key: 'cpc', label: 'CPC', render: v => fmtINRCompact(v) },
-    { key: 'gaRevenue', label: 'GA4 Rev', render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
-    { key: 'roasGA4', label: 'GA4 ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
-    { key: 'gaOrders', label: 'Orders', render: v => fmtNum(v) },
-    { key: 'cpa', label: 'CPA', render: v => fmtINRCompact(v) },
-    { key: 'ecr', label: 'ECR', render: v => fmtPct(v) },
+    { key: pivotDim,       label: PIVOT_LABELS[pivotDim], align: 'left', bold: true },
+    { key: 'spend',        label: 'Spend',      render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+    { key: 'spendMix',     label: 'Spend %',    render: v => `${v.toFixed(1)}%` },
+    { key: 'creativeCount',label: 'Creatives',  render: v => fmtNum(v) },
+    { key: 'reach',        label: 'Reach',      render: v => v > 0 ? fmtNum(v) : '—' },
+    { key: 'impressions',  label: 'Impr.',      render: v => fmtNum(v) },
+    { key: 'ctr',          label: 'CTR',        render: v => fmtPct(v), color: v => v>0.02?'var(--green)':v>0.01?'var(--amber)':'var(--red)' },
+    { key: 'cpm',          label: 'CPM',        render: v => fmtINRCompact(v) },
+    { key: 'cpc',          label: 'CPC',        render: v => fmtINRCompact(v) },
+    { key: 'gaRevenue',    label: 'GA4 Rev',    render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
+    { key: 'roasGA4',      label: 'GA4 ROAS',   render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
+    { key: 'gaOrders',     label: 'Orders',     render: v => fmtNum(v) },
+    { key: 'cpa',          label: 'CPA',        render: v => fmtINRCompact(v) },
+    { key: 'ecr',          label: 'ECR',        render: v => fmtPct(v) },
+  ]
+
+  const drillCols = [
+    { key: 'product',     label: 'Product',   align: 'left', bold: true },
+    { key: 'spend',       label: 'Spend',     render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+    { key: 'spendMix',    label: 'Mix %',     render: v => `${v.toFixed(1)}%` },
+    { key: 'reach',       label: 'Reach',     render: v => v > 0 ? fmtNum(v) : '—' },
+    { key: 'impressions', label: 'Impr.',     render: v => fmtNum(v) },
+    { key: 'ctr',         label: 'CTR',       render: v => fmtPct(v), color: v => v>0.02?'var(--green)':v>0.01?'var(--amber)':'var(--red)' },
+    { key: 'cpm',         label: 'CPM',       render: v => fmtINRCompact(v) },
+    { key: 'gaRevenue',   label: 'GA4 Rev',   render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
+    { key: 'roasGA4',     label: 'GA4 ROAS',  render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
+    { key: 'gaOrders',    label: 'Orders',    render: v => fmtNum(v) },
+    { key: 'cpa',         label: 'CPA',       render: v => fmtINRCompact(v) },
   ]
 
   const topCreativeCols = [
-    { key: 'creativeName', label: 'Creative', align: 'left', bold: true },
-    { key: 'format', label: 'Format' },
-    { key: 'product', label: 'Product' },
-    { key: 'contentType', label: 'Type' },
-    { key: 'creator', label: 'Creator' },
-    { key: 'cohort', label: 'Cohort' },
-    { key: 'spend', label: 'Spend', render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
-    { key: 'ctr', label: 'CTR', render: v => fmtPct(v), color: v => v > 0.02 ? 'var(--green)' : v > 0.01 ? 'var(--amber)' : 'var(--red)' },
-    { key: 'roasGA4', label: 'GA4 ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
-    { key: 'gaRevenue', label: 'GA4 Rev', render: v => fmtINRCompact(v) },
-    { key: 'gaOrders', label: 'Orders', render: v => fmtNum(v) },
-    { key: 'cpa', label: 'CPA', render: v => fmtINRCompact(v) },
+    { key: 'creativeName', label: 'Creative',  align: 'left', bold: true },
+    { key: 'format',       label: 'Format' },
+    { key: 'product',      label: 'Product' },
+    { key: 'contentType',  label: 'Type' },
+    { key: 'creator',      label: 'Creator' },
+    { key: 'cohort',       label: 'Cohort' },
+    { key: 'spend',        label: 'Spend',     render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
+    { key: 'ctr',          label: 'CTR',       render: v => fmtPct(v), color: v => v>0.02?'var(--green)':v>0.01?'var(--amber)':'var(--red)' },
+    { key: 'roasGA4',      label: 'GA4 ROAS',  render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
+    { key: 'gaRevenue',    label: 'GA4 Rev',   render: v => fmtINRCompact(v) },
+    { key: 'gaOrders',     label: 'Orders',    render: v => fmtNum(v) },
+    { key: 'cpa',          label: 'CPA',       render: v => fmtINRCompact(v) },
   ]
-
-  const COLORS = ['var(--pink)', 'var(--blue)', 'var(--amber)', 'var(--green)', 'var(--purple)']
 
   return (
     <div style={{ padding: '24px 28px', width: '100%' }}>
@@ -122,12 +138,14 @@ export default function MetaCreative() {
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Meta creative lookback</h1>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>Product · Format · Content type · Creator · Cohort breakdown</div>
       </div>
+
       <FilterBar filters={filters} showAdvanced />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 10, marginBottom: 16 }}>
-        <MetricCard label="Total spend" value={fmtINRCompact(totals.spend)} accent="var(--pink)" />
-        <MetricCard label="GA4 revenue" value={fmtINRCompact(totals.gaRevenue)} accent="var(--purple)" />
-        <MetricCard label="GA4 ROAS" value={fmtX(calcROAS(totals.gaRevenue, totals.spend))} accent="var(--purple)" />
+      {/* KPI cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 16 }}>
+        <MetricCard label="Total spend"      value={fmtINRCompact(totals.spend)}      accent="var(--pink)" />
+        <MetricCard label="GA4 revenue"      value={fmtINRCompact(totals.gaRevenue)}  accent="var(--purple)" />
+        <MetricCard label="GA4 ROAS"         value={fmtX(calcROAS(totals.gaRevenue, totals.spend))} accent="var(--purple)" />
         <MetricCard label="Unique creatives" value={fmtNum([...new Set(rows.map(r => r.adId || r.adName || r.creativeName).filter(Boolean))].length)} />
       </div>
 
@@ -135,19 +153,16 @@ export default function MetaCreative() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--text2)', marginRight: 4 }}>Breakdown by:</span>
         {PIVOT_DIMS.map(d => (
-          <button key={d} onClick={() => switchPivot(d)}
-            style={{
-              padding: '4px 12px', fontSize: 12, borderRadius: 20, cursor: 'pointer',
-              background: pivotDim === d ? 'var(--pink-dim)' : 'var(--bg3)',
-              color: pivotDim === d ? 'var(--pink)' : 'var(--text2)',
-              border: `0.5px solid ${pivotDim === d ? 'var(--pink-border)' : 'var(--border)'}`,
-            }}>
-            {PIVOT_LABELS[d]}
-          </button>
+          <button key={d} onClick={() => switchPivot(d)} style={{
+            padding: '4px 12px', fontSize: 12, borderRadius: 20, cursor: 'pointer',
+            background: pivotDim === d ? 'var(--pink-dim)' : 'var(--bg3)',
+            color: pivotDim === d ? 'var(--pink)' : 'var(--text2)',
+            border: `0.5px solid ${pivotDim === d ? 'var(--pink-border)' : 'var(--border)'}`,
+          }}>{PIVOT_LABELS[d]}</button>
         ))}
       </div>
 
-      {/* Bar chart of spend by dimension */}
+      {/* Bar chart */}
       {pivoted.length > 0 && pivoted.length <= 12 && (
         <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>GA4 ROAS by {PIVOT_LABELS[pivotDim].toLowerCase()}</div>
@@ -165,40 +180,47 @@ export default function MetaCreative() {
         </div>
       )}
 
-      <DrillTable columns={cols} data={pivoted} defaultSort={{ key: 'spend', dir: 'desc' }}
-        onRowClick={row => { if (pivotDim === 'creator') setDrillCreator(prev => prev === (row.creator || 'Unknown') ? null : (row.creator || 'Unknown')) }}
+      {/* Main pivot table */}
+      {pivotDim === 'creator' && (
+        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>
+          💡 Click a creator row to see their product breakdown
+        </div>
+      )}
+      <DrillTable
+        columns={cols}
+        data={pivoted}
+        defaultSort={{ key: 'spend', dir: 'desc' }}
+        onRowClick={pivotDim === 'creator'
+          ? row => setDrillCreator(prev => prev === (row[pivotDim] || 'Unknown') ? null : (row[pivotDim] || 'Unknown'))
+          : undefined
+        }
       />
 
-      {/* Creator drill-down into products */}
+      {/* Creator → Product drill-down panel */}
       {drillCreator && creatorProducts && (
         <div style={{ marginTop: 16, background: 'var(--bg2)', border: '0.5px solid var(--blue-border)', borderRadius: 10, padding: '16px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>{drillCreator}</span>
-              <span style={{ fontSize: 12, color: 'var(--text3)', marginLeft: 8 }}>→ Product breakdown</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--blue)' }} />
+              <span style={{ fontSize: 15, fontWeight: 700 }}>{drillCreator}</span>
+              <span style={{ fontSize: 12, color: 'var(--text3)' }}>→ Product breakdown · {creatorProducts.length} products</span>
             </div>
-            <button onClick={() => setDrillCreator(null)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text2)', cursor: 'pointer' }}>✕ Close</button>
+            <button onClick={() => setDrillCreator(null)} style={{
+              fontSize: 11, padding: '4px 10px', borderRadius: 6,
+              background: 'var(--bg3)', border: '0.5px solid var(--border2)',
+              color: 'var(--text2)', cursor: 'pointer',
+            }}>✕ Close</button>
           </div>
-          <DrillTable columns={[
-            { key: 'product',    label: 'Product',  align: 'left', bold: true },
-            { key: 'spend',      label: 'Spend',    render: v => `₹${Math.round(v).toLocaleString('en-IN')}` },
-            { key: 'spendMix',   label: 'Mix %',    render: v => `${v.toFixed(1)}%` },
-            { key: 'reach',      label: 'Reach',    render: v => v > 0 ? fmtNum(v) : '—' },
-            { key: 'impressions',label: 'Impr.',    render: v => fmtNum(v) },
-            { key: 'ctr',        label: 'CTR',      render: v => fmtPct(v), color: v => v>0.02?'var(--green)':v>0.01?'var(--amber)':'var(--red)' },
-            { key: 'cpm',        label: 'CPM',      render: v => fmtINRCompact(v) },
-            { key: 'gaRevenue',  label: 'GA4 Rev',  render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
-            { key: 'roasGA4',    label: 'GA4 ROAS', render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
-            { key: 'gaOrders',   label: 'Orders',   render: v => fmtNum(v) },
-          ]} data={creatorProducts} defaultSort={{ key: 'spend', dir: 'desc' }} compact />
+          <DrillTable columns={drillCols} data={creatorProducts} defaultSort={{ key: 'spend', dir: 'desc' }} />
         </div>
       )}
 
+      {/* All creatives */}
       <div style={{ marginTop: 24, marginBottom: 8 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>All creatives</div>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>Sorted by GA4 revenue · min ₹1K spend</div>
       </div>
-      <DrillTable columns={topCreativeCols} data={topCreatives} defaultSort={{ key: 'gaRevenue', dir: 'desc' }} compact />
+      <DrillTable columns={topCreativeCols} data={topCreatives} defaultSort={{ key: 'gaRevenue', dir: 'desc' }} />
     </div>
   )
 }
