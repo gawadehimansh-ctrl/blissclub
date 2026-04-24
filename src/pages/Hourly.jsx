@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef } from 'react'
 import { useData } from '../data/store.jsx'
 import { format, subDays } from 'date-fns'
 import { parseCSV } from '../utils/csvParser.js'
+import OjanReport from '../components/OjanReport.jsx'
 
 const TIME_SLOTS = [
   { key: '9am',   label: '9 AM',  hour: 9  },
@@ -75,6 +76,7 @@ export default function Hourly() {
   const [hourFrom, setHourFrom] = useState(0)
   const [hourTo, setHourTo]     = useState(23)
   const [hourFilterOn, setHourFilterOn] = useState(false)
+
 
   // All rows for primary date
   const allPrimaryRows = useMemo(() => getRowsForDate(state.metaHourly, primaryDate), [state.metaHourly, primaryDate])
@@ -430,31 +432,63 @@ function HourlyDatePanel({ primaryDate, compareDate, compareOn, onApply, onClose
         <button onClick={onClose} style={{ padding: '4px 10px', fontSize: 12, borderRadius: 5, background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text2)', cursor: 'pointer' }}>Cancel</button>
         <button onClick={() => onApply(pDate, cDate, cOn)} style={{ padding: '4px 10px', fontSize: 12, borderRadius: 5, background: 'var(--pink)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>Apply</button>
       </div>
+
+      {/* OJAN Report Section */}
+      <div style={{ marginTop: 24, background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>⚡ Auto OJAN Report</div>
+            <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>AI-generated report ready to screenshot and share</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {TIME_SLOTS.map(slot => (
+              <button key={slot.key} onClick={() => generateOjanReport(slot.label)}
+                disabled={ojanLoading || !allPrimaryRows.length}
+                style={{
+                  padding: '8px 16px', fontSize: 12, fontWeight: 600, borderRadius: 8, cursor: ojanLoading || !allPrimaryRows.length ? 'not-allowed' : 'pointer',
+                  background: ojanSlot === slot.label && (ojanLoading || ojanReport) ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'var(--bg3)',
+                  color: ojanSlot === slot.label && (ojanLoading || ojanReport) ? '#fff' : 'var(--text2)',
+                  border: '0.5px solid var(--border2)', opacity: ojanLoading && ojanSlot !== slot.label ? 0.4 : 1,
+                  transition: 'all .15s',
+                }}>
+                {ojanLoading && ojanSlot === slot.label ? '⏳ Generating...' : `${slot.label} Report`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {!allPrimaryRows.length && (
+          <div style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', padding: '20px 0' }}>
+            Upload a CSV first to generate OJAN report
+          </div>
+        )}
+
+        {ojanReport && (
+          <div style={{ position: 'relative' }}>
+            {/* Copy button */}
+            <button onClick={() => navigator.clipboard.writeText(ojanReport).then(() => alert('Copied!'))}
+              style={{
+                position: 'absolute', top: 0, right: 0,
+                padding: '5px 12px', fontSize: 11, borderRadius: 6, cursor: 'pointer',
+                background: 'var(--blue-dim)', color: 'var(--blue)', border: '0.5px solid var(--blue-border)',
+                fontWeight: 600,
+              }}>
+              📋 Copy
+            </button>
+            {/* Report card — styled for screenshot */}
+            <div style={{
+              background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12,
+              padding: '20px 24px', fontFamily: 'monospace', fontSize: 13, lineHeight: 1.7,
+              color: '#f0f0f0', whiteSpace: 'pre-wrap', marginTop: 0,
+            }}>
+              {ojanReport}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <OjanReport rows={allPrimaryRows} />
+
     </div>
   )
-}
-
-const selectStyle = {
-  padding: '4px 8px', fontSize: 12, borderRadius: 5, cursor: 'pointer',
-  background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text)', outline: 'none',
-}
-
-function th({ align = 'right', comp = false } = {}) {
-  return {
-    padding: '8px 12px', fontSize: 10, fontWeight: 600,
-    color: comp ? 'var(--blue)' : 'var(--text3)',
-    textTransform: 'uppercase', letterSpacing: '0.05em',
-    borderBottom: '0.5px solid var(--border2)',
-    background: comp ? 'var(--blue-dim)' : 'var(--bg3)',
-    textAlign: align, whiteSpace: 'nowrap',
-    borderLeft: comp ? '1px solid var(--blue-border)' : 'none',
-  }
-}
-
-function td({ align = 'right', bold = false, comp = false } = {}) {
-  return {
-    padding: '8px 12px', fontSize: 13, borderBottom: '0.5px solid var(--border)',
-    textAlign: align, fontWeight: bold ? 600 : 400, color: 'var(--text)',
-    borderLeft: comp ? '1px solid rgba(66,133,244,0.1)' : 'none',
-  }
 }
