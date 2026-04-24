@@ -53,6 +53,8 @@ export default function MetaCreative() {
   const creatorProducts = useMemo(() => {
     if (!drillCreator) return null
     const creatorRows = rows.filter(r => (r.creator || 'Unknown') === drillCreator)
+    console.log('drillCreator:', drillCreator, 'matched rows:', creatorRows.length, 'sample creator values:', rows.slice(0,3).map(r => r.creator))
+    if (creatorRows.length === 0) return []
     return groupAndAggregate(creatorRows, 'product')
   }, [rows, drillCreator])
 
@@ -198,7 +200,7 @@ export default function MetaCreative() {
       />
 
       {/* Creator → Product drill-down panel */}
-      {drillCreator && creatorProducts && (
+      {drillCreator && creatorProducts !== null && (
         <div style={{ marginTop: 16, background: 'var(--bg2)', border: '0.5px solid var(--blue-border)', borderRadius: 10, padding: '16px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
