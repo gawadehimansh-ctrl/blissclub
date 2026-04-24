@@ -53,7 +53,6 @@ export default function MetaCreative() {
   const creatorProducts = useMemo(() => {
     if (!drillCreator) return null
     const creatorRows = rows.filter(r => (r.creator || 'Unknown') === drillCreator)
-    console.log('drillCreator:', drillCreator, 'matched rows:', creatorRows.length, 'sample creator values:', rows.slice(0,3).map(r => r.creator))
     if (creatorRows.length === 0) return []
     return groupAndAggregate(creatorRows, 'product')
   }, [rows, drillCreator])
