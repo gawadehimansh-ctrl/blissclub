@@ -453,7 +453,7 @@ function parseWindsorMetaGA4(rows) {
       date:           parseDate(r['date']),
       adsetName:      term,
       adName:         adContent,
-      campaignName:   r['campaign'] || '',
+      campaignName:   r['campaign'] || r['campaign_name'] || (r['adset_name'] || '').split('_').slice(0,4).join('_') || '',
       spend:          num(r['spend']),
       clicks:         num(r['clicks']),
       impressions:    num(r['impressions']),
