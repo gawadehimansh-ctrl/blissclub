@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useData } from '../data/store.jsx'
 import { fmtINRCompact, fmtX, fmtPct, fmtNum } from '../utils/formatters.js'
 import { aggregateRows } from '../utils/metrics.js'
+import BLISSCLUB_BRAIN from './BlissClubBrain.js'
 
 const OPENROUTER_KEY = 'sk-or-v1-placeholder' // user sets this
 const MODELS = [
@@ -43,29 +44,24 @@ function buildSystemPrompt(dashData, pageContext) {
     ? `\n\nPAST LOGGED INSIGHTS (most recent first):\n${insights.map(i => `[${i.ts?.slice(0,10)}] ${i.text}${i.action ? ` → Action: ${i.action}` : ''}`).join('\n')}`
     : ''
 
-  return `You are a senior performance marketing analyst and co-pilot for BlissClub, an Indian women's activewear D2C brand.
+  return `${BLISSCLUB_BRAIN}
 
-You have deep expertise in:
-- Meta Ads (ACQ/REM/RET cohorts, 1DC ROAS, GA4 ROAS, CTR, CPM, CPC, CR%)
-- Google Ads (PMax, Shopping, Search, UAC, Awareness/AWR campaigns)
-- D2C metrics (blended ROAS, CAC, AOV, ECR, pacing vs targets)
-- Indian market context (₹ currency, Indian consumer behavior)
+=== LIVE DASHBOARD DATA ===
+You are currently looking at the following live performance data:
 
-CURRENT DASHBOARD DATA:
 ${JSON.stringify(dashData, null, 2)}
 
-${pageContext ? `CURRENT PAGE CONTEXT:\n${pageContext}` : ''}
+${pageContext ? `CURRENT PAGE CONTEXT (use this for context-specific analysis):\n${pageContext}` : ''}
 ${insightText}
 
-INSTRUCTIONS:
-- Be direct and actionable. No fluff.
-- Always ground recommendations in the actual numbers shown
-- Use ₹ for currency, Indian number formatting (L for lakhs, Cr for crores)
-- Flag urgent issues first
-- When suggesting budget shifts, be specific about amounts and campaigns
-- Reference past insights when relevant to show pattern recognition
-- Format responses cleanly with bold headers where helpful
-- Keep responses concise but complete — this is a busy media buyer`
+=== RESPONSE RULES ===
+- Always use OJAN framework for analysis (Observation → Justification → Action → Next Steps)
+- Be direct and specific. Numbers, not vague advice.
+- Use ₹, L (lakhs), Cr (crores) — Indian formatting
+- Flag P0 issues (immediate action) first, then P1 (today), then P2 (this week)
+- Reference past logged insights when relevant
+- If asked about a specific creative/campaign, pull the exact numbers from dashboard data
+- Think like a 2yr BlissClub media buyer — you know the brand, the products, the benchmarks`
 }
 
 async function callOpenRouter(messages, systemPrompt, apiKey) {
