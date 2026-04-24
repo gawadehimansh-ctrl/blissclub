@@ -4,7 +4,7 @@ const PAGE_SIZE_DEFAULT = 50
 const PAGE_SIZE_COMPACT = 25
 
 export default function DrillTable({
-  columns, data, onRowClick,
+  columns, data, onRowClick, highlightRow,
   defaultSort, stickyFirst = true, compact = false,
   emptyMsg = 'No data for selected period',
   // optional: pass addMetricFilter / metricFilters for inline filter buttons
@@ -123,7 +123,7 @@ export default function DrillTable({
                 <tr
                   key={ri}
                   onClick={() => onRowClick?.(row)}
-                  style={{ cursor: onRowClick ? 'pointer' : 'default' }}
+                  style={{ cursor: onRowClick ? 'pointer' : 'default', background: highlightRow?.(row) ? 'rgba(66,133,244,0.15)' : undefined }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
