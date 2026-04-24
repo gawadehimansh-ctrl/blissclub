@@ -190,10 +190,11 @@ export default function MetaCreative() {
         columns={cols}
         data={pivoted}
         defaultSort={{ key: 'spend', dir: 'desc' }}
-        onRowClick={pivotDim === 'creator'
-          ? row => setDrillCreator(prev => prev === (row[pivotDim] || 'Unknown') ? null : (row[pivotDim] || 'Unknown'))
-          : undefined
-        }
+        onRowClick={row => {
+          if (pivotDim !== 'creator') return
+          const name = row.creator || 'Unknown'
+          setDrillCreator(prev => prev === name ? null : name)
+        }}
       />
 
       {/* Creator → Product drill-down panel */}
