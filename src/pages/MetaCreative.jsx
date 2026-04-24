@@ -43,6 +43,7 @@ export default function MetaCreative() {
   const { filterRows } = filters
   const [pivotDim, setPivotDim]       = useState('product')
   const [drillCreator, setDrillCreator] = useState(null)
+  const drillRef = React.useRef(null)
 
   // rows must be declared BEFORE anything that uses it
   const rows   = useMemo(() => filterRows(state.metaDB || []), [state.metaDB, filters])
@@ -56,6 +57,13 @@ export default function MetaCreative() {
     if (creatorRows.length === 0) return []
     return groupAndAggregate(creatorRows, 'product')
   }, [rows, drillCreator])
+
+  // Auto-scroll to drill panel when it opens
+  React.useEffect(() => {
+    if (drillCreator && drillRef.current) {
+      setTimeout(() => drillRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    }
+  }, [drillCreator])
 
   // All creatives table
   const topCreatives = useMemo(() => {
@@ -196,6 +204,7 @@ export default function MetaCreative() {
           const name = row.creator || 'Unknown'
           setDrillCreator(prev => prev === name ? null : name)
         }}
+        highlightRow={row => pivotDim === 'creator' && (row.creator || 'Unknown') === drillCreator}
       />
 
       {/* Creator → Product drill-down panel */}
