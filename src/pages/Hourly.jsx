@@ -5,10 +5,10 @@ import { parseCSV } from '../utils/csvParser.js'
 import OjanReport from '../components/OjanReport.jsx'
 
 const TIME_SLOTS = [
-  { key: '9am',   label: '9 AM',  hour: 9  },
-  { key: '12pm',  label: '12 PM', hour: 12 },
-  { key: '3pm',   label: '3 PM',  hour: 15 },
-  { key: '5pm',   label: '5 PM',  hour: 17 },
+  { key: '9am',  label: '9 AM',  hour: 9  },
+  { key: '12pm', label: '12 PM', hour: 12 },
+  { key: '3pm',  label: '3 PM',  hour: 15 },
+  { key: '5pm',  label: '5 PM',  hour: 17 },
 ]
 
 function parseHour(timeStr) {
@@ -61,41 +61,56 @@ function aggregateByProduct(rows) {
   return Object.values(map)
 }
 
+const th = ({ align = 'right', comp = false } = {}) => ({
+  padding: '8px 10px', fontSize: 10, fontWeight: 700,
+  color: comp ? 'var(--blue)' : 'var(--text3)',
+  textTransform: 'uppercase', letterSpacing: '0.05em',
+  textAlign: align, whiteSpace: 'nowrap',
+  background: comp ? 'rgba(66,133,244,0.05)' : 'var(--bg3)',
+  borderBottom: '0.5px solid var(--border2)',
+})
+
+const td = ({ align = 'right', bold = false, comp = false } = {}) => ({
+  padding: '7px 10px', fontSize: 12,
+  fontWeight: bold ? 600 : 400,
+  textAlign: align, color: 'var(--text)',
+  borderBottom: '0.5px solid var(--border)',
+  background: comp ? 'rgba(66,133,244,0.03)' : 'transparent',
+})
+
+const selectStyle = {
+  padding: '3px 6px', fontSize: 12, borderRadius: 5,
+  background: 'var(--bg3)', border: '0.5px solid var(--border2)',
+  color: 'var(--text)', outline: 'none', cursor: 'pointer',
+}
+
 export default function Hourly() {
   const { state, dispatch } = useData()
   const fileRef = useRef()
-
   const [primaryDate, setPrimaryDate] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d })
   const [compareDate, setCompareDate] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return subDays(d,1) })
-  const [compareOn, setCompareOn]     = useState(true)
-  const [showComp, setShowComp]       = useState(false)
-  const [pickerOpen, setPickerOpen]   = useState(false)
-  const [uploading, setUploading]     = useState(false)
-  const [activeSlot, setActiveSlot]   = useState(null) // which slot is being uploaded
-  // Hour filter: null = all hours, or { from, to }
-  const [hourFrom, setHourFrom] = useState(0)
-  const [hourTo, setHourTo]     = useState(23)
+  const [compareOn, setCompareOn]   = useState(true)
+  const [showComp, setShowComp]     = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [uploading, setUploading]   = useState(false)
+  const [activeSlot, setActiveSlot] = useState(null)
+  const [hourFrom, setHourFrom]     = useState(0)
+  const [hourTo, setHourTo]         = useState(23)
   const [hourFilterOn, setHourFilterOn] = useState(false)
 
-
-  // All rows for primary date
   const allPrimaryRows = useMemo(() => getRowsForDate(state.metaHourly, primaryDate), [state.metaHourly, primaryDate])
   const allCompareRows = useMemo(() => getRowsForDate(state.metaHourly, compareDate), [state.metaHourly, compareDate])
 
-  // Which upload slots exist for primary date
   const uploadedSlots = useMemo(() => {
-    const slots = new Set(allPrimaryRows.map(r => r.uploadSlot).filter(Boolean))
-    return slots
+    return new Set(allPrimaryRows.map(r => r.uploadSlot).filter(Boolean))
   }, [allPrimaryRows])
 
-  // Latest upload time for primary date
   const lastUploadTime = useMemo(() => {
     const times = allPrimaryRows.map(r => r.uploadTime).filter(Boolean)
     if (!times.length) return null
     return times.sort((a,b) => b - a)[0]
   }, [allPrimaryRows])
 
-  // Filtered by hour range
   const primaryRows = useMemo(() => {
     if (!hourFilterOn) return allPrimaryRows
     return allPrimaryRows.filter(r => {
@@ -139,11 +154,9 @@ export default function Hourly() {
   const effectiveHours = hourFilterOn ? (hourTo - hourFrom + 1) : currentHour || 1
   const spendPerHour = effectiveHours > 0 ? totalPrimary / effectiveHours : 0
   const projectedSpend = spendPerHour * 24
-
   const primaryLabel = format(primaryDate, 'd MMM yyyy')
   const compareLabel = format(compareDate, 'd MMM yyyy')
 
-  // Upload handler — tagged with slot
   async function handleUpload(slot, file) {
     if (!file) return
     setUploading(true)
@@ -160,12 +173,13 @@ export default function Hourly() {
 
   return (
     <div style={{ padding: '24px 28px' }}>
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Hourly pulse</h1>
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-            Intraday product spend · 1DC orders · CSV upload only · Last upload
+            Intraday product spend · 1DC ROAS · CSV upload only
             {lastUploadTime && (
               <span style={{ marginLeft: 8, color: 'var(--green)' }}>
                 · Last upload {format(lastUploadTime, 'h:mm a')}
@@ -174,7 +188,6 @@ export default function Hourly() {
             )}
           </div>
         </div>
-        {/* Date picker button */}
         <div style={{ position: 'relative' }}>
           <button onClick={() => setPickerOpen(o => !o)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
@@ -195,7 +208,7 @@ export default function Hourly() {
         </div>
       </div>
 
-      {/* Upload strip — one button per time slot */}
+      {/* Upload strip */}
       <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8 }}>Upload Meta hourly CSV</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -225,7 +238,7 @@ export default function Hourly() {
         </div>
       </div>
 
-      {/* Hour range filter */}
+      {/* Hour filter */}
       <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12 }}>
           <input type="checkbox" checked={hourFilterOn} onChange={e => setHourFilterOn(e.target.checked)} style={{ accentColor: 'var(--pink)' }} />
@@ -236,37 +249,26 @@ export default function Hourly() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 11, color: 'var(--text3)' }}>From</span>
               <select value={hourFrom} onChange={e => setHourFrom(Number(e.target.value))} style={selectStyle}>
-                {Array.from({length: 24}, (_,h) => (
-                  <option key={h} value={h}>{String(h).padStart(2,'0')}:00</option>
-                ))}
+                {Array.from({length: 24}, (_,h) => <option key={h} value={h}>{String(h).padStart(2,'0')}:00</option>)}
               </select>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 11, color: 'var(--text3)' }}>To</span>
               <select value={hourTo} onChange={e => setHourTo(Number(e.target.value))} style={selectStyle}>
-                {Array.from({length: 24}, (_,h) => (
-                  <option key={h} value={h}>{String(h).padStart(2,'0')}:59</option>
-                ))}
+                {Array.from({length: 24}, (_,h) => <option key={h} value={h}>{String(h).padStart(2,'0')}:59</option>)}
               </select>
             </div>
-            <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-              Showing {hourFrom.toString().padStart(2,'0')}:00 – {hourTo.toString().padStart(2,'0')}:59
-              ({hourTo - hourFrom + 1}h window)
-            </span>
           </>
         )}
-        {!hourFilterOn && (
-          <span style={{ fontSize: 11, color: 'var(--text3)' }}>Showing all uploaded hours</span>
-        )}
+        {!hourFilterOn && <span style={{ fontSize: 11, color: 'var(--text3)' }}>Showing all uploaded hours</span>}
       </div>
 
       {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10, marginBottom: 16 }}>
         {[
-          { label: 'Spend so far', val: totalPrimary, comp: totalCompare },
-          { label: 'Projected day', val: projectedSpend, comp: null, sub: `Based on ${effectiveHours}h run rate` },
-
-          { label: 'Clicks', val: primaryRows.reduce((s,r)=>s+(r.clicks||0),0), comp: compareRows.reduce((s,r)=>s+(r.clicks||0),0), isNum: true },
+          { label: 'Spend so far',   val: totalPrimary,   comp: totalCompare },
+          { label: 'Projected day',  val: projectedSpend, comp: null, sub: `Based on ${effectiveHours}h run rate` },
+          { label: 'Clicks',         val: primaryRows.reduce((s,r)=>s+(r.clicks||0),0), comp: compareRows.reduce((s,r)=>s+(r.clicks||0),0), isNum: true },
         ].map(({ label, val, comp, sub, isNum }) => (
           <div key={label} style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
             <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, fontWeight: 600 }}>{label}</div>
@@ -275,9 +277,7 @@ export default function Hourly() {
             </div>
             {comp != null && compareOn ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-                  {isNum ? (comp > 0 ? Math.round(comp).toLocaleString('en-IN') : '0') : fmtINR(comp)}
-                </span>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>{isNum ? Math.round(comp).toLocaleString('en-IN') : fmtINR(comp)}</span>
                 <DeltaBadge curr={val} prev={comp} />
               </div>
             ) : sub ? (
@@ -296,7 +296,6 @@ export default function Hourly() {
             background: showComp ? 'var(--blue-dim)' : 'var(--bg3)',
             color: showComp ? 'var(--blue)' : 'var(--text2)',
             border: `0.5px solid ${showComp ? 'var(--blue-border)' : 'var(--border2)'}`,
-            fontWeight: showComp ? 500 : 400,
           }}>
             {showComp ? '▼ Hide comparison' : '▶ Show comparison'}
           </button>
@@ -314,14 +313,12 @@ export default function Hourly() {
             <thead>
               <tr>
                 <th style={th({ align: 'left' })}>Product</th>
-                <th style={th()}>Spend ({primaryLabel}{hourFilterOn ? ` · ${hourFrom.toString().padStart(2,'0')}–${hourTo.toString().padStart(2,'0')}h` : ''})</th>
-                <th style={th()}>Spend Mix</th>
+                <th style={th()}>Spend</th>
+                <th style={th()}>Mix</th>
                 <th style={th()}>CPC</th>
-
+                <th style={th()}>1DC ROAS</th>
                 {showComp && compareOn && <>
                   <th style={th({ comp: true })}>Spend ({compareLabel})</th>
-                  <th style={th({ comp: true })}>Mix</th>
-                  <th style={th({ comp: true })}>CPC</th>
                   <th style={th({ comp: true })}>Δ Spend</th>
                   <th style={th({ comp: true })}>Δ CPC</th>
                 </>}
@@ -329,14 +326,13 @@ export default function Hourly() {
             </thead>
             <tbody>
               {tableRows.map(r => {
-                const compRow  = r.comp
-                const compMix  = compRow && totalCompare > 0 ? compRow.spend / totalCompare * 100 : null
-                const compCpc  = compRow?.clicks > 0 ? compRow.spend / compRow.clicks : null
+                const compRow = r.comp
+                const compCpc = compRow?.clicks > 0 ? compRow.spend / compRow.clicks : null
+                const roas1dc = r.spend > 0 && r.fbRevenue > 0 ? r.fbRevenue / r.spend : 0
                 return (
                   <tr key={r.product}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <td style={td({ align: 'left', bold: true })}>{r.product}</td>
                     <td style={td()}>{fmtINR(r.spend)}</td>
                     <td style={td()}>
@@ -348,28 +344,25 @@ export default function Hourly() {
                       </div>
                     </td>
                     <td style={td()}>₹{r.cpc > 0 ? Math.round(r.cpc).toLocaleString('en-IN') : '—'}</td>
-
+                    <td style={{ ...td(), color: roas1dc >= 2 ? 'var(--green)' : roas1dc >= 1 ? 'var(--amber)' : roas1dc > 0 ? 'var(--red)' : 'var(--text3)' }}>
+                      {roas1dc > 0 ? `${roas1dc.toFixed(2)}x` : '—'}
+                    </td>
                     {showComp && compareOn && <>
                       <td style={td({ comp: true })}>{compRow ? fmtINR(compRow.spend) : '—'}</td>
-                      <td style={td({ comp: true })}>{compMix != null ? `${compMix.toFixed(1)}%` : '—'}</td>
-                      <td style={td({ comp: true })}>{compCpc ? `₹${Math.round(compCpc).toLocaleString('en-IN')}` : '—'}</td>
                       <td style={td({ comp: true })}><DeltaBadge curr={r.spend} prev={compRow?.spend} /></td>
                       <td style={td({ comp: true })}><DeltaBadge curr={r.cpc} prev={compCpc} lowerBetter /></td>
                     </>}
                   </tr>
                 )
               })}
-              {/* Grand total */}
               <tr style={{ borderTop: '1px solid var(--border2)', background: 'var(--bg3)' }}>
                 <td style={td({ align: 'left', bold: true })}>Grand Total</td>
                 <td style={td({ bold: true })}>{fmtINR(totalPrimary)}</td>
                 <td style={td()}>100%</td>
                 <td style={td()}>{(() => { const tc = primaryRows.reduce((s,r)=>s+(r.clicks||0),0); return tc > 0 ? `₹${Math.round(totalPrimary/tc).toLocaleString('en-IN')}` : '—' })()}</td>
-
+                <td style={td()}>{(() => { const rev = primaryRows.reduce((s,r)=>s+(r.fbRevenue||0),0); return totalPrimary > 0 && rev > 0 ? `${(rev/totalPrimary).toFixed(2)}x` : '—' })()}</td>
                 {showComp && compareOn && <>
                   <td style={td({ comp: true, bold: true })}>{fmtINR(totalCompare)}</td>
-                  <td style={td({ comp: true })}>100%</td>
-                  <td style={td({ comp: true })}>{(() => { const tc = compareRows.reduce((s,r)=>s+(r.clicks||0),0); return tc > 0 ? `₹${Math.round(totalCompare/tc).toLocaleString('en-IN')}` : '—' })()}</td>
                   <td style={td({ comp: true })}><DeltaBadge curr={totalPrimary} prev={totalCompare} /></td>
                   <td style={td({ comp: true })}>—</td>
                 </>}
@@ -378,6 +371,10 @@ export default function Hourly() {
           </table>
         </div>
       )}
+
+      {/* OJAN Report — inside Hourly component, has access to allPrimaryRows */}
+      <OjanReport rows={allPrimaryRows} />
+
     </div>
   )
 }
@@ -387,9 +384,9 @@ function HourlyDatePanel({ primaryDate, compareDate, compareOn, onApply, onClose
   const [cDate, setCDate] = useState(compareDate)
   const [cOn, setCOn]     = useState(compareOn)
   const QUICK = [
-    { label: 'Today',     fn: () => { setPDate(new Date()); setCDate(subDays(new Date(),1)) } },
-    { label: 'Yesterday', fn: () => { const y=subDays(new Date(),1); setPDate(y); setCDate(subDays(new Date(),2)) } },
-    { label: '2 days ago',fn: () => { const d=subDays(new Date(),2); setPDate(d); setCDate(subDays(new Date(),3)) } },
+    { label: 'Today',      fn: () => { setPDate(new Date()); setCDate(subDays(new Date(),1)) } },
+    { label: 'Yesterday',  fn: () => { const y=subDays(new Date(),1); setPDate(y); setCDate(subDays(new Date(),2)) } },
+    { label: '2 days ago', fn: () => { const d=subDays(new Date(),2); setPDate(d); setCDate(subDays(new Date(),3)) } },
   ]
   return (
     <div style={{
@@ -403,10 +400,7 @@ function HourlyDatePanel({ primaryDate, compareDate, compareOn, onApply, onClose
           <button key={q.label} onClick={q.fn} style={{
             padding: '4px 8px', fontSize: 11, borderRadius: 4, cursor: 'pointer',
             background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text2)',
-          }}
-            onMouseEnter={e=>e.currentTarget.style.color='var(--text)'}
-            onMouseLeave={e=>e.currentTarget.style.color='var(--text2)'}
-          >{q.label}</button>
+          }}>{q.label}</button>
         ))}
       </div>
       <div style={{ marginBottom: 8 }}>
@@ -417,7 +411,7 @@ function HourlyDatePanel({ primaryDate, compareDate, compareOn, onApply, onClose
         />
       </div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', marginBottom: 8 }}>
-        <input type="checkbox" checked={cOn} onChange={e=>setCOn(e.target.checked)} style={{ accentColor: 'var(--blue)' }} />
+        <input type="checkbox" checked={cOn} onChange={e => setCOn(e.target.checked)} style={{ accentColor: 'var(--blue)' }} />
         <span style={{ color: 'var(--text2)' }}>Compare with</span>
       </label>
       {cOn && (
@@ -432,9 +426,6 @@ function HourlyDatePanel({ primaryDate, compareDate, compareOn, onApply, onClose
         <button onClick={onClose} style={{ padding: '4px 10px', fontSize: 12, borderRadius: 5, background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text2)', cursor: 'pointer' }}>Cancel</button>
         <button onClick={() => onApply(pDate, cDate, cOn)} style={{ padding: '4px 10px', fontSize: 12, borderRadius: 5, background: 'var(--pink)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>Apply</button>
       </div>
-
-      <OjanReport rows={allPrimaryRows} />
-
     </div>
   )
 }
