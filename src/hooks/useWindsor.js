@@ -14,7 +14,7 @@ export function useWindsor() {
     return json.data || []
   }, [])
 
-  const syncAll = useCallback(async (preset = 'last_30d') => {
+  const syncAll = useCallback(async (preset = 'last_90d') => {
     const results = { success: [], errors: [] }
 
     // Meta + GA4 — split by datasource field
