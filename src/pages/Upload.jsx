@@ -125,7 +125,7 @@ export default function Upload() {
   const { syncAll } = useWindsor()
   const [syncing, setSyncing] = React.useState(false)
   const [syncResult, setSyncResult] = React.useState(null)
-  const [syncPreset, setSyncPreset] = React.useState('last_30d')
+  const [syncPreset, setSyncPreset] = React.useState('last_90d')
 
   const PROXY_URL = import.meta.env.VITE_WINDSOR_PROXY_URL
 
