@@ -74,8 +74,8 @@ function parseMetaDB(rows) {
     const parsed    = parseCreativeName(adName)
     const dateVal   = r['Reporting starts'] || r['Date'] || ''
     const spend     = num(r['Amount spent (INR)'] || r['Spends'] || r['Spend'] || 0)
-    const fbOrders  = num(r['Purchases [1-day click]'] || r['Purchases (1-day click)'] || r['FB Orders'] || r['1DC purchases'] || r['Purchases'] || 0)
-    const fbRevenue = num(r['Purchases conversion value [1-day click]'] || r['Purchases conversion value (1-day click)'] || r['FB Revenue'] || r['1dc Revenue'] || r['1DC Revenue'] || r['Purchases conversion value'] || 0)
+    const fbOrders  = num(r['Purchases [1-day click all conversions]'] || r['Purchases [1-day click]'] || r['Purchases (1-day click)'] || r['FB Orders'] || r['1DC purchases'] || r['Purchases'] || 0)
+    const fbRevenue = num(r['Purchases conversion value [1-day click all conversions]'] || r['Purchases conversion value [1-day click]'] || r['Purchases conversion value (1-day click)'] || r['FB Revenue'] || r['1dc Revenue'] || r['1DC Revenue'] || r['Purchases conversion value'] || 0)
     return {
       date: parseDate(dateVal),
       adsetName, adName,
@@ -114,8 +114,8 @@ function parseMetaHourly(rows) {
       impressions: num(r['Impressions'] || 0),
       clicks: num(r['Link clicks'] || 0),
       spend: num(r['Amount spent (INR)'] || r['Spends'] || 0),
-      fbOrders: num(r['Purchases [1-day click]'] || r['Purchases (1-day click)'] || r['1DC purchases'] || r['Purchases'] || 0),
-      fbRevenue: num(r['Purchases conversion value [1-day click]'] || r['Purchases conversion value (1-day click)'] || r['1dc Revenue'] || r['Purchases conversion value'] || 0),
+      fbOrders: num(r['Purchases [1-day click all conversions]'] || r['Purchases [1-day click]'] || r['Purchases (1-day click)'] || r['1DC purchases'] || r['Purchases'] || 0),
+      fbRevenue: num(r['Purchases conversion value [1-day click all conversions]'] || r['Purchases conversion value [1-day click]'] || r['Purchases conversion value (1-day click)'] || r['1dc Revenue'] || r['Purchases conversion value'] || 0),
       cohort: r['cohort'] || r['Cohort'] || parsed.cohort || '',
       product: r['Product'] || parsed.product || '',
       format: r['Format'] || parsed.format || '',
