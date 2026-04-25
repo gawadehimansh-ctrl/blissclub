@@ -46,29 +46,39 @@ Blended 1DC ROAS: ${blendedROAS}x
 TOP ADS BY SPEND:
 ${adLines}
 
+CRITICAL RULES FOR THIS REPORT:
+1. ALL actions must be at AD LEVEL only — never recommend pausing/scaling an adset directly
+2. Name the EXACT ad (full ad name from data above) for every action
+3. Minimum spend before pausing: INR 2000 for 5*5 products, INR 1500 for others — do NOT recommend pausing below this
+4. CPC target: INR 10-15 for LTC/TUL products, INR 15-20 for others, INR 20-25 for Men's
+5. 1DC ROAS targets: LTC/TUL = 2.5x+, BB/RS = 2.15x+, Men's = 0.4x+, Others = 2x+
+6. P0 = CPC > 2x target AND 0 orders AND spend > minimum threshold
+7. GREEN = 1DC ROAS > target AND CPC within target AND orders > 0
+8. P1 = ROAS below target but within 15% — scale down budget 10-15% at ad level
+
 Generate a complete OJAN report. Format EXACTLY as below for client WhatsApp screenshot:
 
 BlissClub | ${slot} Report | ${new Date().toLocaleDateString('en-IN')}
 --------------------------------
 Spend: INR X | Orders: X | 1DC ROAS: Xx
 
-P0 - PAUSE IMMEDIATELY
-- [Ad name]: CPC INR X vs target INR X | 0 orders at INR X spend -> PAUSE
-(list all ads that need immediate action with exact numbers)
+🔴 P0 - PAUSE AD IMMEDIATELY
+- [EXACT full ad name]: CPC INR X vs target INR X | Orders: X at INR X spend -> PAUSE THIS AD
+(only include if spend > minimum threshold)
 
-P1 - SCALE DOWN 10-15%
-- [Ad name]: ROAS Xx (within 15% of benchmark) -> reduce budget 10-15%
+🟡 P1 - SCALE DOWN AD BUDGET 10-15%
+- [EXACT full ad name]: 1DC ROAS Xx vs target Xx -> reduce this ad budget 10-15%
 
-GREEN - SCALE UP
-- [Ad name]: ROAS Xx, CPC INR X, Orders X -> scale +20%
+🟢 SCALE UP AD +20%
+- [EXACT full ad name]: ROAS Xx, CPC INR X, Orders X -> increase this ad budget 20%
 
-OJAN:
-O: [3 observations with exact numbers]
-J: [reason for each observation]
-A: [specific action for each - name the ad, state the action]
-N: [what to check at next slot]
+📋 OJAN:
+O: [Top 3 observations with exact numbers from the data]
+J: [Specific reason for each — audience issue? CPM spike? creative fatigue?]
+A: [Ad-level action for each — full ad name + exact action]
+N: [What to check at next slot — specific metrics and ads to watch]
 
-Rules: Under 300 words. Always use real numbers from data. Name specific ads. Be direct.`
+Under 300 words. Real numbers only. Always full ad names. Ad-level actions only.`
 }
 
 export default function OjanReport({ rows }) {
