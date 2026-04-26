@@ -14,12 +14,12 @@ export function useWindsor() {
     return json.data || []
   }, [])
 
-  const syncAll = useCallback(async (preset = 'last_30d') => {
+  const syncAll = useCallback(async () => {
     const results = { success: [], errors: [] }
 
     // Meta daily
     try {
-      const raw    = await fetchEndpoint(`/api/meta-daily?preset=${preset}`)
+      const raw    = await fetchEndpoint(`/api/meta-daily`)
       const parsed = parseWindsorPayload(raw, 'windsor_meta_ga4')
       const metaRows = parsed.filter(r =>
         r.datasource === 'facebook' ||
@@ -50,7 +50,7 @@ export function useWindsor() {
 
     // GA4 standalone
     try {
-      const data   = await fetchEndpoint(`/api/ga4?preset=${preset}`)
+      const data   = await fetchEndpoint(`/api/ga4`)
       const parsed = parseWindsorPayload(data, 'ga4')
       if (parsed.length > 0) loadData(parsed, 'GA4_DUMP', false)
       results.success.push(`GA4 (${parsed.length})`)
@@ -58,14 +58,14 @@ export function useWindsor() {
 
     // Google campaigns
     try {
-      const data = await fetchEndpoint(`/api/google-campaigns?preset=${preset}`)
+      const data = await fetchEndpoint(`/api/google-campaigns`)
       loadData(parseWindsorPayload(data, 'windsor_google'), 'WINDSOR_GOOGLE_DAILY', true)
       results.success.push('Google campaigns')
     } catch (e) { results.errors.push(`Google: ${e.message}`) }
 
     // Google search terms
     try {
-      const data   = await fetchEndpoint(`/api/google-search-terms?preset=${preset}`)
+      const data   = await fetchEndpoint(`/api/google-search-terms`)
       const parsed = parseWindsorPayload(data, 'windsor_search_terms')
       if (parsed.length > 0) loadData(parsed, 'WINDSOR_SEARCH_TERMS', true)
       results.success.push(`Search terms (${parsed.length})`)
@@ -73,7 +73,7 @@ export function useWindsor() {
 
     // Google keywords
     try {
-      const data   = await fetchEndpoint(`/api/google-keywords?preset=${preset}`)
+      const data   = await fetchEndpoint(`/api/google-keywords`)
       const parsed = parseWindsorPayload(data, 'windsor_keywords')
       if (parsed.length > 0) loadData(parsed, 'GOOGLE_KEYWORDS', true)
       results.success.push(`Keywords (${parsed.length})`)
