@@ -5,16 +5,9 @@ export function detectFileType(headers) {
   const h = headers.map(x => String(x).toLowerCase().trim())
 
   // ── Windsor Google Sheets formats (detected first — specific column combos) ──
-  // Windsor google_daily: campaign_name + cost + roas + ecr
   if (h.includes('campaign_name') && h.includes('cost') && (h.includes('roas') || h.includes('ecr'))) return 'WINDSOR_GOOGLE_DAILY'
-
-  // Windsor google_search_terms: "search terms" column (Windsor writes it with capital S and space)
   if (h.includes('search terms') || (h.includes('search_term') && h.includes('campaign_name'))) return 'WINDSOR_SEARCH_TERMS'
-
-  // Windsor google_keywords: keyword_text + keyword_match_type
   if (h.includes('keyword_text') && h.includes('keyword_match_type')) return 'WINDSOR_KEYWORDS'
-
-  // Windsor meta/GA4 blended: session_manual_term + totalrevenue + datasource
   if (h.includes('session_manual_term') && h.includes('totalrevenue')) return 'WINDSOR_META_GA4'
   if (h.includes('session_manual_term') && h.includes('transactions') && h.includes('datasource')) return 'WINDSOR_META_GA4'
 
@@ -31,24 +24,15 @@ export function detectFileType(headers) {
   if (h.includes('session campaign') || h.includes('session manual term') || h.includes('ecommerce revenue') || h.includes('purchase revenue')) return 'GA4_DUMP'
 
   // ── Google Awareness / YouTube ─────────────────────────────────────────────
-  // Campaign report with TrueView columns
   const hasTrueView = h.some(x => x.includes('trueview') || x.includes('true view'))
-  // Device report with TrueView CPV
   const hasTrueViewCPV = h.some(x => x.includes('trueview avg. cpv') || x.includes('avg. cpv'))
-  // Standalone video views column
   const hasVideoViews = h.some(x => x === 'video views' || x === 'views')
-  // Video view rate
-  const hasVTR = h.some(x => x.includes('video view rate') || x.includes('view rate'))
-  // Device breakdown report
   const isDeviceReport = h.includes('device') && (hasTrueView || hasTrueViewCPV)
-  // Channel distribution report
   const isChannelReport = h.includes('channels') && h.includes('campaigns')
-
   if (hasTrueView || hasTrueViewCPV || hasVideoViews || isDeviceReport) return 'GOOGLE_AWARENESS'
-  if (isChannelReport) return 'GOOGLE_AWARENESS' // Channel dist maps to awareness
+  if (isChannelReport) return 'GOOGLE_AWARENESS'
 
-  // ── Google Ad-level report (DemandGen, Pmax, Search ads) ─────────────────
-  // Has 'ad name' or 'ad status' column → ad-level report
+  // ── Google Ad-level report ────────────────────────────────────────────────
   const isAdReport = h.includes('ad name') || h.includes('ad status')
   if (isAdReport && h.includes('campaign') && h.includes('cost')) return 'GOOGLE_AD_REPORT'
 
@@ -57,11 +41,8 @@ export function detectFileType(headers) {
   if (h.some(x => x === 'keyword' || x === 'search keyword') && h.includes('cost') && h.some(x => x.includes('quality score') || x.includes('impr.'))) return 'GOOGLE_KEYWORDS'
 
   // ── Google conversion campaigns dump ─────────────────────────────────────
-  // Internal format: RowLabels + Type column
   if (h.includes('rowlabels') && h.includes('cost')) return 'GOOGLE_DUMP'
-  // Standard Google Ads campaign export: Campaign + Cost + Impr. + CTR
   if (h.includes('campaign') && h.includes('cost') && (h.includes('impr.') || h.includes('impressions')) && h.includes('ctr')) return 'GOOGLE_DUMP'
-  // Conversion action report
   if (h.includes('conversion action') && h.includes('campaign') && h.includes('cost')) return 'GOOGLE_DUMP'
 
   return 'UNKNOWN'
@@ -149,7 +130,6 @@ function parseGoogleDump(rows) {
   }).filter(r => r.date && r.campaignName)
 }
 
-// Google Awareness / YouTube campaigns
 function parseGoogleAwareness(rows) {
   return rows.map(r => {
     const campaignName = r['Campaign'] || r['RowLabels'] || ''
@@ -180,7 +160,6 @@ function parseGoogleAwareness(rows) {
   }).filter(r => r.date && r.campaignName)
 }
 
-// Google Keywords
 function parseGoogleKeywords(rows) {
   return rows.map(r => {
     const keyword = r['Keyword'] || r['Search keyword'] || ''
@@ -207,7 +186,6 @@ function parseGoogleKeywords(rows) {
   }).filter(r => r.keyword)
 }
 
-// Google Search Terms
 function parseGoogleSearchTerms(rows) {
   return rows.map(r => {
     const term = r['Search term'] || r['Search Term'] || ''
@@ -236,7 +214,6 @@ function parseGoogleSearchTerms(rows) {
 
 function parseGA4Dump(rows) {
   return rows.map(r => {
-    // Handle both CSV export format and Windsor API format
     const term = r['session_manual_term'] || r['Session manual term'] || r['Session campaign'] || r['campaign'] || ''
     const adContent = r['session_manual_ad_content'] || r['Session manual ad content'] || ''
     return {
@@ -253,16 +230,13 @@ function parseGA4Dump(rows) {
   }).filter(r => r.date)
 }
 
-
-// Google Ad-level report (DemandGen, Pmax, Search ads)
 function parseGoogleAdReport(rows) {
   return rows.map(r => {
-    const adName      = r['Ad name'] || ''
+    const adName       = r['Ad name'] || ''
     const campaignName = r['Campaign'] || ''
     return {
       date: parseDate(r['Date'] || new Date()),
-      adName,
-      campaignName,
+      adName, campaignName,
       adgroupName: r['Ad group'] || '',
       adType: r['Ad type'] || '',
       adStatus: r['Status'] || r['Ad status'] || '',
@@ -282,7 +256,6 @@ function parseGoogleAdReport(rows) {
   }).filter(r => r.campaignName)
 }
 
-// Google Channel distribution report
 function parseGoogleChannelReport(rows) {
   return rows.map(r => {
     const campaignName = r['Campaigns'] || r['Campaign'] || ''
@@ -301,7 +274,6 @@ function parseGoogleChannelReport(rows) {
   }).filter(r => r.campaignName || r.channel)
 }
 
-// Google Device report (awareness)
 function parseGoogleDeviceReport(rows) {
   return rows.map(r => {
     const campaignName = r['Campaign'] || ''
@@ -321,11 +293,9 @@ function parseGoogleDeviceReport(rows) {
   }).filter(r => r.campaignName || r.device)
 }
 
-// Google Campaign report (awareness - TrueView)
 function parseGoogleCampaignReport(rows) {
   return rows.map(r => {
     const campaignName = r['Campaign'] || ''
-    const hasTrueView = r['TrueView views'] !== undefined
     return {
       date: new Date(),
       campaignName,
@@ -347,19 +317,13 @@ function parseGoogleCampaignReport(rows) {
   }).filter(r => r.campaignName)
 }
 
+// ── Windsor Google Sheets parsers ─────────────────────────────────────────────
 
-// ── Windsor Google Sheets parsers ────────────────────────────────────────────
-// These handle CSVs downloaded from the BlissClub Windsor Google Sheet
-
-// Windsor: google_daily tab
-// Headers: account_name, ad_name, campaign_name, date, impressions, spend,
-//          average_cpm, clicks, conversion_value, conversions, cost, cpc, ctr,
-//          roas, conv value/cost, ecr
 function parseWindsorGoogleDaily(rows) {
   return rows.map(r => {
     const campaignName = r['campaign_name'] || r['campaign'] || ''
     return {
-      date: parseDate(r['date']),
+      date:         parseDate(r['date']),
       campaignName,
       campaignType: parseCampaignType(campaignName),
       cost:         num(r['cost'] || r['spend']),
@@ -379,19 +343,16 @@ function parseWindsorGoogleDaily(rows) {
   }).filter(r => r.date && r.campaignName)
 }
 
-// Windsor: google_search_terms tab
-// Headers: account_name, ad_name, campaign_name, date, impressions, spend,
-//          ad_group_name, clicks, conversions, Cost, Search Terms
 function parseWindsorSearchTerms(rows) {
   return rows.map(r => {
-    // Windsor returns column as 'Search Terms' (capital) or 'search_term' depending on version
+    // Proxy returns: search_term, campaign, ad_group_name, impressions, clicks, spend, conversions
     const term = r['Search Terms'] || r['search_term'] || r['Search Term'] || r['search terms'] || ''
     const campaignName = r['campaign_name'] || r['campaign'] || r['Campaign'] || ''
     return {
       date:         parseDate(r['date'] || new Date()),
       term,
       campaignName,
-      adgroupName:  r['ad_group_name'] || '',
+      adgroupName:  r['ad_group_name'] || r['adGroupName'] || '',
       cost:         num(r['Cost'] || r['cost'] || r['spend']),
       impressions:  num(r['impressions']),
       clicks:       num(r['clicks']),
@@ -405,11 +366,9 @@ function parseWindsorSearchTerms(rows) {
   }).filter(r => r.term)
 }
 
-// Windsor: google_keywords tab
-// Headers: account_name, ad_group_name, campaign_name, clicks, conversions,
-//          cost, date, impressions, keyword_match_type, keyword_text
 function parseWindsorKeywords(rows) {
   return rows.map(r => {
+    // Proxy returns: keyword_text, keyword, match_type, campaign, ad_group_name
     const keyword = r['keyword_text'] || r['keyword'] || ''
     const campaignName = r['campaign_name'] || r['campaign'] || ''
     return {
@@ -434,26 +393,22 @@ function parseWindsorKeywords(rows) {
   }).filter(r => r.keyword)
 }
 
-// Windsor: meta_daily tab (GA4 data joined with Meta)
-// Headers: account_name, campaign, clicks, cost_per_action_type_landing_page_view,
-//          cpc, datasource, date, purchase_roas_omni_purchase,
-//          session_manual_ad_content, session_manual_term, sessions, source,
-//          spend, totalrevenue, transactions
 function parseWindsorMetaGA4(rows) {
   return rows.map(r => {
-    // Windsor field names differ from CSV: adset_name, ad_name (snake_case)
+    // Meta rows: ad_name, adset_name, spend, impressions, clicks, datasource=facebook
+    //            purchase_roas_omni_purchase, actions_omni_purchase, action_values_omni_purchase
+    // GA4 rows:  campaign, session_manual_term, session_manual_ad_content,
+    //            sessions, totalrevenue, transactions, datasource=googleanalytics4
+    const isMeta = (r['datasource'] || '') === 'facebook' || num(r['spend']) > 0
     const term      = r['session_manual_term'] || r['adset_name'] || r['campaign'] || ''
     const adContent = r['ad_name'] || r['session_manual_ad_content'] || ''
-    // Parse creative name from ad_name (contains full creative naming convention)
     const parsed    = parseCreativeName(adContent || term)
-    const isGA4 = (r['datasource'] || '') === 'googleanalytics4'
-    const isMeta = (r['datasource'] || '') === 'facebook' || num(r['spend']) > 0
 
     return {
       date:           parseDate(r['date']),
       adsetName:      term,
       adName:         adContent,
-      campaignName:   r['campaign'] || r['campaign_name'] || (r['adset_name'] || '').split('_').slice(0,4).join('_') || '',
+      campaignName:   r['campaign'] || r['campaign_name'] || '',
       spend:          num(r['spend']),
       clicks:         num(r['clicks']),
       impressions:    num(r['impressions']),
@@ -461,8 +416,11 @@ function parseWindsorMetaGA4(rows) {
       sessions:       num(r['sessions']),
       gaOrders:       num(r['transactions']),
       gaRevenue:      num(r['totalrevenue']),
-      fbRevenue:      isMeta ? num(r['purchase_roas_omni_purchase']) * num(r['spend']) : num(r['totalrevenue']),
-      fbOrders:       num(r['transactions']),
+      // fbRevenue: use action_values_omni_purchase for Meta rows, totalrevenue for GA4
+      fbRevenue:      isMeta
+        ? num(r['action_values_omni_purchase']) || (num(r['purchase_roas_omni_purchase']) * num(r['spend']))
+        : num(r['totalrevenue']),
+      fbOrders:       num(r['actions_omni_purchase'] || r['transactions']),
       reportedROAS:   num(r['purchase_roas_omni_purchase']),
       cplpv:          num(r['cost_per_action_type_landing_page_view']),
       datasource:     r['datasource'] || '',
@@ -479,10 +437,63 @@ function parseWindsorMetaGA4(rows) {
   }).filter(r => r.date && (r.adsetName || r.campaignName))
 }
 
-// Windsor: Sheet1 (blended Meta + GA4 dump)
-// Same structure as meta_daily — just different sheet name
 function parseWindsorSheet1(rows) {
   return parseWindsorMetaGA4(rows)
+}
+
+// ── Windsor API payload parsers — called from useWindsor.js ───────────────────
+
+function parseWindsorDemandGen(rows) {
+  return rows.map(r => ({
+    date:            parseDate(r.date),
+    // Proxy returns 'campaign' not 'campaign_name'
+    campaignName:    r.campaign    || r.campaign_name    || r.campaignName    || '',
+    adgroupName:     r.ad_group_name || r.adGroupName    || '',
+    // Proxy returns 'ad_name' directly
+    adName:          r.ad_name     || r.adName           || '',
+    cost:            num(r.cost    || r.spend             || 0),
+    impressions:     num(r.impressions                   || 0),
+    clicks:          num(r.clicks                        || 0),
+    ctr:             num(r.ctr                           || 0),
+    cpm:             num(r.average_cpm || r.cpm          || 0),
+    conversions:     num(r.conversions                   || 0),
+    conversionValue: num(r.conversion_value || r.conversionValue || 0),
+  })).filter(r => r.date && (r.cost > 0 || r.impressions > 0))
+}
+
+function parseWindsorProducts(rows) {
+  return rows.map(r => ({
+    date:            parseDate(r.date),
+    // Proxy returns 'campaign' and 'ad_group_name' — use ad_group_name as product title
+    campaignName:    r.campaign    || r.campaign_name    || r.campaignName    || '',
+    adgroupName:     r.ad_group_name || r.adGroupName    || '',
+    // Product title comes from ad_group_name for Shopping/PMax
+    productTitle:    r.ad_group_name || r.product_title  || r.productTitle    || r.ad_name || '',
+    cost:            num(r.cost    || r.spend             || 0),
+    impressions:     num(r.impressions                   || 0),
+    clicks:          num(r.clicks                        || 0),
+    conversions:     num(r.conversions                   || 0),
+    conversionValue: num(r.conversion_value || r.conversionValue || 0),
+  })).filter(r => r.date && (r.cost > 0 || r.impressions > 0))
+}
+
+function parseWindsorAwareness(rows) {
+  return rows.map(r => ({
+    date:         parseDate(r.date),
+    campaignName: r.campaign    || r.campaign_name    || r.campaignName || '',
+    adName:       r.ad_name     || r.adName           || '',
+    cost:         num(r.cost    || r.spend),
+    impressions:  num(r.impressions),
+    clicks:       num(r.clicks),
+    videoViews:   num(r.video_views   || r.videoViews   || 0),
+    vtr:          num(r.vtr           || r.view_rate     || 0),
+    cpv:          num(r.cpv           || r.cost_per_view || 0),
+    cpm:          num(r.average_cpm   || r.cpm           || 0),
+    videoPlayed25:  num(r.video_quartile_p25  || r.videoPlayed25  || 0),
+    videoPlayed50:  num(r.video_quartile_p50  || r.videoPlayed50  || 0),
+    videoPlayed75:  num(r.video_quartile_p75  || r.videoPlayed75  || 0),
+    videoPlayed100: num(r.video_quartile_p100 || r.videoPlayed100 || 0),
+  })).filter(r => r.date && (r.cost > 0 || r.impressions > 0))
 }
 
 export function parseCSV(file) {
@@ -491,30 +502,18 @@ export function parseCSV(file) {
     reader.onload = (e) => {
       let text = e.target.result
       const lines = text.split('\n')
-
-      // Strategy: find the real header row — the first row with 3+ comma-separated values
-      // that looks like column headers (not a title/date-range row).
-      // Google Ads exports have 2 garbage rows at top: "Report name" + "date range"
-      // GA4 exports have # comment lines at top
-      // Meta exports start directly with real headers
       let headerIdx = 0
       for (let i = 0; i < Math.min(lines.length, 10); i++) {
         const line = lines[i].trim()
         if (!line || line.startsWith('#')) continue
-        // Count comma-separated values — real header rows have many columns
         const cols = line.split(',').length
         if (cols >= 3) {
-          // Extra check: if it looks like a report title (single word + "report") or date range, skip it
           const lc = line.toLowerCase()
           const isTitle = cols <= 3 && (lc.includes('report') || lc.match(/\d+ \w+ \d{4}/))
-          if (!isTitle) {
-            headerIdx = i
-            break
-          }
+          if (!isTitle) { headerIdx = i; break }
         }
       }
       text = lines.slice(headerIdx).join('\n')
-
       Papa.parse(text, {
         header: true,
         skipEmptyLines: true,
@@ -538,7 +537,6 @@ export function parseCSV(file) {
           else if (fileType === 'GOOGLE_DUMP')      parsed = parseGoogleDump(data)
           else if (fileType === 'GOOGLE_AD_REPORT') parsed = parseGoogleAdReport(data)
           else if (fileType === 'GOOGLE_AWARENESS') {
-            // Route to specific parser based on columns
             const hh = headers.map(x => x.toLowerCase())
             if (hh.includes('device')) parsed = parseGoogleDeviceReport(data)
             else if (hh.includes('channels') || hh.includes('channel')) parsed = parseGoogleChannelReport(data)
@@ -562,73 +560,21 @@ export function parseCSV(file) {
   })
 }
 
-
-// ── Windsor API payload parsers (called from useWindsor.js) ───────────────────
-// These parse raw JSON from the Railway proxy, not CSV
-
 export function parseWindsorPayload(rows, dataType) {
   if (!Array.isArray(rows)) rows = []
   switch (dataType) {
-    case 'windsor_meta_ga4':    return parseWindsorMetaGA4(rows)
-    case 'windsor_google':      return parseWindsorGoogleDaily(rows)
-    case 'windsor_search_terms':return parseWindsorSearchTerms(rows)
-    case 'windsor_keywords':    return parseWindsorKeywords(rows)
-    case 'windsor_awareness':   return parseWindsorAwareness(rows)
-    case 'windsor_products':    return parseWindsorProducts(rows)
-    case 'windsor_demandgen':   return parseWindsorDemandGen(rows)
-    case 'meta':                return parseMetaDB(rows)
-    case 'google':              return parseGoogleDump(rows)
-    case 'ga4':                 return parseGA4Dump(rows)
-    default:                    return rows
+    case 'windsor_meta_ga4':     return parseWindsorMetaGA4(rows)
+    case 'windsor_google':       return parseWindsorGoogleDaily(rows)
+    case 'windsor_search_terms': return parseWindsorSearchTerms(rows)
+    case 'windsor_keywords':     return parseWindsorKeywords(rows)
+    case 'windsor_awareness':    return parseWindsorAwareness(rows)
+    case 'windsor_products':     return parseWindsorProducts(rows)
+    case 'windsor_demandgen':    return parseWindsorDemandGen(rows)
+    case 'meta':                 return parseMetaDB(rows)
+    case 'google':               return parseGoogleDump(rows)
+    case 'ga4':                  return parseGA4Dump(rows)
+    default:                     return rows
   }
-}
-
-
-function parseWindsorDemandGen(rows) {
-  return rows.map(r => ({
-    date:            parseDate(r.date),
-    campaignName:    r.campaign_name || r.campaignName || '',
-    adName:          r.ad_name       || r.adName       || '',
-    cost:            num(r.cost || r.spend || 0),
-    impressions:     num(r.impressions || 0),
-    clicks:          num(r.clicks || 0),
-    ctr:             num(r.ctr || 0),
-    cpm:             num(r.average_cpm || r.cpm || 0),
-    conversions:     num(r.conversions || 0),
-    conversionValue: num(r.conversion_value || r.conversionValue || 0),
-  })).filter(r => r.date && (r.cost > 0 || r.impressions > 0))
-}
-
-function parseWindsorProducts(rows) {
-  return rows.map(r => ({
-    date:            parseDate(r.date),
-    campaignName:    r.campaign_name || r.campaignName || '',
-    productTitle:    r.product_title || r.productTitle || '',
-    cost:            num(r.cost || r.spend || 0),
-    impressions:     num(r.impressions || 0),
-    clicks:          num(r.clicks || 0),
-    conversions:     num(r.conversions || 0),
-    conversionValue: num(r.conversion_value || r.conversionValue || 0),
-  })).filter(r => r.date && r.productTitle)
-}
-
-function parseWindsorAwareness(rows) {
-  return rows.map(r => ({
-    date:         parseDate(r.date),
-    campaignName: r.campaign_name || r.campaignName || '',
-    adName:       r.ad_name       || r.adName       || '',
-    cost:         num(r.cost),
-    impressions:  num(r.impressions),
-    clicks:       num(r.clicks),
-    videoViews:   num(r.video_views   || r.videoViews   || 0),
-    vtr:          num(r.vtr           || r.view_rate     || 0),
-    cpv:          num(r.cpv           || r.cost_per_view || 0),
-    cpm:          num(r.average_cpm   || r.cpm           || 0),
-    videoPlayed25:  num(r.video_quartile_p25  || r.videoPlayed25  || 0),
-    videoPlayed50:  num(r.video_quartile_p50  || r.videoPlayed50  || 0),
-    videoPlayed75:  num(r.video_quartile_p75  || r.videoPlayed75  || 0),
-    videoPlayed100: num(r.video_quartile_p100 || r.videoPlayed100 || 0),
-  })).filter(r => r.date && (r.cost > 0 || r.impressions > 0))
 }
 
 function num(v) {
