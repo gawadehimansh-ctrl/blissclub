@@ -63,12 +63,29 @@ export default function MetaCatalog() {
   const [tab, setTab]               = useState('products')
   const [expandedProduct, setExpanded] = useState(null)
 
-  const raw = state.metaCatalog || []
+  const raw      = state.metaCatalog || []
+  const ga4Items = state.ga4Items    || []
 
   const inRange = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) return raw
     return raw.filter(r => { const d = new Date(r.date); return d >= dateRange.from && d <= dateRange.to })
   }, [raw, dateRange])
+
+
+  // GA4 item lookup: variant_id → { revenue, views, qty }
+  const ga4Map = useMemo(() => {
+    const map = new Map()
+    for (const r of ga4Items) {
+      const vid = r.variant_id
+      if (!vid) continue
+      if (!map.has(vid)) map.set(vid, { ga4Revenue: 0, ga4Views: 0, ga4Qty: 0 })
+      const g = map.get(vid)
+      g.ga4Revenue += Number(r.item_revenue || 0)
+      g.ga4Views   += Number(r.item_views   || 0)
+      g.ga4Qty     += Number(r.item_quantity || 0)
+    }
+    return map
+  }, [ga4Items])
 
   // ── Product aggregation ───────────────────────────────────────────────────
   const products = useMemo(() => {
@@ -86,16 +103,22 @@ export default function MetaCatalog() {
       g.views       += Number(r.actions_view_content || 0)
       g.camps.add(r.campaign || '')
     }
-    return Array.from(map.values()).map(g => ({
+    return Array.from(map.values()).map(g => {
+      const ga4 = ga4Map.get(g.id) || { ga4Revenue: 0, ga4Views: 0, ga4Qty: 0 }
+      return {
       ...g, campaigns: g.camps.size,
+      ga4Revenue: ga4.ga4Revenue,
+      ga4Views:   ga4.ga4Views,
+      ga4Qty:     ga4.ga4Qty,
+      ga4Roas:    g.spend ? ga4.ga4Revenue / g.spend : 0,
       ctr:    g.impressions ? g.clicks / g.impressions * 100 : 0,
       roas:   g.spend ? g.revenue / g.spend : 0,
       cvr:    g.clicks ? g.purchases / g.clicks * 100 : 0,
       atcRate:g.views  ? g.atc / g.views * 100 : 0,
       cpa:    g.purchases ? g.spend / g.purchases : 0,
       v2b:    g.views ? g.purchases / g.views * 100 : 0,
-    }))
-  }, [inRange])
+    }})
+  }, [inRange, ga4Map])
 
   // ── Campaign aggregation ──────────────────────────────────────────────────
   const campaigns = useMemo(() => {
@@ -204,10 +227,14 @@ export default function MetaCatalog() {
                 <SortTh col="cvr"        label="CVR%"       sort={sort} onSort={onSort} title="Purchases / Clicks" />
                 <SortTh col="ctr"        label="CTR%"       sort={sort} onSort={onSort} />
                 <SortTh col="campaigns"  label="Camps"      sort={sort} onSort={onSort} title="# campaigns showing this product" />
+                <th style={{ ...TH, borderLeft: '1px solid rgba(52,211,153,0.3)', color: '#34d399' }}>GA4 Rev</th>
+                <th style={{ ...TH, color: '#34d399' }}>GA4 ROAS</th>
+                <th style={{ ...TH, color: '#34d399' }}>GA4 Views</th>
+                <th style={{ ...TH, color: '#34d399' }}>GA4 Qty</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={12} style={{ ...TD, textAlign: 'center', padding: 32, color: 'var(--color-text-secondary)' }}>No products found</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={16} style={{ ...TD, textAlign: 'center', padding: 32, color: 'var(--color-text-secondary)' }}>No products found</td></tr>}
               {filtered.map((p, i) => (
                 <React.Fragment key={p.id}>
                   <tr onClick={() => setExpanded(expandedProduct === p.id ? null : p.id)}
@@ -232,6 +259,10 @@ export default function MetaCatalog() {
                     <td style={{ ...TD, color: p.cvr > 2 ? '#22c55e' : p.cvr > 0.5 ? '#f59e0b' : undefined }}>{fmtP(p.cvr)}</td>
                     <td style={TDs}>{fmtP(p.ctr)}</td>
                     <td style={TDs}>{p.campaigns}</td>
+                    <td style={{ ...TD, borderLeft: '1px solid rgba(52,211,153,0.15)', color: p.ga4Revenue > 0 ? '#34d399' : 'var(--color-text-secondary)' }}>{p.ga4Revenue > 0 ? fmtC(p.ga4Revenue) : '—'}</td>
+                    <td style={{ ...TD, color: p.ga4Roas >= 2 ? '#22c55e' : p.ga4Roas >= 1 ? '#f59e0b' : p.ga4Roas > 0 ? '#ef4444' : 'var(--color-text-secondary)', fontWeight: p.ga4Roas > 0 ? 600 : 400 }}>{p.ga4Roas > 0 ? fmtR(p.ga4Roas) : '—'}</td>
+                    <td style={TDs}>{p.ga4Views > 0 ? fmtN(Math.round(p.ga4Views)) : '—'}</td>
+                    <td style={TDs}>{p.ga4Qty > 0 ? fmtN(Math.round(p.ga4Qty)) : '—'}</td>
                   </tr>
                   {expandedProduct === p.id && (
                     <tr>
