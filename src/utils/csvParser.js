@@ -446,34 +446,31 @@ function parseWindsorSheet1(rows) {
 function parseWindsorDemandGen(rows) {
   return rows.map(r => ({
     date:            parseDate(r.date),
-    // Proxy returns 'campaign' not 'campaign_name'
-    campaignName:    r.campaign    || r.campaign_name    || r.campaignName    || '',
-    adgroupName:     r.ad_group_name || r.adGroupName    || '',
-    // Proxy returns 'ad_name' directly
-    adName:          r.ad_name     || r.adName           || '',
-    cost:            num(r.cost    || r.spend             || 0),
-    impressions:     num(r.impressions                   || 0),
-    clicks:          num(r.clicks                        || 0),
-    ctr:             num(r.ctr                           || 0),
-    cpm:             num(r.average_cpm || r.cpm          || 0),
-    conversions:     num(r.conversions                   || 0),
-    conversionValue: num(r.conversion_value || r.conversionValue || 0),
+    campaignName:    r.campaign     || r.campaign_name    || '',
+    adgroupName:     r.ad_group_name || '',
+    adName:          r.ad_name      || '',
+    cost:            num(r.spend    || r.cost              || 0),
+    impressions:     num(r.impressions                    || 0),
+    clicks:          num(r.clicks                         || 0),
+    ctr:             num(r.ctr                            || 0),
+    cpm:             num(r.average_cpm || r.cpm           || 0),
+    conversions:     num(r.conversions                    || 0),
+    conversionValue: num(r.conversion_value               || 0),
   })).filter(r => r.date && (r.cost > 0 || r.impressions > 0))
 }
 
 function parseWindsorProducts(rows) {
   return rows.map(r => ({
     date:            parseDate(r.date),
-    // Proxy returns 'campaign' and 'ad_group_name' — use ad_group_name as product title
-    campaignName:    r.campaign    || r.campaign_name    || r.campaignName    || '',
-    adgroupName:     r.ad_group_name || r.adGroupName    || '',
-    // Product title comes from ad_group_name for Shopping/PMax
-    productTitle:    r.ad_group_name || r.product_title  || r.productTitle    || r.ad_name || '',
-    cost:            num(r.cost    || r.spend             || 0),
-    impressions:     num(r.impressions                   || 0),
-    clicks:          num(r.clicks                        || 0),
-    conversions:     num(r.conversions                   || 0),
-    conversionValue: num(r.conversion_value || r.conversionValue || 0),
+    campaignName:    r.campaign     || r.campaign_name    || '',
+    adgroupName:     r.ad_group_name || '',
+    // Shopping/PMax: ad_group_name IS the product group title
+    productTitle:    r.ad_group_name || r.product_title   || r.ad_name || '',
+    cost:            num(r.spend    || r.cost              || 0),
+    impressions:     num(r.impressions                    || 0),
+    clicks:          num(r.clicks                         || 0),
+    conversions:     num(r.conversions                    || 0),
+    conversionValue: num(r.conversion_value               || 0),
   })).filter(r => r.date && (r.cost > 0 || r.impressions > 0))
 }
 
