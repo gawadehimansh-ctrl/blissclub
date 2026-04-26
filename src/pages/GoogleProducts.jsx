@@ -9,66 +9,69 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 
 const TIP = { contentStyle: { background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12, borderRadius: 6 } }
 
-const COLOR_WORDS = [
+const COLOR_WORDS = new Set([
   'brown','black','white','blue','green','red','grey','gray','pink','purple',
   'orange','yellow','beige','cream','navy','burgundy','maroon','teal','olive',
   'coral','mint','lilac','peach','mustard','charcoal','nude','ivory','sage',
   'rust','camel','tan','gold','silver','indigo','violet','plum','agate',
   'walnut','wood','granite','cedar','biscotti','oyster','ash','wine','scarlet',
   'bliss','mist','dune','earth','seaweed','midnight','clay','smoke','sand',
-]
-const FIT_NAMES = ['una','aia','elene','gowri','wahida','baani','naina','prachi','rachel','carrie','bella','bulbull','arya','ol','bhanu','gargi','olivia','baani']
+])
+const FIT_TRIGGER = new Set([
+  'barkha','naina','bhanu','bella','baani','gargi','olivia','bulbull',
+  'una','aia','elene','gowri','wahida','prachi','rachel','carrie','arya','ol',
+])
+const FIT_NAMES = ['una','aia','elene','gowri','wahida','baani','naina','prachi','rachel','carrie','bella','bulbull','arya','ol','bhanu','gargi','olivia','barkha']
 const SIZES = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL']
 
-function parseSKU(title = '') {
-  if (!title) return { productName: 'Unknown', color: null, size: null, fit: null, height: null }
-  // Clean up Windsor format
-  title = title
-    .replace(/^\|+\s*/, '').replace(/\s*\|+$/, '').trim()
-    .replace(/\s*BY\s+Blissclub\s*/gi, '').trim()
-    .replace(/^Blissclub\s+/i, '').trim()
-
+function parseSKU(raw = '') {
+  if (!raw) return { productName: 'Unknown', color: null, size: null, fit: null, height: null }
+  let title = raw
+    .replace(/^[|\s]+/, '').replace(/[|\s]+$/, '')
+    .replace(/\s*BY\s+Blissclub\s*/gi, '')
+    .replace(/^Blissclub\s+/i, '')
+    .replace(/^BlissClub\s+/i, '')
+    .trim()
+  let height = null
+  const baseForHeight = title.split('/')[0]
+  if (/tall/i.test(baseForHeight)) height = 'Tall'
+  else if (/regular/i.test(baseForHeight)) height = 'Regular'
+  else if (/petite/i.test(baseForHeight)) height = 'Petite'
   const parts = title.split('/').map(p => p.trim())
   let base = parts[0]
-  let size = null, fit = null, height = null, color = null
-
+  let size = null, fit = null
   for (const part of parts.slice(1)) {
-    const p = part.toLowerCase()
-    if (p.includes('tall') || p.includes("above 5")) height = 'Tall'
-    else if (p.includes('regular') || p.includes('upto 5') || p.includes('up to 5')) height = 'Regular'
-    else if (p.includes('petite')) height = 'Petite'
-
-    // Parse size-fit: "L-una" or "XS-elene" or "M-aia"
-    const dashParts = part.split('-')
-    const sz = dashParts[0].trim().toUpperCase()
-    if (SIZES.includes(sz)) {
-      size = sz
-      const fitRaw = dashParts.slice(1).join('-').trim().toLowerCase()
-      const fitFound = FIT_NAMES.find(f => fitRaw.startsWith(f))
-      if (fitFound) fit = fitFound.charAt(0).toUpperCase() + fitFound.slice(1)
+    const pl = part.toLowerCase()
+    if (!height) {
+      if (pl.includes('tall') || pl.includes('above 5')) height = 'Tall'
+      else if (pl.includes('regular') || pl.includes('upto 5') || pl.includes('up to 5')) height = 'Regular'
+      else if (pl.includes('petite')) height = 'Petite'
     }
-    // Also check for standalone size
+    if (part.includes('-')) {
+      const dash = part.split('-')
+      const sz = dash[0].trim().toUpperCase()
+      if (SIZES.includes(sz)) {
+        size = sz
+        const fitRaw = dash.slice(1).join('-').trim().toLowerCase()
+        const fitFound = FIT_NAMES.find(f => fitRaw.startsWith(f))
+        if (fitFound) fit = fitFound.charAt(0).toUpperCase() + fitFound.slice(1)
+      }
+    }
     if (!size && SIZES.includes(part.trim().toUpperCase())) size = part.trim().toUpperCase()
   }
-
-  // Extract color from base — find first color word
+  base = base.replace(/\s*-\s*Tall\s*/gi, '').replace(/\s*-\s*Regular\s*/gi, '').replace(/\s*-\s*Petite\s*/gi, '').trim()
   const words = base.split(/\s+/)
   let colorStart = -1
   for (let i = 0; i < words.length; i++) {
-    if (COLOR_WORDS.includes(words[i].toLowerCase())) {
-      colorStart = i
-      break
-    }
+    const w = words[i].toLowerCase()
+    if (COLOR_WORDS.has(w) || FIT_TRIGGER.has(w)) { colorStart = i; break }
   }
-
+  let color = null, productName = base
   if (colorStart >= 0) {
-    // Color = from colorStart to end of base
-    color = words.slice(colorStart).join(' ')
-    const productName = words.slice(0, colorStart).join(' ').replace(/[–\-]+$/, '').trim()
-    return { productName: productName || base, color, size, fit, height }
+    color = words.slice(colorStart).join(' ').trim()
+    productName = words.slice(0, colorStart).join(' ').replace(/[–\-]+$/, '').trim()
   }
-
-  return { productName: base, color: null, size, fit, height }
+  return { productName: productName || base || 'Unknown', color, size, fit, height }
 }
 
 function aggProd(rows) {
