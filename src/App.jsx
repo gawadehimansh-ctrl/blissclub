@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
@@ -175,7 +175,19 @@ function Sidebar() {
 }
 
 function Layout() {
-  const { user, loading } = useAuth()
+  const { user, token, loading } = useAuth()
+  const location = useLocation()
+  const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://blissclub-proxy-production.up.railway.app'
+
+  useEffect(() => {
+    if (!user || !token) return
+    fetch(`${BACKEND}/activity`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ page: location.pathname, action: 'page_view' }),
+    }).catch(() => {})
+  }, [location.pathname, user])
+
   if (loading) return <div style={{ minHeight:'100vh', background:'#0a0a0a' }} />
   if (!user) return <LoginPage />
   return (
