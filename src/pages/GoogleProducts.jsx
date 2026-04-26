@@ -72,6 +72,8 @@ function parseSKU(raw = '') {
     color = words.slice(colorStart).join(' ').trim()
     productName = words.slice(0, colorStart).join(' ').replace(/[–\-]+$/, '').trim()
   }
+  // If productName is very short (likely parsing artifact), use full cleaned base
+  if (!productName || productName.length < 3) productName = base.replace(/^[-\s]+/, '').trim()
   return { productName: productName || base || 'Unknown', color, size, fit, height }
 }
 
