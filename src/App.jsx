@@ -19,6 +19,7 @@ import GoogleProducts  from './pages/GoogleProducts.jsx'
 import GoogleDemandGen from './pages/GoogleDemandGen.jsx'
 import Upload          from './pages/Upload.jsx'
 import CoPilotPage     from './pages/CoPilotPage.jsx'
+import AdminPanel      from './pages/AdminPanel.jsx'
 import CoPilot         from './components/CoPilot.jsx'
 
 const NAV = [
@@ -35,6 +36,7 @@ const NAV = [
   { path: '/google/awareness',   label: 'Awareness',        icon: 'awareness', group: 'GOOGLE' },
   { path: '/google/products',    label: 'Products',         icon: 'products',  group: 'GOOGLE' },
   { path: '/google/demandgen',   label: 'Demand Gen',       icon: 'demandgen', group: 'GOOGLE' },
+  { path: '/admin',              label: 'Admin',            icon: 'admin',     group: 'DATA', adminOnly: true },
   { path: '/copilot',            label: 'Co-pilot',         icon: 'copilot',   group: 'DATA' },
   { path: '/upload',             label: 'Upload data',      icon: 'upload',    group: 'DATA' },
 ]
@@ -53,6 +55,7 @@ const ICONS = {
   awareness:  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
   products:   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>,
   demandgen:  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>,
+  admin:      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
   copilot:    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2a8 8 0 0 1 8 8c0 5-8 12-8 12S4 15 4 10a8 8 0 0 1 8-8z"/><circle cx="12" cy="10" r="3"/></svg>,
   upload:     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
 }
@@ -100,7 +103,7 @@ function Sidebar() {
             <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', padding: '10px 8px 4px' }}>
               {group}
             </div>
-            {NAV.filter(n => n.group === group).map(item => {
+            {NAV.filter(n => n.group === group).filter(n => !n.adminOnly || user?.role === 'admin').map(item => {
               const isActive = item.path === '/'
                 ? location.pathname === '/'
                 : location.pathname.startsWith(item.path)
@@ -193,6 +196,7 @@ function Layout() {
           <Route path="/google/awareness"   element={<GoogleAwareness />} />
           <Route path="/google/products"    element={<GoogleProducts />} />
           <Route path="/google/demandgen"   element={<GoogleDemandGen />} />
+          <Route path="/admin"              element={<AdminPanel />} />
           <Route path="/copilot"            element={<CoPilotPage />} />
           <Route path="/upload"             element={<Upload />} />
         </Routes>
