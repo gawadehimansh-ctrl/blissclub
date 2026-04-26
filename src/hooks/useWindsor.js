@@ -90,7 +90,7 @@ export function useWindsor() {
     // Google products
     try {
       const data   = await fetchEndpoint(`/api/google-products`)
-      const parsed = parseWindsorPayload(data, 'windsor_google')
+      const parsed = parseWindsorPayload(data, 'windsor_products')
       if (parsed.length > 0) loadData(parsed, 'GOOGLE_PRODUCTS', true)
       results.success.push(`Google products (${parsed.length})`)
     } catch (e) { results.errors.push(`Google products: ${e.message}`) }
@@ -98,7 +98,7 @@ export function useWindsor() {
     // Google demand gen
     try {
       const data   = await fetchEndpoint(`/api/google-demandgen`)
-      const parsed = parseWindsorPayload(data, 'windsor_google')
+      const parsed = parseWindsorPayload(data, 'windsor_demandgen')
       if (parsed.length > 0) loadData(parsed, 'GOOGLE_DEMANDGEN', true)
       results.success.push(`Demand Gen (${parsed.length})`)
     } catch (e) { results.errors.push(`Demand Gen: ${e.message}`) }
