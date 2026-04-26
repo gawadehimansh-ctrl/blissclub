@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useData } from '../data/store.jsx'
+import { useFilters, PRESET_RANGES } from '../hooks/useFilters.js'
+import { format } from 'date-fns'
 import { CATALOG_MAP } from '../data/catalogMap.js'
 
 // CATALOG_MAP: { contentId → { g: groupId, n: productName } }
@@ -97,11 +99,21 @@ function VariantDrill({ variants }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function MetaCatalog() {
   const { state }   = useData()
+  const filters = useFilters('last30')
+  const { dateFrom, dateTo, dateLabel, applyPreset } = filters
+  const [showDateMenu, setShowDateMenu] = useState(false)
   const [search, setSearch] = useState('')
   const [sort, setSort]     = useState({ col:'spend', dir:'desc' })
   const [expanded, setExpanded] = useState(null)
 
-  const raw = state.metaCatalog || []
+  const raw = useMemo(() => {
+    const all = state.metaCatalog || []
+    if (!dateFrom || !dateTo) return all
+    return all.filter(r => {
+      const d = r.date instanceof Date ? r.date : new Date(r.date)
+      return d >= dateFrom && d <= dateTo
+    })
+  }, [state.metaCatalog, dateFrom, dateTo])
 
   // ── Aggregate Windsor data by Content ID ──────────────────────────────────
   const byContentId = useMemo(() => {
@@ -194,12 +206,41 @@ export default function MetaCatalog() {
 
   return (
     <div style={{ padding:'28px 32px', maxWidth:1400 }}>
-      <div style={{ marginBottom:24 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24 }}>
+        <div>
         <h1 style={{ fontSize:22, fontWeight:700, marginBottom:4 }}>Meta Catalog / DPA — Product Intelligence</h1>
         <div style={{ fontSize:13, color:'var(--text3)' }}>
           {products.length} products · {byContentId.length} variants · all data via Windsor API · click row → variant drill
         </div>
       </div>
+      {/* Date picker */}
+      <div style={{ position:'relative' }}>
+        <button onClick={()=>setShowDateMenu(m=>!m)} style={{
+          display:'flex', alignItems:'center', gap:8, padding:'7px 14px', borderRadius:8,
+          background:'var(--bg2)', border:'0.5px solid var(--border2)', cursor:'pointer',
+          fontSize:12, color:'var(--text)', fontWeight:500,
+        }}>
+          📅 {dateLabel || (dateFrom && dateTo ? `${format(dateFrom,'d MMM')} – ${format(dateTo,'d MMM yy')}` : 'Last 30 days')}
+          <span style={{ fontSize:10, opacity:0.5 }}>▼</span>
+        </button>
+        {showDateMenu && (
+          <div style={{
+            position:'absolute', right:0, top:'calc(100% + 6px)', zIndex:100,
+            background:'var(--bg2)', border:'0.5px solid var(--border2)', borderRadius:10,
+            padding:'8px', minWidth:160, boxShadow:'0 8px 32px rgba(0,0,0,0.4)',
+          }}>
+            {['last7','last14','last30','last60','thisMonth','lastMonth'].map(key => (
+              <button key={key} onClick={()=>{ applyPreset(key); setShowDateMenu(false) }} style={{
+                display:'block', width:'100%', textAlign:'left', padding:'7px 12px',
+                fontSize:12, borderRadius:6, cursor:'pointer', border:'none',
+                background: dateLabel===PRESET_RANGES[key]().label ? 'var(--bg3)' : 'transparent',
+                color: dateLabel===PRESET_RANGES[key]().label ? 'var(--text)' : 'var(--text2)',
+              }}>{PRESET_RANGES[key]().label}</button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
 
       {/* KPIs */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:12, marginBottom:28 }}>
