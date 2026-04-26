@@ -98,6 +98,21 @@ export function useWindsor() {
       results.success.push(`Search terms (${parsed.length})`)
     } catch (e) { results.errors.push(`Search terms: ${e.message}`) }
 
+    // GA4 items (for Weekly page — category + product level)
+    try {
+      const raw    = await fetchEndpoint('/api/ga4-items')
+      const parsed = raw.map(r => ({
+        date:          parseDate(r.date),
+        itemCategory:  r.item_category || '',
+        itemName:      r.item_name || '',
+        itemRevenue:   num(r.item_revenue || 0),
+        itemsPurchased:num(r.items_purchased || 0),
+        grossRevenue:  num(r.gross_item_revenue || 0),
+      })).filter(r => r.date && r.itemName)
+      if (parsed.length > 0) loadData(parsed, 'GA4_ITEMS', true)
+      results.success.push(`GA4 items (${parsed.length})`)
+    } catch (e) { results.errors.push(`GA4 items: ${e.message}`) }
+
     // Google keywords
     try {
       const data   = await fetchEndpoint(`/api/google-keywords`)
