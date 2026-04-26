@@ -27,7 +27,8 @@ const SIZES = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL']
 function parseSKU(raw = '') {
   if (!raw) return { productName: 'Unknown', color: null, size: null, fit: null, height: null }
   let title = raw
-    .replace(/^[|\s]+/, '').replace(/[|\s]+$/, '')
+    .replace(/^[|\s]+/, '').replace(/[|\s]+$/, '')  // strip leading/trailing pipes
+    .replace(/\s*\|\s*/g, ' - ')                     // replace internal pipes with dash
     .replace(/\s*BY\s+Blissclub\s*/gi, '')
     .replace(/^Blissclub\s+/i, '')
     .replace(/^BlissClub\s+/i, '')
