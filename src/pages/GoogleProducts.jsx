@@ -500,9 +500,3 @@ export default function GoogleProducts() {
     </div>
   )
 }
-
-function deltaLabel(curr, prev) {
-  if (!prev || !curr) return null
-  const pct = ((curr - prev) / prev) * 100
-  return { value: pct.toFixed(1), positive: pct > 0 }
-}
