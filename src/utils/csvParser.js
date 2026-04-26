@@ -400,7 +400,7 @@ function parseWindsorMetaGA4(rows) {
     // GA4 rows:  campaign, session_manual_term, session_manual_ad_content,
     //            sessions, totalrevenue, transactions, datasource=googleanalytics4
     const isMeta = (r['datasource'] || '') === 'facebook' || num(r['spend']) > 0
-    const term      = r['session_manual_term'] || r['adset_name'] || r['campaign'] || ''
+    const term      = r['session_manual_term'] || r['session_manual_ad_content'] || r['adset_name'] || r['campaign'] || ''
     const adContent = r['ad_name'] || r['session_manual_ad_content'] || ''
     const parsed    = parseCreativeName(adContent || term)
 
@@ -434,7 +434,7 @@ function parseWindsorMetaGA4(rows) {
       saleTag:        parseSaleTag(term),
       _source: 'WINDSOR_META_GA4',
     }
-  }).filter(r => r.date && (r.adsetName || r.campaignName))
+  }).filter(r => r.date && (r.adsetName || r.campaignName || r.gaRevenue > 0))
 }
 
 function parseWindsorSheet1(rows) {
