@@ -15,47 +15,60 @@ const COLOR_WORDS = [
   'coral','mint','lilac','peach','mustard','charcoal','nude','ivory','sage',
   'rust','camel','tan','gold','silver','indigo','violet','plum','agate',
   'walnut','wood','granite','cedar','biscotti','oyster','ash','wine','scarlet',
+  'bliss','mist','dune','earth','seaweed','midnight','clay','smoke','sand',
 ]
-const FIT_NAMES = ['una','aia','elene','gowri','wahida','baani','naina','prachi','rachel','carrie','bella','bulbull','arya']
+const FIT_NAMES = ['una','aia','elene','gowri','wahida','baani','naina','prachi','rachel','carrie','bella','bulbull','arya','ol','bhanu','gargi','olivia','baani']
 const SIZES = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL']
 
 function parseSKU(title = '') {
   if (!title) return { productName: 'Unknown', color: null, size: null, fit: null, height: null }
+  // Clean up Windsor format
+  title = title
+    .replace(/^\|+\s*/, '').replace(/\s*\|+$/, '').trim()
+    .replace(/\s*BY\s+Blissclub\s*/gi, '').trim()
+    .replace(/^Blissclub\s+/i, '').trim()
+
   const parts = title.split('/').map(p => p.trim())
-  let base = parts[0].replace(/ BY Blissclub/gi, '').trim()
-  let size = null, fit = null, height = null
+  let base = parts[0]
+  let size = null, fit = null, height = null, color = null
 
   for (const part of parts.slice(1)) {
     const p = part.toLowerCase()
     if (p.includes('tall') || p.includes("above 5")) height = 'Tall'
     else if (p.includes('regular') || p.includes('upto 5') || p.includes('up to 5')) height = 'Regular'
     else if (p.includes('petite')) height = 'Petite'
-    if (p.includes('-')) {
-      const [szRaw, fitRaw = ''] = p.split('-')
-      const sz = szRaw.trim().toUpperCase()
-      if (SIZES.includes(sz)) size = sz
-      const fitFound = FIT_NAMES.find(f => fitRaw.includes(f))
+
+    // Parse size-fit: "L-una" or "XS-elene" or "M-aia"
+    const dashParts = part.split('-')
+    const sz = dashParts[0].trim().toUpperCase()
+    if (SIZES.includes(sz)) {
+      size = sz
+      const fitRaw = dashParts.slice(1).join('-').trim().toLowerCase()
+      const fitFound = FIT_NAMES.find(f => fitRaw.startsWith(f))
       if (fitFound) fit = fitFound.charAt(0).toUpperCase() + fitFound.slice(1)
     }
+    // Also check for standalone size
+    if (!size && SIZES.includes(part.trim().toUpperCase())) size = part.trim().toUpperCase()
   }
 
+  // Extract color from base — find first color word
   const words = base.split(/\s+/)
   let colorStart = -1
   for (let i = 0; i < words.length; i++) {
     if (COLOR_WORDS.includes(words[i].toLowerCase())) {
-      colorStart = Math.max(0, i - 1)
+      colorStart = i
       break
     }
   }
 
-  let color = null
-  let productName = base
   if (colorStart >= 0) {
+    // Color = from colorStart to end of base
     color = words.slice(colorStart).join(' ')
-    productName = words.slice(0, colorStart).join(' ').replace(/[–\-]+$/, '').trim()
+    const productName = words.slice(0, colorStart).join(' ').replace(/[–\-]+$/, '').trim()
+    return { productName: productName || base, color, size, fit, height }
   }
-  productName = productName.replace(/^Blissclub\s+/i, '').trim()
-  return { productName: productName || base, color, size, fit, height }
+
+  return { productName: base, color: null, size, fit, height }
 }
 
 function aggProd(rows) {
@@ -75,18 +88,20 @@ function aggProd(rows) {
 
 function fmtINR(v) {
   if (!v) return '—'
+  if (v >= 10000000) return `₹${(v/10000000).toFixed(2)}Cr`
+  if (v >= 100000)   return `₹${(v/100000).toFixed(1)}L`
+  if (v >= 1000)     return `₹${(v/1000).toFixed(1)}K`
   return `₹${Math.round(v).toLocaleString('en-IN')}`
 }
 
-const DRILL_DIMS = [
-  { key: 'color',  label: 'Color' },
-  { key: 'size',   label: 'Size' },
-  { key: 'fit',    label: 'Fit' },
-  { key: 'height', label: 'Height' },
-]
+const TH = { padding: '8px 12px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'var(--bg3)', borderBottom: '0.5px solid var(--border2)', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }
+const TD = { padding: '9px 12px', fontSize: 12, borderBottom: '0.5px solid var(--border)', color: 'var(--text)', whiteSpace: 'nowrap' }
+const TDr = { ...TD, textAlign: 'right' }
 
-function DrillRows({ skus, totalCost }) {
+// ── Drill panel shown when a product row is expanded ──────────────────────────
+function DrillPanel({ skus, totalCost }) {
   const [dim, setDim] = useState('color')
+  const [sort, setSort] = useState({ col: 'cost', dir: 'desc' })
 
   const grouped = useMemo(() => {
     const map = {}
@@ -96,167 +111,137 @@ function DrillRows({ skus, totalCost }) {
       map[k].push(r)
     }
     return Object.values(map).map(rs => ({
-      label: rs[0][dim] || 'Unknown',
+      label:    rs[0][dim] || 'Unknown',
       skuCount: [...new Set(rs.map(r => r.productTitle))].length,
       ...aggProd(rs),
-    })).sort((a, b) => b.cost - a.cost)
-  }, [skus, dim])
+    })).sort((a, b) => sort.dir === 'desc' ? b[sort.col] - a[sort.col] : a[sort.col] - b[sort.col])
+  }, [skus, dim, sort])
+
+  const DIMS = [
+    { key: 'color',  label: 'Color' },
+    { key: 'size',   label: 'Size' },
+    { key: 'fit',    label: 'Fit' },
+    { key: 'height', label: 'Height' },
+  ]
+
+  function onSort(col) {
+    setSort(s => ({ col, dir: s.col === col && s.dir === 'desc' ? 'asc' : 'desc' }))
+  }
+
+  const sortArrow = col => sort.col === col ? (sort.dir === 'desc' ? ' ↓' : ' ↑') : ''
 
   return (
     <tr>
-      <td colSpan={10} style={{ padding: 0, background: 'var(--bg3)' }}>
-        <div style={{ padding: '10px 16px 14px 48px' }}>
-          {/* Dim switcher */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-            {DRILL_DIMS.map(d => (
+      <td colSpan={11} style={{ padding: 0, background: 'rgba(127,119,221,0.04)', borderBottom: '1px solid var(--border2)' }}>
+        <div style={{ padding: '12px 16px 16px 40px' }}>
+          {/* Dim tabs */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12, alignItems: 'center' }}>
+            {DIMS.map(d => (
               <button key={d.key} onClick={() => setDim(d.key)} style={{
-                padding: '3px 10px', fontSize: 11, borderRadius: 4, cursor: 'pointer',
-                background: dim === d.key ? 'var(--blue-dim)' : 'var(--bg4)',
-                color: dim === d.key ? 'var(--blue)' : 'var(--text2)',
-                border: `0.5px solid ${dim === d.key ? 'var(--blue-border)' : 'var(--border2)'}`,
-                fontWeight: dim === d.key ? 500 : 400,
+                padding: '4px 12px', fontSize: 11, borderRadius: 6, cursor: 'pointer', border: 'none',
+                background: dim === d.key ? 'var(--purple)' : 'var(--bg3)',
+                color: dim === d.key ? '#fff' : 'var(--text2)',
+                fontWeight: dim === d.key ? 600 : 400,
               }}>{d.label}</button>
             ))}
-            <span style={{ fontSize: 11, color: 'var(--text3)', alignSelf: 'center', marginLeft: 8 }}>
-              {grouped.length} {dim}s
-            </span>
+            <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 8 }}>{grouped.length} {dim}s</span>
           </div>
 
           {/* Drill table */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: '0.5px solid var(--border2)' }}>
-                {[dim === 'color' ? 'Color' : dim === 'size' ? 'Size' : dim === 'fit' ? 'Fit' : 'Height',
-                  'SKUs', 'Spend', 'Mix', 'Impressions', 'Clicks', 'CTR', 'CPC', 'Revenue', 'ROAS'
-                ].map((h, i) => (
-                  <th key={h} style={{
-                    padding: '5px 10px', fontSize: 10, fontWeight: 600,
-                    color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em',
-                    textAlign: i === 0 ? 'left' : 'right', whiteSpace: 'nowrap',
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {grouped.map((r, i) => (
-                <tr key={i}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg4)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <td style={{ padding: '6px 10px', fontWeight: 500, color: 'var(--text)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.label}</td>
-                  <td style={dtd()}>{r.skuCount}</td>
-                  <td style={dtd()}>{fmtINR(r.cost)}</td>
-                  <td style={dtd()}>{totalCost > 0 ? `${((r.cost / totalCost) * 100).toFixed(1)}%` : '—'}</td>
-                  <td style={dtd()}>{fmtNum(r.impressions)}</td>
-                  <td style={dtd()}>{fmtNum(r.clicks)}</td>
-                  <td style={{ ...dtd(), color: r.ctr >= 0.02 ? 'var(--green)' : r.ctr >= 0.01 ? 'var(--amber)' : 'var(--red)' }}>{fmtPct(r.ctr)}</td>
-                  <td style={dtd()}>{fmtINR(r.cpc)}</td>
-                  <td style={{ ...dtd(), color: 'var(--green)' }}>{fmtINR(r.revenue)}</td>
-                  <td style={{ ...dtd(), color: r.roas >= 4 ? 'var(--green)' : r.roas >= 2 ? 'var(--amber)' : 'var(--red)', fontWeight: 500 }}>{r.roas.toFixed(2)}x</td>
+          <div style={{ overflowX: 'auto', borderRadius: 8, border: '0.5px solid var(--border)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr>
+                  {[
+                    { key: dim,          label: dim.charAt(0).toUpperCase() + dim.slice(1), align: 'left' },
+                    { key: 'skuCount',   label: 'SKUs' },
+                    { key: 'cost',       label: 'Spend' },
+                    { key: 'mix',        label: 'Mix %', noSort: true },
+                    { key: 'impressions',label: 'Impr.' },
+                    { key: 'clicks',     label: 'Clicks' },
+                    { key: 'ctr',        label: 'CTR' },
+                    { key: 'cpc',        label: 'CPC' },
+                    { key: 'conversions',label: 'Conv.' },
+                    { key: 'revenue',    label: 'Revenue' },
+                    { key: 'roas',       label: 'ROAS' },
+                  ].map((h, i) => (
+                    <th key={h.key}
+                      onClick={() => !h.noSort && onSort(h.key)}
+                      style={{ ...TH, textAlign: i === 0 ? 'left' : 'right', fontSize: 10,
+                        color: sort.col === h.key ? 'var(--text)' : 'var(--text3)',
+                        cursor: h.noSort ? 'default' : 'pointer' }}>
+                      {h.label}{!h.noSort && sortArrow(h.key)}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {grouped.map((r, i) => (
+                  <tr key={i}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <td style={{ ...TD, fontWeight: 500, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.label}</td>
+                    <td style={TDr}>{r.skuCount}</td>
+                    <td style={TDr}>{fmtINR(r.cost)}</td>
+                    <td style={TDr}>{totalCost > 0 ? ((r.cost / totalCost) * 100).toFixed(1) + '%' : '—'}</td>
+                    <td style={TDr}>{fmtNum(r.impressions)}</td>
+                    <td style={TDr}>{fmtNum(r.clicks)}</td>
+                    <td style={{ ...TDr, color: r.ctr >= 0.02 ? 'var(--green)' : r.ctr >= 0.01 ? 'var(--amber)' : 'var(--red)' }}>{fmtPct(r.ctr)}</td>
+                    <td style={TDr}>{fmtINR(r.cpc)}</td>
+                    <td style={TDr}>{fmtNum(r.conversions, 1)}</td>
+                    <td style={{ ...TDr, color: 'var(--green)' }}>{fmtINR(r.revenue)}</td>
+                    <td style={{ ...TDr, color: r.roas >= 4 ? 'var(--green)' : r.roas >= 2 ? 'var(--amber)' : 'var(--red)', fontWeight: 600 }}>{r.roas > 0 ? r.roas.toFixed(2) + 'x' : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </td>
     </tr>
   )
 }
 
-function dtd() {
-  return { padding: '6px 10px', textAlign: 'right', color: 'var(--text)', borderBottom: 'none' }
-}
-
+// ── Main component ────────────────────────────────────────────────────────────
 export default function GoogleProducts() {
-  const { state } = useData()
-  const filters = useFilters('last30')
+  const { state }  = useData()
+  const filters    = useFilters('last30')
   const { filterRows, getPrevRows } = filters
-  const [campaignFilter, setCampaignFilter] = useState('all')
-  const [expandedProduct, setExpandedProduct] = useState(null)
-  const [activeTab, setActiveTab] = useState('products') // 'products' | 'cohort'
-  const [sortKey, setSortKey] = useState('cost')
-  const [sortDir, setSortDir] = useState('desc')
 
+  const [view, setView]           = useState('products')  // 'products' | 'campaigns'
+  const [campaignFilter, setCampaignFilter] = useState('all')
+  const [expandedProduct, setExpanded]      = useState(null)
+  const [sort, setSort]           = useState({ col: 'cost', dir: 'desc' })
+  const [campSort, setCampSort]   = useState({ col: 'cost', dir: 'desc' })
+
+  // ── All rows with parsed SKU ──────────────────────────────────────────────
   const allRows = useMemo(() => {
-    return (filterRows(state.googleProducts || [], 'date')).map(r => ({
+    return filterRows(state.googleProducts || [], 'date').map(r => ({
       ...r, ...parseSKU(r.productTitle),
     }))
   }, [state.googleProducts, filters])
 
   const prevAllRows = useMemo(() => {
-    return (getPrevRows(state.googleProducts || [], 'date')).map(r => ({
+    return getPrevRows(state.googleProducts || [], 'date').map(r => ({
       ...r, ...parseSKU(r.productTitle),
     }))
   }, [state.googleProducts, filters])
 
   const campaigns = useMemo(() => [...new Set(allRows.map(r => r.campaignName).filter(Boolean))].sort(), [allRows])
 
-  const rows = useMemo(() => campaignFilter === 'all' ? allRows : allRows.filter(r => r.campaignName === campaignFilter), [allRows, campaignFilter])
-  const prev = useMemo(() => campaignFilter === 'all' ? prevAllRows : prevAllRows.filter(r => r.campaignName === campaignFilter), [prevAllRows, campaignFilter])
+  const rows = useMemo(() =>
+    campaignFilter === 'all' ? allRows : allRows.filter(r => r.campaignName === campaignFilter),
+    [allRows, campaignFilter])
 
-  // Search terms for cohort view
-  const allSearchTerms = useMemo(() => {
-    const stRows = filterRows(state.googleSearchTerms || [], 'date')
-    return campaignFilter === 'all' ? stRows : stRows.filter(r => r.campaignName === campaignFilter)
-  }, [state.googleSearchTerms, filters, campaignFilter])
-
-  // Cohort: for each campaign, products + search terms side by side
-  const cohortData = useMemo(() => {
-    const campNames = campaignFilter === 'all'
-      ? [...new Set([...rows.map(r => r.campaignName), ...allSearchTerms.map(r => r.campaignName)].filter(Boolean))].sort()
-      : [campaignFilter]
-
-    return campNames.map(camp => {
-      const campProducts = rows.filter(r => r.campaignName === camp)
-      const campTerms    = allSearchTerms.filter(r => r.campaignName === camp)
-      const prodAgg      = aggProd(campProducts)
-      const termSpend    = campTerms.reduce((s,r) => s+(r.cost||0), 0)
-      const termClicks   = campTerms.reduce((s,r) => s+(r.clicks||0), 0)
-      const termConv     = campTerms.reduce((s,r) => s+(r.transactions||0), 0)
-      const termRev      = campTerms.reduce((s,r) => s+(r.revenue||0), 0)
-
-      // Top products by spend
-      const topProds = Object.values(campProducts.reduce((map, r) => {
-        const k = r.productName || 'Unknown'
-        if (!map[k]) map[k] = []
-        map[k].push(r)
-        return map
-      }, {})).map(rs => ({ name: rs[0].productName, ...aggProd(rs) }))
-        .sort((a,b) => b.cost - a.cost).slice(0, 5)
-
-      // Top search terms by spend
-      const topTerms = Object.values(campTerms.reduce((map, r) => {
-        const k = r.term || 'Unknown'
-        if (!map[k]) map[k] = []
-        map[k].push(r)
-        return map
-      }, {})).map(rs => ({
-        term: rs[0].term,
-        cost: rs.reduce((s,r)=>s+(r.cost||0),0),
-        clicks: rs.reduce((s,r)=>s+(r.clicks||0),0),
-        conversions: rs.reduce((s,r)=>s+(r.transactions||0),0),
-        revenue: rs.reduce((s,r)=>s+(r.revenue||0),0),
-        isBrand: rs[0].isBrand,
-      })).sort((a,b) => b.cost - a.cost).slice(0, 10)
-
-      return {
-        campaign: camp,
-        productCount: [...new Set(campProducts.map(r => r.productName))].length,
-        termCount: [...new Set(campTerms.map(r => r.term))].length,
-        prodSpend: prodAgg.cost, prodRevenue: prodAgg.revenue, prodROAS: prodAgg.roas,
-        termSpend, termClicks, termConv, termRev,
-        topProds, topTerms,
-      }
-    }).filter(c => c.productCount > 0 || c.termCount > 0)
-  }, [rows, allSearchTerms, campaignFilter])
-
-
+  const prev = useMemo(() =>
+    campaignFilter === 'all' ? prevAllRows : prevAllRows.filter(r => r.campaignName === campaignFilter),
+    [prevAllRows, campaignFilter])
 
   const totals     = useMemo(() => aggProd(rows), [rows])
   const prevTotals = useMemo(() => aggProd(prev), [prev])
   const hasData    = rows.length > 0
 
-  // Group by product name
+  // ── Product grouping ──────────────────────────────────────────────────────
   const byProduct = useMemo(() => {
     const map = {}
     for (const r of rows) {
@@ -266,71 +251,97 @@ export default function GoogleProducts() {
     }
     return Object.values(map).map(rs => ({
       productName: rs[0].productName,
-      skuCount: [...new Set(rs.map(r => r.productTitle))].length,
-      skus: rs,
+      skuCount:    [...new Set(rs.map(r => r.productTitle))].length,
+      colorCount:  [...new Set(rs.map(r => r.color).filter(Boolean))].length,
+      sizeCount:   [...new Set(rs.map(r => r.size).filter(Boolean))].length,
+      skus:        rs,
       ...aggProd(rs),
     }))
   }, [rows])
 
-  const sorted = useMemo(() => {
-    return [...byProduct].sort((a, b) => {
-      const av = a[sortKey], bv = b[sortKey]
-      return sortDir === 'desc' ? bv - av : av - bv
-    })
-  }, [byProduct, sortKey, sortDir])
+  const sortedProducts = useMemo(() => {
+    return [...byProduct].sort((a, b) =>
+      sort.dir === 'desc' ? b[sort.col] - a[sort.col] : a[sort.col] - b[sort.col])
+  }, [byProduct, sort])
 
-  function toggleSort(key) {
-    if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
-    else { setSortKey(key); setSortDir('desc') }
-  }
+  // ── Campaign grouping ─────────────────────────────────────────────────────
+  const byCampaign = useMemo(() => {
+    const map = {}
+    for (const r of rows) {
+      const k = r.campaignName || 'Unknown'
+      if (!map[k]) map[k] = []
+      map[k].push(r)
+    }
+    return Object.values(map).map(rs => ({
+      campaignName: rs[0].campaignName,
+      productCount: [...new Set(rs.map(r => r.productName))].length,
+      skuCount:     [...new Set(rs.map(r => r.productTitle))].length,
+      ...aggProd(rs),
+    }))
+  }, [rows])
 
-  const thStyle = (key) => ({
-    padding: '8px 12px', fontSize: 10, fontWeight: 600, color: sortKey === key ? 'var(--text)' : 'var(--text3)',
-    textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
-    background: 'var(--bg3)', borderBottom: '0.5px solid var(--border2)',
-    textAlign: key === 'productName' ? 'left' : 'right', whiteSpace: 'nowrap', userSelect: 'none',
-  })
+  const sortedCampaigns = useMemo(() => {
+    return [...byCampaign].sort((a, b) =>
+      campSort.dir === 'desc' ? b[campSort.col] - a[campSort.col] : a[campSort.col] - b[campSort.col])
+  }, [byCampaign, campSort])
 
-  const tdStyle = (color) => ({
-    padding: '9px 12px', fontSize: 13, borderBottom: '0.5px solid var(--border)',
-    textAlign: 'right', color: color || 'var(--text)',
-  })
-
-  const chartData = sorted.slice(0, 10).map(r => ({
-    name: r.productName.length > 24 ? r.productName.slice(0, 24) + '…' : r.productName,
+  // ── Chart ─────────────────────────────────────────────────────────────────
+  const chartData = sortedProducts.slice(0, 10).map(r => ({
+    name: r.productName.length > 22 ? r.productName.slice(0, 22) + '…' : r.productName,
     spend: Math.round(r.cost),
     revenue: Math.round(r.revenue),
   }))
 
+  function onSort(col) {
+    setSort(s => ({ col, dir: s.col === col && s.dir === 'desc' ? 'asc' : 'desc' }))
+  }
+
+  function onCampSort(col) {
+    setCampSort(s => ({ col, dir: s.col === col && s.dir === 'desc' ? 'asc' : 'desc' }))
+  }
+
+  const sortArrow = (col, s) => s.col === col ? (s.dir === 'desc' ? ' ↓' : ' ↑') : ''
+
   return (
     <div style={{ padding: '24px 28px' }}>
+      {/* Header */}
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Google — Product Performance</h1>
-        <div style={{ fontSize: 12, color: 'var(--text3)' }}>Shopping & PMax · click any product to drill into color, size, fit, height</div>
+        <div style={{ fontSize: 12, color: 'var(--text3)' }}>Shopping & PMax · click any product to drill into color · size · fit · height</div>
       </div>
 
       <FilterBar filters={filters} showCohort={false} showSaleTag={false} />
 
-      {/* Campaign filter */}
-      {campaigns.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>Campaign</span>
-          <select value={campaignFilter} onChange={e => { setCampaignFilter(e.target.value); setExpandedProduct(null) }} style={{
-            padding: '5px 10px', fontSize: 12, borderRadius: 6, cursor: 'pointer',
-            background: 'var(--bg2)', border: '0.5px solid var(--border2)',
-            color: 'var(--text)', outline: 'none', maxWidth: 440,
-          }}>
-            <option value="all">All campaigns ({campaigns.length})</option>
-            {campaigns.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          {campaignFilter !== 'all' && (
-            <button onClick={() => setCampaignFilter('all')} style={{
-              padding: '4px 8px', fontSize: 11, borderRadius: 4, cursor: 'pointer',
-              background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text2)',
-            }}>✕ Clear</button>
-          )}
+      {/* Campaign filter + View toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>Campaign</span>
+        <select value={campaignFilter} onChange={e => { setCampaignFilter(e.target.value); setExpanded(null) }} style={{
+          padding: '5px 10px', fontSize: 12, borderRadius: 6, cursor: 'pointer',
+          background: 'var(--bg2)', border: '0.5px solid var(--border2)',
+          color: 'var(--text)', outline: 'none', maxWidth: 440,
+        }}>
+          <option value="all">All campaigns ({campaigns.length})</option>
+          {campaigns.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        {campaignFilter !== 'all' && (
+          <button onClick={() => { setCampaignFilter('all'); setExpanded(null) }} style={{
+            padding: '4px 8px', fontSize: 11, borderRadius: 4, cursor: 'pointer',
+            background: 'var(--bg3)', border: '0.5px solid var(--border2)', color: 'var(--text2)',
+          }}>✕ Clear</button>
+        )}
+
+        {/* View toggle */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+          {[['products','By Product'], ['campaigns','By Campaign']].map(([v, l]) => (
+            <button key={v} onClick={() => setView(v)} style={{
+              padding: '5px 14px', fontSize: 12, borderRadius: 6, cursor: 'pointer', border: 'none',
+              background: view === v ? 'var(--blue)' : 'var(--bg3)',
+              color: view === v ? '#fff' : 'var(--text2)',
+              fontWeight: view === v ? 500 : 400,
+            }}>{l}</button>
+          ))}
         </div>
-      )}
+      </div>
 
       {!hasData && (
         <div style={{ background: 'var(--red-dim)', border: '0.5px solid var(--red-border)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: 'var(--red)' }}>
@@ -341,16 +352,16 @@ export default function GoogleProducts() {
       {/* KPI cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 10, marginBottom: 16 }}>
         {[
-          { label: 'Total spend',  val: fmtINR(totals.cost),    delta: deltaLabel(totals.cost, prevTotals.cost) },
+          { label: 'Total spend',  val: fmtINR(totals.cost),       delta: deltaLabel(totals.cost, prevTotals.cost) },
           { label: 'Impressions',  val: fmtNum(totals.impressions), delta: deltaLabel(totals.impressions, prevTotals.impressions) },
-          { label: 'Clicks',       val: fmtNum(totals.clicks),   delta: deltaLabel(totals.clicks, prevTotals.clicks) },
-          { label: 'Revenue',      val: fmtINR(totals.revenue),  delta: deltaLabel(totals.revenue, prevTotals.revenue), accent: 'var(--green)' },
-          { label: 'ROAS',         val: `${totals.roas.toFixed(2)}x`, delta: deltaLabel(totals.roas, prevTotals.roas), accent: totals.roas >= 4 ? 'var(--green)' : totals.roas >= 2 ? 'var(--amber)' : 'var(--red)' },
+          { label: 'Clicks',       val: fmtNum(totals.clicks),      delta: deltaLabel(totals.clicks, prevTotals.clicks) },
+          { label: 'Revenue',      val: fmtINR(totals.revenue),     delta: deltaLabel(totals.revenue, prevTotals.revenue), accent: 'var(--green)' },
+          { label: 'ROAS',         val: totals.roas > 0 ? totals.roas.toFixed(2) + 'x' : '—', delta: deltaLabel(totals.roas, prevTotals.roas), accent: totals.roas >= 4 ? 'var(--green)' : totals.roas >= 2 ? 'var(--amber)' : 'var(--red)' },
         ].map(m => <MetricCard key={m.label} label={m.label} value={m.val} delta={m.delta} accent={m.accent} />)}
       </div>
 
       {/* Chart */}
-      {hasData && (
+      {hasData && view === 'products' && (
         <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10, fontWeight: 500 }}>Top 10 products — spend vs revenue</div>
           <ResponsiveContainer width="100%" height={220}>
@@ -366,204 +377,132 @@ export default function GoogleProducts() {
         </div>
       )}
 
-      {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '0.5px solid var(--border)' }}>
-        {[['products', 'Products'], ['cohort', 'Products x Search Terms']].map(([key, label]) => (
-          <button key={key} onClick={() => setActiveTab(key)} style={{
-            padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontWeight: activeTab === key ? 600 : 400,
-            background: 'transparent', border: 'none',
-            color: activeTab === key ? 'var(--blue)' : 'var(--text2)',
-            borderBottom: `2px solid ${activeTab === key ? 'var(--blue)' : 'transparent'}`,
-            marginBottom: -1,
-          }}>{label}</button>
-        ))}
-      </div>
-
-      {/* Cohort view */}
-      {activeTab === 'cohort' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {cohortData.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
-              No data — sync Windsor and select a date range
-            </div>
-          ) : cohortData.map(c => (
-            <CohortCard key={c.campaign} data={c} />
-          ))}
-        </div>
+      {/* ── BY PRODUCT TABLE ── */}
+      {view === 'products' && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{sortedProducts.length} products</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)' }}>Click a row → drill into color · size · fit · height</div>
+          </div>
+          <div style={{ overflowX: 'auto', borderRadius: 8, border: '0.5px solid var(--border)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {[
+                    { key: 'productName', label: 'Product',     align: 'left', minW: 220 },
+                    { key: 'skuCount',    label: 'SKUs',        align: 'right' },
+                    { key: 'colorCount',  label: 'Colors',      align: 'right' },
+                    { key: 'sizeCount',   label: 'Sizes',       align: 'right' },
+                    { key: 'cost',        label: 'Spend',       align: 'right' },
+                    { key: 'impressions', label: 'Impr.',       align: 'right' },
+                    { key: 'clicks',      label: 'Clicks',      align: 'right' },
+                    { key: 'ctr',         label: 'CTR',         align: 'right' },
+                    { key: 'conversions', label: 'Conv.',       align: 'right' },
+                    { key: 'revenue',     label: 'Revenue',     align: 'right' },
+                    { key: 'roas',        label: 'ROAS',        align: 'right' },
+                  ].map(col => (
+                    <th key={col.key} onClick={() => onSort(col.key)}
+                      style={{ ...TH, textAlign: col.align, minWidth: col.minW,
+                        color: sort.col === col.key ? 'var(--text)' : 'var(--text3)' }}>
+                      {col.label}{sortArrow(col.key, sort)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedProducts.map((r) => {
+                  const isExpanded = expandedProduct === r.productName
+                  return (
+                    <React.Fragment key={r.productName}>
+                      <tr onClick={() => setExpanded(isExpanded ? null : r.productName)}
+                        style={{ cursor: 'pointer', background: isExpanded ? 'var(--bg3)' : 'transparent' }}
+                        onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = 'var(--bg3)' }}
+                        onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = 'transparent' }}>
+                        <td style={{ ...TD, textAlign: 'left', fontWeight: 600 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 10, color: 'var(--text3)', display: 'inline-block', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform .15s' }}>▶</span>
+                            {r.productName}
+                          </span>
+                        </td>
+                        <td style={TDr}>{r.skuCount}</td>
+                        <td style={TDr}>{r.colorCount || '—'}</td>
+                        <td style={TDr}>{r.sizeCount || '—'}</td>
+                        <td style={TDr}>{fmtINR(r.cost)}</td>
+                        <td style={TDr}>{fmtNum(r.impressions)}</td>
+                        <td style={TDr}>{fmtNum(r.clicks)}</td>
+                        <td style={{ ...TDr, color: r.ctr >= 0.02 ? 'var(--green)' : r.ctr >= 0.01 ? 'var(--amber)' : 'var(--red)' }}>{fmtPct(r.ctr)}</td>
+                        <td style={TDr}>{fmtNum(r.conversions, 1)}</td>
+                        <td style={{ ...TDr, color: 'var(--green)' }}>{fmtINR(r.revenue)}</td>
+                        <td style={{ ...TDr, color: r.roas >= 4 ? 'var(--green)' : r.roas >= 2 ? 'var(--amber)' : 'var(--red)', fontWeight: 600 }}>{r.roas > 0 ? r.roas.toFixed(2) + 'x' : '—'}</td>
+                      </tr>
+                      {isExpanded && <DrillPanel skus={r.skus} totalCost={r.cost} />}
+                    </React.Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
-      {activeTab === 'products' && <>
-      {/* Table header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>{sorted.length} products</div>
-        <div style={{ fontSize: 11, color: 'var(--text3)' }}>Click a row to drill into color · size · fit · height</div>
-      </div>
-
-      {/* Product table */}
-      <div style={{ overflowX: 'auto', borderRadius: 8, border: '0.5px solid var(--border)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              {[
-                { key: 'productName', label: 'Product' },
-                { key: 'skuCount',    label: 'SKUs' },
-                { key: 'cost',        label: 'Spend' },
-                { key: 'impressions', label: 'Impressions' },
-                { key: 'clicks',      label: 'Clicks' },
-                { key: 'ctr',         label: 'CTR' },
-                { key: 'cpc',         label: 'CPC' },
-                { key: 'conversions', label: 'Conv.' },
-                { key: 'revenue',     label: 'Revenue' },
-                { key: 'roas',        label: 'ROAS' },
-              ].map(col => (
-                <th key={col.key} style={thStyle(col.key)} onClick={() => toggleSort(col.key)}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                    {col.label}
-                    {sortKey === col.key
-                      ? <span style={{ color: 'var(--pink)', fontSize: 11 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>
-                      : <span style={{ opacity: 0.2, fontSize: 11 }}>↕</span>
-                    }
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((r) => {
-              const isExpanded = expandedProduct === r.productName
-              return (
-                <React.Fragment key={r.productName}>
-                  <tr
-                    onClick={() => setExpandedProduct(isExpanded ? null : r.productName)}
-                    style={{ cursor: 'pointer', background: isExpanded ? 'var(--bg3)' : 'transparent' }}
-                    onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = 'var(--bg3)' }}
-                    onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = 'transparent' }}
-                  >
-                    <td style={{ ...tdStyle(), textAlign: 'left', fontWeight: 600 }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 10, color: 'var(--text3)', transition: 'transform .15s', display: 'inline-block', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
-                        {r.productName}
-                      </span>
-                    </td>
-                    <td style={tdStyle()}>{r.skuCount}</td>
-                    <td style={tdStyle()}>{fmtINR(r.cost)}</td>
-                    <td style={tdStyle()}>{fmtNum(r.impressions)}</td>
-                    <td style={tdStyle()}>{fmtNum(r.clicks)}</td>
-                    <td style={tdStyle(r.ctr >= 0.02 ? 'var(--green)' : r.ctr >= 0.01 ? 'var(--amber)' : 'var(--red)')}>{fmtPct(r.ctr)}</td>
-                    <td style={tdStyle()}>{fmtINR(r.cpc)}</td>
-                    <td style={tdStyle()}>{fmtNum(r.conversions, 1)}</td>
-                    <td style={tdStyle('var(--green)')}>{fmtINR(r.revenue)}</td>
-                    <td style={tdStyle(r.roas >= 4 ? 'var(--green)' : r.roas >= 2 ? 'var(--amber)' : 'var(--red)')}>{r.roas.toFixed(2)}x</td>
+      {/* ── BY CAMPAIGN TABLE ── */}
+      {view === 'campaigns' && (
+        <>
+          <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 600 }}>{sortedCampaigns.length} campaigns</div>
+          <div style={{ overflowX: 'auto', borderRadius: 8, border: '0.5px solid var(--border)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {[
+                    { key: 'campaignName', label: 'Campaign',   align: 'left', minW: 280 },
+                    { key: 'productCount', label: 'Products',   align: 'right' },
+                    { key: 'skuCount',     label: 'SKUs',       align: 'right' },
+                    { key: 'cost',         label: 'Spend',      align: 'right' },
+                    { key: 'impressions',  label: 'Impr.',      align: 'right' },
+                    { key: 'clicks',       label: 'Clicks',     align: 'right' },
+                    { key: 'ctr',          label: 'CTR',        align: 'right' },
+                    { key: 'conversions',  label: 'Conv.',      align: 'right' },
+                    { key: 'revenue',      label: 'Revenue',    align: 'right' },
+                    { key: 'roas',         label: 'ROAS',       align: 'right' },
+                    { key: 'cpa',          label: 'CPA',        align: 'right' },
+                  ].map(col => (
+                    <th key={col.key} onClick={() => onCampSort(col.key)}
+                      style={{ ...TH, textAlign: col.align, minWidth: col.minW,
+                        color: campSort.col === col.key ? 'var(--text)' : 'var(--text3)' }}>
+                      {col.label}{sortArrow(col.key, campSort)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedCampaigns.map((r, i) => (
+                  <tr key={i}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <td style={{ ...TD, textAlign: 'left', fontWeight: 500, maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.campaignName}>{r.campaignName}</td>
+                    <td style={TDr}>{r.productCount}</td>
+                    <td style={TDr}>{r.skuCount}</td>
+                    <td style={TDr}>{fmtINR(r.cost)}</td>
+                    <td style={TDr}>{fmtNum(r.impressions)}</td>
+                    <td style={TDr}>{fmtNum(r.clicks)}</td>
+                    <td style={{ ...TDr, color: r.ctr >= 0.02 ? 'var(--green)' : r.ctr >= 0.01 ? 'var(--amber)' : 'var(--red)' }}>{fmtPct(r.ctr)}</td>
+                    <td style={TDr}>{fmtNum(r.conversions, 1)}</td>
+                    <td style={{ ...TDr, color: 'var(--green)' }}>{fmtINR(r.revenue)}</td>
+                    <td style={{ ...TDr, color: r.roas >= 4 ? 'var(--green)' : r.roas >= 2 ? 'var(--amber)' : 'var(--red)', fontWeight: 600 }}>{r.roas > 0 ? r.roas.toFixed(2) + 'x' : '—'}</td>
+                    <td style={TDr}>{r.cpa > 0 ? fmtINR(r.cpa) : '—'}</td>
                   </tr>
-                  {isExpanded && <DrillRows skus={r.skus} totalCost={r.cost} />}
-                </React.Fragment>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-    </>}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
-function CohortCard({ data: c }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-      {/* Campaign header */}
-      <div onClick={() => setOpen(o => !o)} style={{
-        padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: open ? '0.5px solid var(--border)' : 'none',
-      }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 10, color: 'var(--text3)', transform: open ? 'rotate(90deg)' : 'rotate(0)', display: 'inline-block', transition: 'transform .15s' }}>▶</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{c.campaign}</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
-              {c.productCount} products · {c.termCount} search terms
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 20 }}>
-          {[
-            { label: 'Prod Spend', val: `₹${Math.round(c.prodSpend).toLocaleString('en-IN')}` },
-            { label: 'Prod ROAS',  val: c.prodROAS > 0 ? `${c.prodROAS.toFixed(2)}x` : '—', color: c.prodROAS >= 4 ? 'var(--green)' : c.prodROAS >= 2 ? 'var(--amber)' : 'var(--red)' },
-            { label: 'Term Spend', val: `₹${Math.round(c.termSpend).toLocaleString('en-IN')}` },
-            { label: 'Term Conv',  val: c.termConv > 0 ? Math.round(c.termConv).toLocaleString('en-IN') : '—' },
-          ].map(m => (
-            <div key={m.label} style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: m.color || 'var(--text)' }}>{m.val}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {open && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-          {/* Products side */}
-          <div style={{ padding: '12px 16px', borderRight: '0.5px solid var(--border)' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-              Top Products
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr>
-                  {['Product','Spend','Revenue','ROAS'].map((h,i) => (
-                    <th key={h} style={{ padding: '4px 8px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textAlign: i===0?'left':'right', textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:'0.5px solid var(--border)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {c.topProds.map((p, i) => (
-                  <tr key={i} onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                    <td style={{ padding:'5px 8px', color:'var(--text)', fontWeight:500, maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</td>
-                    <td style={{ padding:'5px 8px', textAlign:'right', color:'var(--text)' }}>₹{Math.round(p.cost).toLocaleString('en-IN')}</td>
-                    <td style={{ padding:'5px 8px', textAlign:'right', color:'var(--green)' }}>₹{Math.round(p.revenue).toLocaleString('en-IN')}</td>
-                    <td style={{ padding:'5px 8px', textAlign:'right', color: p.roas>=4?'var(--green)':p.roas>=2?'var(--amber)':'var(--red)', fontWeight:500 }}>{p.roas.toFixed(2)}x</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Search terms side */}
-          <div style={{ padding: '12px 16px' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-              Top Search Terms
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr>
-                  {['Search Term','Spend','Clicks','Conv.'].map((h,i) => (
-                    <th key={h} style={{ padding: '4px 8px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textAlign: i===0?'left':'right', textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:'0.5px solid var(--border)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {c.topTerms.map((t, i) => (
-                  <tr key={i} onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                    <td style={{ padding:'5px 8px', color:'var(--text)', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {t.isBrand && <span style={{ fontSize:9, padding:'1px 5px', borderRadius:3, background:'var(--blue-dim)', color:'var(--blue)', marginRight:5, fontWeight:600 }}>B</span>}
-                      {t.term}
-                    </td>
-                    <td style={{ padding:'5px 8px', textAlign:'right', color:'var(--text)' }}>₹{Math.round(t.cost).toLocaleString('en-IN')}</td>
-                    <td style={{ padding:'5px 8px', textAlign:'right', color:'var(--text)' }}>{t.clicks.toLocaleString('en-IN')}</td>
-                    <td style={{ padding:'5px 8px', textAlign:'right', color: t.conversions>0?'var(--green)':'var(--text3)' }}>{t.conversions > 0 ? Math.round(t.conversions) : '—'}</td>
-                  </tr>
-                ))}
-                {c.topTerms.length === 0 && (
-                  <tr><td colSpan={4} style={{ padding:'10px 8px', color:'var(--text3)', fontSize:11 }}>No search terms data for this campaign</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  )
+function deltaLabel(curr, prev) {
+  if (!prev || !curr) return null
+  const pct = ((curr - prev) / prev) * 100
+  return { value: pct.toFixed(1), positive: pct > 0 }
 }
