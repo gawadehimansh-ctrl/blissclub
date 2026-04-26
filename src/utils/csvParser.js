@@ -462,16 +462,16 @@ function parseWindsorDemandGen(rows) {
 function parseWindsorProducts(rows) {
   return rows.map(r => ({
     date:            parseDate(r.date),
-    campaignName:    r.campaign     || r.campaign_name    || '',
+    campaignName:    r.campaign      || r.campaign_name || '',
     adgroupName:     r.ad_group_name || '',
-    // Shopping/PMax: ad_group_name IS the product group title
-    productTitle:    r.ad_group_name || r.product_title   || r.ad_name || '',
-    cost:            num(r.spend    || r.cost              || 0),
-    impressions:     num(r.impressions                    || 0),
-    clicks:          num(r.clicks                         || 0),
-    conversions:     num(r.conversions                    || 0),
-    conversionValue: num(r.conversion_value               || 0),
-  })).filter(r => r.date && (r.cost > 0 || r.impressions > 0))
+    // product_title is the full SKU title e.g. "Ultimate Flare Pants - Tall - BlissClub Bliss Black / S-elene"
+    productTitle:    r.product_title || r.ad_group_name || '',
+    cost:            num(r.spend     || r.cost           || 0),
+    impressions:     num(r.impressions                   || 0),
+    clicks:          num(r.clicks                        || 0),
+    conversions:     num(r.conversions                   || 0),
+    conversionValue: num(r.conversion_value              || 0),
+  })).filter(r => r.date && r.productTitle && (r.cost > 0 || r.impressions > 0))
 }
 
 function parseWindsorAwareness(rows) {
