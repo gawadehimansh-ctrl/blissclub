@@ -13,6 +13,7 @@ const initialState = {
   googleSearchTerms:   [],
   googleKeywords:      [],
   ga4Dump:             [],
+  ga4Items:            [],
   lastUpdated:         {},
   uploadLog:           [],
   clmSpend:            0,
@@ -120,6 +121,14 @@ function reducer(state, action) {
         uploadLog: [{ type: 'WINDSOR_SEARCH_TERMS', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)]
       }
 
+    case 'LOAD_GA4_ITEMS':
+      return {
+        ...state,
+        ga4Items: action.replace ? action.data : [...state.ga4Items, ...action.data],
+        lastUpdated: { ...state.lastUpdated, ga4Items: new Date() },
+        uploadLog: [{ type: 'GA4_ITEMS', count: action.data.length, time: new Date() }, ...state.uploadLog.slice(0, 9)]
+      }
+
     case 'SET_CLM_SPEND':
       return { ...state, clmSpend: action.value }
 
@@ -151,6 +160,7 @@ export function DataProvider({ children }) {
     else if (fileType === 'GOOGLE_SEARCH_TERMS') dispatch({ type: 'LOAD_GOOGLE_SEARCH_TERMS',data, replace })
     else if (fileType === 'GOOGLE_KEYWORDS')     dispatch({ type: 'LOAD_GOOGLE_KEYWORDS',    data, replace })
     else if (fileType === 'GA4_DUMP')            dispatch({ type: 'LOAD_GA4',                data, replace })
+    else if (fileType === 'GA4_ITEMS')           dispatch({ type: 'LOAD_GA4_ITEMS',          data, replace })
     else if (fileType === 'WINDSOR_GOOGLE_DAILY')dispatch({ type: 'WINDSOR_GOOGLE_DAILY',    data, replace })
     else if (fileType === 'WINDSOR_SEARCH_TERMS')dispatch({ type: 'WINDSOR_SEARCH_TERMS',    data, replace })
   }, [])
