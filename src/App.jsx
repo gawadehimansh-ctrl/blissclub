@@ -1,4 +1,6 @@
 import React from 'react'
+import { AuthProvider, useAuth } from './contexts/AuthContext.jsx'
+import LoginPage from './pages/LoginPage.jsx'
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import { DataProvider, useData } from './data/store.jsx'
 
@@ -57,6 +59,7 @@ const ICONS = {
 
 function Sidebar() {
   const { state } = useData()
+  const { user, logout } = useAuth()
   const location  = useLocation()
 
   const groups = [...new Set(NAV.map(n => n.group))]
@@ -132,8 +135,21 @@ function Sidebar() {
         ))}
       </nav>
 
-      {/* Status footer */}
+      {/* User + Status footer */}
       <div style={{ padding: '12px 16px', borderTop: '0.5px solid rgba(255,255,255,0.07)', fontSize: 11 }}>
+        {user && (
+          <div style={{ marginBottom: 10, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ fontSize:12, fontWeight:600, color:'#fff' }}>{user.name}</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'capitalize' }}>{user.role.replace('_',' ')}</div>
+            </div>
+            <button onClick={logout} style={{ fontSize:10, color:'rgba(255,255,255,0.3)', background:'none', border:'none', cursor:'pointer', padding:'4px 8px', borderRadius:4 }}
+              onMouseEnter={e=>e.target.style.color='#ef4444'}
+              onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.3)'}>
+              Sign out
+            </button>
+          </div>
+        )}
         {hasData ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
@@ -156,6 +172,9 @@ function Sidebar() {
 }
 
 function Layout() {
+  const { user, loading } = useAuth()
+  if (loading) return <div style={{ minHeight:'100vh', background:'#0a0a0a' }} />
+  if (!user) return <LoginPage />
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar />
@@ -185,8 +204,10 @@ function Layout() {
 
 export default function App() {
   return (
-    <DataProvider>
-      <Layout />
-    </DataProvider>
+    <AuthProvider>
+      <DataProvider>
+        <Layout />
+      </DataProvider>
+    </AuthProvider>
   )
 }
