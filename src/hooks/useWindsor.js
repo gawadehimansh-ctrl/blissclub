@@ -41,6 +41,13 @@ export function useWindsor() {
       results.success.push(`Catalog (${raw.length})`)
     } catch (e) { results.errors.push(`Catalog: ${e.message}`) }
 
+    // GA4 item-level (joins with Meta catalog via variant_id)
+    try {
+      const raw = await fetchEndpoint('/api/ga4-items')
+      loadData(raw, 'GA4_ITEMS', true)
+      results.success.push('GA4 items (' + raw.length + ')')
+    } catch (e) { results.errors.push('GA4 items: ' + e.message) }
+
     // GA4 standalone
     try {
       const data   = await fetchEndpoint(`/api/ga4?preset=${preset}`)
