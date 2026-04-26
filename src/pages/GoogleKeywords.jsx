@@ -73,7 +73,7 @@ function BrandPill({ isBrand }) {
 
 export default function GoogleKeywords() {
   const { state } = useData()
-  const filters = useFilters('thisMonth')
+  const filters = useFilters('last30')
   const { filterRows, getPrevRows } = filters
   const [tab, setTab]     = useState('overview')
   const [segCut, setSegCut] = useState('all')
