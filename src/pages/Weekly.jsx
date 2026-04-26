@@ -132,7 +132,16 @@ export default function Weekly() {
   const compTo   = new Date(dateFrom - 1)
   const compFrom = new Date(compTo - spanMs)
 
-  // Fetch GA4 items directly from proxy
+  // Fetch GA4 channel data (all sessions incl organic/google/direct)
+  const [ga4Full, setGa4Full] = useState([])
+  useEffect(() => {
+    fetch(`${PROXY}/api/ga4`)
+      .then(r => r.json())
+      .then(d => setGa4Full(d.data || []))
+      .catch(() => {})
+  }, [])
+
+  // Fetch GA4 items for categories/products
   useEffect(() => {
     setItemsLoading(true)
     fetch(`${PROXY}/api/ga4-items`)
@@ -149,6 +158,7 @@ export default function Weekly() {
   }
 
   // ── Data sources ─────────────────────────────────────────────────────────────
+  // Use full GA4 (all sessions) for channel split, ga4Dump for KPIs (has revenue)
   const ga4All  = state.ga4Dump  || []
   const metaAll = state.metaDB   || []
   const gAdsAll = state.googleDump || []
@@ -182,7 +192,9 @@ export default function Weekly() {
   // ── Channel split ─────────────────────────────────────────────────────────────
   const channelData = useMemo(()=>{
     const map = {}
-    for (const r of ga4Week) {
+    // Use full GA4 data for channel split (has source/medium for ALL channels)
+    const ga4FullWeek = ga4Full.filter(r=>inRange(r.date,dateFrom,dateTo))
+    for (const r of ga4FullWeek) {
       const ch = getChannel(r.source||'', r.medium||'', r.campaign||'')
       if (!map[ch]) map[ch] = { channel:ch, revenue:0, sessions:0, orders:0, sources:{} }
       map[ch].revenue  += r.totalrevenue||r.gaRevenue||0
@@ -202,7 +214,7 @@ export default function Weekly() {
       map[ch].sources[src].campaigns[camp].orders   += r.transactions||r.gaOrders||0
     }
     return Object.values(map).map(c=>({...c,revShare:revenue>0?(c.revenue/revenue)*100:0,sourcesArr:Object.values(c.sources).sort((a,b)=>b.revenue-a.revenue)})).sort((a,b)=>b.revenue-a.revenue)
-  }, [ga4Week, revenue])
+  }, [ga4Full, dateFrom, dateTo, revenue])
 
   // ── 8-week trend ─────────────────────────────────────────────────────────────
   const weeklyTrend = useMemo(()=>{
