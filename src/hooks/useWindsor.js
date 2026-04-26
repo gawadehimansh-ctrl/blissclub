@@ -31,24 +31,28 @@ export function useWindsor() {
         (r.datasource !== 'facebook' && !r.spend && (r.gaRevenue > 0 || r.sessions > 0))
       )
 
-      // Build GA4 lookup: adName (session_manual_ad_content) + date → { gaRevenue, gaOrders }
-      // Aggregate by adName across all dates for joining
+      // Build GA4 lookup keyed by date + adName to avoid over-attribution
       const ga4Map = {}
       for (const r of ga4Rows) {
-        const key = (r.adName || r.adsetName || '').trim()
-        if (!key) continue
-        if (!ga4Map[key]) ga4Map[key] = { gaRevenue: 0, gaOrders: 0, sessions: 0 }
+        const adKey  = (r.adName || r.adsetName || '').trim()
+        const dateKey = r.date instanceof Date
+          ? r.date.toISOString().split('T')[0]
+          : String(r.date || '').split('T')[0]
+        const key = dateKey + '__' + adKey
+        if (!adKey || !dateKey) continue
+        if (!ga4Map[key]) ga4Map[key] = { gaRevenue: 0, gaOrders: 0 }
         ga4Map[key].gaRevenue += r.gaRevenue || 0
         ga4Map[key].gaOrders  += r.gaOrders  || 0
-        ga4Map[key].sessions  += r.sessions   || 0
       }
 
-      // Join GA4 revenue onto Meta rows by ad name
+      // Join GA4 onto Meta rows by date + adName
       const joinedMeta = metaRows.map(r => {
-        const ga4 = ga4Map[(r.adName || '').trim()]
-        if (ga4) {
-          return { ...r, gaRevenue: ga4.gaRevenue, gaOrders: ga4.gaOrders }
-        }
+        const dateKey = r.date instanceof Date
+          ? r.date.toISOString().split('T')[0]
+          : String(r.date || '').split('T')[0]
+        const key = dateKey + '__' + (r.adName || '').trim()
+        const ga4 = ga4Map[key]
+        if (ga4) return { ...r, gaRevenue: ga4.gaRevenue, gaOrders: ga4.gaOrders }
         return r
       })
 
