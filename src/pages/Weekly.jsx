@@ -71,6 +71,31 @@ const CHANNEL_COLORS = {
   'Other':          '#64748b',
 }
 
+
+// ── Product line classifier ───────────────────────────────────────────────────
+function getProductLine(name='') {
+  const n = name.toLowerCase()
+  if (n.includes('legging')) return 'Leggings'
+  if (n.includes('flare pant')||n.includes('straight pant')||n.includes('wide leg')||n.includes('palazzo')||n.includes('cigarette pant')||n.includes('trouser')||n.includes('korean pant')||n.includes('kick flare')||n.includes('slit flare')||n.includes('jogger')||n.includes('capri')||n.includes('shorties')||n.includes('cycling short')) return 'Bottoms'
+  if (n.includes('short')&&!n.includes('shorties')) return 'Shorts'
+  if (n.includes('bra')||n.includes('sports bra')||n.includes('invisible bra')) return 'Bras'
+  if (n.includes('top')||n.includes('tee')||n.includes('tank')||n.includes('polo')||n.includes('shirt')) return 'Tops & Tees'
+  if (n.includes('jacket')||n.includes('hoodie')||n.includes('pullover')||n.includes('zip')) return 'Jackets'
+  if (n.includes('swim')||n.includes('swimsuit')||n.includes('swimwear')) return 'Swimwear'
+  if (n.includes('panty')||n.includes('undie')||n.includes('sock')) return 'Innerwear'
+  if (n.includes('skirt')||n.includes('skort')||n.includes('dress')) return 'Skirts & Dresses'
+  return 'Others'
+}
+
+// Parse size/height from item_name suffix
+function parseItemVariants(name='') {
+  const n = name
+  const height = n.includes(' Tall') ? 'Tall' : 'Regular'
+  const isLite = n.includes(' - Lite') || n.includes('- Lite')
+  const variant = isLite ? 'Lite' : 'Standard'
+  return { height, variant }
+}
+
 // ── Date picker ───────────────────────────────────────────────────────────────
 function DatePicker({ dateFrom, dateTo, dateLabel, compFrom, compTo, onApply }) {
   const [open, setOpen]     = useState(false)
@@ -126,6 +151,7 @@ export default function Weekly() {
   const [itemsLoading, setItemsLoading] = useState(true)
   // Drill state: null | { channel, source } 
   const [drill, setDrill] = useState(null) // { level: 'channel'|'source'|'campaign', channel, source }
+  const [productDrill, setProductDrill] = useState(null) // selected product name
 
   // Comparison = same span, previous period
   const spanMs   = dateTo - dateFrom
@@ -244,6 +270,21 @@ export default function Weekly() {
     }
     return Object.values(map).sort((a,b)=>b.revenue-a.revenue).slice(0,8)
   }, [itemsInRange])
+
+  // Product drill — size/height breakdown for selected product
+  const productDrillData = useMemo(()=>{
+    if (!productDrill) return []
+    const items = itemsInRange.filter(r=>(r.item_name||r.itemName||'')=== productDrill)
+    const map = {}
+    for (const r of items) {
+      const {height, variant} = parseItemVariants(r.item_name||r.itemName||'')
+      const k = `${variant} / ${height}`
+      if (!map[k]) map[k] = {label:k,revenue:0,purchased:0}
+      map[k].revenue   += Number(r.item_revenue||r.itemRevenue||0)
+      map[k].purchased += Number(r.items_purchased||r.itemsPurchased||0)
+    }
+    return Object.values(map).sort((a,b)=>b.revenue-a.revenue)
+  }, [itemsInRange, productDrill])
 
   const topProducts = useMemo(()=>{
     const map = {}
@@ -406,7 +447,12 @@ export default function Weekly() {
               {/* Campaign level drill */}
               {drill?.source && drillCampaigns.map(c=>(
                 <tr key={c.campaign}
-                  onClick={()=>{ navigate('/meta/campaigns', { state:{ campaign:c.campaign } }) }}
+                  onClick={()=>{
+                    // Route to correct platform page based on channel
+                    if (drill.channel === 'Paid Social') navigate('/meta/campaigns')
+                    else if (drill.channel === 'Paid Search' || drill.channel === 'Paid Shopping') navigate('/google/campaigns')
+                    else navigate('/meta/campaigns')
+                  }}
                   style={{ cursor:'pointer' }}
                   onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'}
                   onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
@@ -510,22 +556,50 @@ export default function Weekly() {
         </div>
 
         <div style={{ background:'var(--bg2)', borderRadius:10, border:'0.5px solid var(--border)', padding:'16px 20px' }}>
-          <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>Top Products — GA4</div>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+            <div style={{ fontSize:13, fontWeight:600 }}>
+              {!productDrill ? 'Top Products — GA4' : (
+                <span>
+                  <button onClick={()=>setProductDrill(null)} style={{ background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:12,padding:0 }}>All products</button>
+                  <span style={{ color:'var(--text3)',margin:'0 6px' }}>›</span>
+                  <span style={{ color:'#22c55e' }}>{productDrill}</span>
+                </span>
+              )}
+            </div>
+            {productDrill && <button onClick={()=>setProductDrill(null)} style={{ marginLeft:'auto',fontSize:11,padding:'3px 8px',borderRadius:5,background:'var(--bg3)',border:'0.5px solid var(--border)',color:'var(--text2)',cursor:'pointer' }}>✕</button>}
+          </div>
           {itemsLoading ? (
             <div style={{ fontSize:12, color:'var(--text3)', padding:'20px 0' }}>Loading...</div>
-          ) : topProducts.length===0 ? (
-            <div style={{ fontSize:12, color:'var(--text3)', padding:'20px 0' }}>No item data yet.</div>
-          ) : (
+          ) : !productDrill ? (
+            topProducts.length===0 ? <div style={{ fontSize:12, color:'var(--text3)', padding:'20px 0' }}>No item data yet.</div> : (
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
               <thead><tr>{['Product','Revenue','Units'].map((h,i)=><th key={h} style={{ padding:'5px 8px',fontSize:10,fontWeight:600,color:'var(--text3)',borderBottom:'0.5px solid var(--border2)',textAlign:i===0?'left':'right',textTransform:'uppercase',letterSpacing:'0.05em' }}>{h}</th>)}</tr></thead>
               <tbody>{topProducts.map((p,i)=>(
-                <tr key={p.name} onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <td style={{ ...TD, textAlign:'left', maxWidth:260, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:8 }}><span style={{ fontSize:10,color:'var(--text3)',minWidth:16 }}>#{i+1}</span>{p.name}</td>
+                <tr key={p.name} onClick={()=>setProductDrill(p.name)} style={{ cursor:'pointer' }}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <td style={{ ...TD, textAlign:'left', maxWidth:260, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:10,color:'var(--text3)',minWidth:16 }}>#{i+1}</span>{p.name}
+                    <span style={{ fontSize:10,color:'var(--text3)',marginLeft:4 }}>›</span>
+                  </td>
                   <td style={{ ...TD, textAlign:'right', color:'#22c55e', fontWeight:500 }}>{fmtC(p.revenue)}</td>
                   <td style={{ ...TD, textAlign:'right', color:'var(--text3)' }}>{fmtN(Math.round(p.purchased))}</td>
                 </tr>
               ))}</tbody>
-            </table>
+            </table>)
+          ) : (
+            <div>
+              <div style={{ fontSize:11, color:'var(--text3)', marginBottom:10 }}>Style / Height breakdown</div>
+              <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                <thead><tr>{['Variant','Revenue','Units'].map((h,i)=><th key={h} style={{ padding:'5px 8px',fontSize:10,fontWeight:600,color:'var(--text3)',borderBottom:'0.5px solid var(--border2)',textAlign:i===0?'left':'right',textTransform:'uppercase',letterSpacing:'0.05em' }}>{h}</th>)}</tr></thead>
+                <tbody>{productDrillData.map(v=>(
+                  <tr key={v.label} onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <td style={{ ...TD, textAlign:'left', fontWeight:500 }}>{v.label}</td>
+                    <td style={{ ...TD, textAlign:'right', color:'#22c55e', fontWeight:500 }}>{fmtC(v.revenue)}</td>
+                    <td style={{ ...TD, textAlign:'right', color:'var(--text3)' }}>{fmtN(Math.round(v.purchased))}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
