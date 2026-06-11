@@ -405,7 +405,7 @@ export default function PacingTracker() {
       <div style={{ marginBottom:16 }}>
         <h1 style={{ fontSize:22, fontWeight:700, marginBottom:4, letterSpacing:'-0.01em' }}>Pacing tracker</h1>
         <div style={{ fontSize:12, color:'var(--text3)' }}>
-          Meta GA4 revenue · {PACING_CONFIG.month} · Day {daysElapsed} of {PACING_CONFIG.totalDays} ·
+          Rubans · {PACING_CONFIG.month} · Day {daysElapsed} of {PACING_CONFIG.totalDays} ·
           Targets are <strong style={{ color:'#f472b6' }}>daily benchmarks</strong> — cumulative shown vs days elapsed
         </div>
       </div>
@@ -424,9 +424,9 @@ export default function PacingTracker() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(5, minmax(0,1fr))', gap:10, marginBottom:20 }}>
         <KPICard label="Meta GA4 Revenue" actual={totals.ga4Revenue} target={accountTgt.ga4Revenue} formatter={fmt} higher={true} />
         <KPICard label="Total Spend"      actual={totals.spend}      target={accountTgt.spends}     formatter={fmt} higher={true} />
-        <KPICard label="GA4 ROAS"         actual={totals.ga4ROAS}    target={1.70}                  formatter={fmtX} higher={true} />
-        <KPICard label="Avg CPC"          actual={totals.cpc}        target={15.94}                 formatter={v => `₹${v.toFixed(0)}`} higher={false} />
-        <KPICard label="Orders"           actual={totals.orders}     target={1657}                  formatter={v => Math.round(v).toLocaleString('en-IN')} higher={true} />
+        <KPICard label="GA4 ROAS"         actual={totals.ga4ROAS}    target={2.0}                  formatter={fmtX} higher={true} />
+        <KPICard label="Avg CPC"          actual={totals.cpc}        target={15}                 formatter={v => `₹${v.toFixed(0)}`} higher={false} />
+        <KPICard label="Orders"           actual={totals.orders}     target={accountTgt.orders || 500}                  formatter={v => Math.round(v).toLocaleString('en-IN')} higher={true} />
       </div>
 
       {/* Category table */}
