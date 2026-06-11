@@ -1,550 +1,24 @@
-// Daily targets from BlissClub media plan (April 2026)
-// All revenue/spend figures are DAILY targets
-// Source: Blissclub Dashboard Metrics.xlsx
-// BlissClub media plan targets — daily benchmarks
-// NR targets = monthly / 30 days
-// All targets are per-day
+// Daily targets — April 2026
+// All figures are DAILY (monthly ÷ 30)
 
-export const CATEGORY_TARGETS = {
-  "5*5 Products": {
-    label: "5*5 Products",
-    spendMixPct: 0.22,
-    ga4Revenue: 14831,
-    nr: 18600,
-    spend: 6800,
-    ga4ROAS: 2.18,
-    cpc: 11.5,
-    cps: 580,
-    ecr: 0.022,
-    crPct: 0.018,
-    sessions: 820,
-    orders: 15,
-    aov: 990,
-  },
-  "Pareto": {
-    label: "Pareto",
-    spendMixPct: 0.08,
-    ga4Revenue: 5449,
-    nr: 6800,
-    spend: 2500,
-    ga4ROAS: 2.18,
-    cpc: 12.0,
-    cps: 600,
-    ecr: 0.020,
-    crPct: 0.017,
-    sessions: 300,
-    orders: 5,
-    aov: 1090,
-  },
-  "Airmelt": {
-    label: "Airmelt",
-    spendMixPct: 0.07,
-    ga4Revenue: 5002,
-    nr: 6250,
-    spend: 2300,
-    ga4ROAS: 2.18,
-    cpc: 11.0,
-    cps: 550,
-    ecr: 0.021,
-    crPct: 0.018,
-    sessions: 280,
-    orders: 5,
-    aov: 1000,
-  },
-  "Outerwear": {
-    label: "Outerwear",
-    spendMixPct: 0.03,
-    ga4Revenue: 754,
-    nr: 940,
-    spend: 345,
-    ga4ROAS: 2.18,
-    cpc: 13.0,
-    cps: 650,
-    ecr: 0.018,
-    crPct: 0.015,
-    sessions: 42,
-    orders: 1,
-    aov: 754,
-  },
-  "Rest": {
-    label: "Rest",
-    spendMixPct: 0.15,
-    ga4Revenue: 10381,
-    nr: 13000,
-    spend: 4760,
-    ga4ROAS: 2.18,
-    cpc: 12.5,
-    cps: 625,
-    ecr: 0.020,
-    crPct: 0.016,
-    sessions: 590,
-    orders: 9,
-    aov: 1153,
-  },
-  "Sports Bra": {
-    label: "Sports Bra",
-    spendMixPct: 0.03,
-    ga4Revenue: 1262,
-    nr: 1580,
-    spend: 579,
-    ga4ROAS: 2.18,
-    cpc: 10.5,
-    cps: 525,
-    ecr: 0.022,
-    crPct: 0.019,
-    sessions: 78,
-    orders: 1,
-    aov: 1262,
-  },
-  "BB/RS": {
-    label: "BB/RS",
-    spendMixPct: 0.17,
-    ga4Revenue: 11667,
-    nr: 14600,
-    spend: 5350,
-    ga4ROAS: 2.18,
-    cpc: 11.0,
-    cps: 550,
-    ecr: 0.023,
-    crPct: 0.019,
-    sessions: 680,
-    orders: 13,
-    aov: 898,
-  },
-  "Swimwear": {
-    label: "Swimwear",
-    spendMixPct: 0.04,
-    ga4Revenue: 1686,
-    nr: 2110,
-    spend: 773,
-    ga4ROAS: 2.18,
-    cpc: 12.0,
-    cps: 600,
-    ecr: 0.020,
-    crPct: 0.016,
-    sessions: 96,
-    orders: 2,
-    aov: 843,
-  },
-  "Topwear": {
-    label: "Topwear",
-    spendMixPct: 0.05,
-    ga4Revenue: 2403,
-    nr: 3004,
-    spend: 1102,
-    ga4ROAS: 2.18,
-    cpc: 11.5,
-    cps: 575,
-    ecr: 0.021,
-    crPct: 0.017,
-    sessions: 137,
-    orders: 2,
-    aov: 1202,
-  },
-  "PetalRib": {
-    label: "PetalRib",
-    spendMixPct: 0.05,
-    ga4Revenue: 3396,
-    nr: 4245,
-    spend: 1558,
-    ga4ROAS: 2.18,
-    cpc: 11.0,
-    cps: 550,
-    ecr: 0.022,
-    crPct: 0.018,
-    sessions: 193,
-    orders: 3,
-    aov: 1132,
-  },
-  "Innerwear": {
-    label: "Innerwear",
-    spendMixPct: 0.03,
-    ga4Revenue: 747,
-    nr: 934,
-    spend: 343,
-    ga4ROAS: 2.18,
-    cpc: 10.0,
-    cps: 500,
-    ecr: 0.024,
-    crPct: 0.020,
-    sessions: 45,
-    orders: 1,
-    aov: 747,
-  },
-  "Bliss Terry": {
-    label: "Bliss Terry",
-    spendMixPct: 0.02,
-    ga4Revenue: 318,
-    nr: 398,
-    spend: 146,
-    ga4ROAS: 2.18,
-    cpc: 12.0,
-    cps: 600,
-    ecr: 0.019,
-    crPct: 0.015,
-    sessions: 19,
-    orders: 0.3,
-    aov: 1060,
-  },
-  "Menswear": {
-    label: "Menswear",
-    spendMixPct: 0.06,
-    ga4Revenue: 8477,
-    nr: 10596,
-    spend: 3888,
-    ga4ROAS: 2.18,
-    cpc: 9.5,
-    cps: 475,
-    ecr: 0.025,
-    crPct: 0.021,
-    sessions: 480,
-    orders: 10,
-    aov: 848,
-  },
+// ── Thresholds ────────────────────────────────────────────────────────────────
+export const DELTA_OK   = 0.90   // ≥90% of target = green
+export const DELTA_WARN = 0.75   // 75–90% = amber / below 75% = red
+
+// ── Pacing config ─────────────────────────────────────────────────────────────
 export const PACING_CONFIG = {
-  startDate:  '2026-04-01',
-  totalDays:  30,
-  month:      'April 2026',
+  month:     'April 2026',
+  totalDays: 30,
+  startDate: '2026-04-01',
+  endDate:   '2026-04-30',
 }
 
-export const PRODUCT_TARGETS = {
-  // ── 5*5 Products ──────────────────────────────────────────
-  "Ultimate Flare Pants-Lite": {
-    alias: "LTC Flare",
-    category: "5*5 Products",
-    ga4Revenue: 3500,
-    spend: 1600,
-    ga4ROAS: 2.18,
-    cpc: 11.5,
-    cps: 575,
-    ecr: 0.022,
-    crPct: 0.018,
-    sessions: 195,
-    orders: 3.5,
-    aov: 1000,
-    ncac: 900,
-  },
-  "Ultimate Straight Pants-Lite": {
-    alias: "LTC USP",
-    category: "5*5 Products",
-    ga4Revenue: 3200,
-    spend: 1470,
-    ga4ROAS: 2.18,
-    cpc: 11.5,
-    cps: 575,
-    ecr: 0.022,
-    crPct: 0.018,
-    sessions: 178,
-    orders: 3.2,
-    aov: 1000,
-    ncac: 900,
-  },
-  "The Ultimate Flare Pants": {
-    alias: "LTC Wide",
-    category: "5*5 Products",
-    ga4Revenue: 2800,
-    spend: 1285,
-    ga4ROAS: 2.18,
-    cpc: 11.5,
-    cps: 575,
-    ecr: 0.022,
-    crPct: 0.018,
-    sessions: 156,
-    orders: 2.8,
-    aov: 1000,
-    ncac: 900,
-  },
-  "Ultimate Leggings-Lite": {
-    alias: "LTC LL",
-    category: "5*5 Products",
-    ga4Revenue: 2100,
-    spend: 964,
-    ga4ROAS: 2.18,
-    cpc: 11.5,
-    cps: 575,
-    ecr: 0.022,
-    crPct: 0.018,
-    sessions: 117,
-    orders: 2.1,
-    aov: 1000,
-    ncac: 900,
-  },
-  "The Ultimate Leggings": {
-    alias: "LTC UL",
-    category: "5*5 Products",
-    ga4Revenue: 1600,
-    spend: 735,
-    ga4ROAS: 2.18,
-    cpc: 11.5,
-    cps: 575,
-    ecr: 0.022,
-    crPct: 0.018,
-    sessions: 89,
-    orders: 1.6,
-    aov: 1000,
-    ncac: 900,
-  },
-  "Ultimate Straight Pants": {
-    alias: "LTC SP",
-    category: "5*5 Products",
-    ga4Revenue: 900,
-    spend: 413,
-    ga4ROAS: 2.18,
-    cpc: 11.5,
-    cps: 575,
-    ecr: 0.022,
-    crPct: 0.018,
-    sessions: 50,
-    orders: 0.9,
-    aov: 1000,
-    ncac: 900,
-  },
-  "Absolute Invisible Bra": {
-    alias: "AIB",
-    category: "5*5 Products",
-    ga4Revenue: 731,
-    spend: 333,
-    ga4ROAS: 2.18,
-    cpc: 11.5,
-    cps: 575,
-    ecr: 0.022,
-    crPct: 0.018,
-    sessions: 41,
-    orders: 0.7,
-    aov: 1044,
-    ncac: 900,
-  },
-
-  // ── BB/RS ──────────────────────────────────────────────────
-  "Bare Butter": {
-    alias: "BB",
-    category: "BB/RS",
-    ga4Revenue: 5834,
-    spend: 2675,
-    ga4ROAS: 2.18,
-    cpc: 11.0,
-    cps: 550,
-    ecr: 0.023,
-    crPct: 0.019,
-    sessions: 340,
-    orders: 6.5,
-    aov: 898,
-    ncac: 850,
-  },
-  "Ribbed Snug": {
-    alias: "RS",
-    category: "BB/RS",
-    ga4Revenue: 5833,
-    spend: 2675,
-    ga4ROAS: 2.18,
-    cpc: 11.0,
-    cps: 550,
-    ecr: 0.023,
-    crPct: 0.019,
-    sessions: 340,
-    orders: 6.5,
-    aov: 898,
-    ncac: 850,
-  },
-
-  // ── Menswear ───────────────────────────────────────────────
-  "Men's Collection": {
-    alias: "Men",
-    category: "Menswear",
-    ga4Revenue: 8477,
-    spend: 3888,
-    ga4ROAS: 2.18,
-    cpc: 9.5,
-    cps: 475,
-    ecr: 0.025,
-    crPct: 0.021,
-    sessions: 480,
-    orders: 10,
-    aov: 848,
-    ncac: 800,
-  },
-
-  // ── Airmelt ────────────────────────────────────────────────
-  "Airmelt Collection": {
-    alias: "Airmelt",
-    category: "Airmelt",
-    ga4Revenue: 5002,
-    spend: 2300,
-    ga4ROAS: 2.18,
-    cpc: 11.0,
-    cps: 550,
-    ecr: 0.021,
-    crPct: 0.018,
-    sessions: 280,
-    orders: 5,
-    aov: 1000,
-    ncac: 950,
-  },
-
-  // ── PetalRib ───────────────────────────────────────────────
-  "PetalRib Collection": {
-    alias: "PetalRib",
-    category: "PetalRib",
-    ga4Revenue: 3396,
-    spend: 1558,
-    ga4ROAS: 2.18,
-    cpc: 11.0,
-    cps: 550,
-    ecr: 0.022,
-    crPct: 0.018,
-    sessions: 193,
-    orders: 3,
-    aov: 1132,
-    ncac: 1000,
-  },
-
-  // ── Sports Bra ─────────────────────────────────────────────
-  "Sports Bra Collection": {
-    alias: "SportsBra",
-    category: "Sports Bra",
-    ga4Revenue: 1262,
-    spend: 579,
-    ga4ROAS: 2.18,
-    cpc: 10.5,
-    cps: 525,
-    ecr: 0.022,
-    crPct: 0.019,
-    sessions: 78,
-    orders: 1,
-    aov: 1262,
-    ncac: 1100,
-  },
-
-  // ── Topwear ────────────────────────────────────────────────
-  "Topwear Collection": {
-    alias: "Topwear",
-    category: "Topwear",
-    ga4Revenue: 2403,
-    spend: 1102,
-    ga4ROAS: 2.18,
-    cpc: 11.5,
-    cps: 575,
-    ecr: 0.021,
-    crPct: 0.017,
-    sessions: 137,
-    orders: 2,
-    aov: 1202,
-    ncac: 1100,
-  },
-
-  // ── Swimwear ───────────────────────────────────────────────
-  "Swimwear Collection": {
-    alias: "Swimwear",
-    category: "Swimwear",
-    ga4Revenue: 1686,
-    spend: 773,
-    ga4ROAS: 2.18,
-    cpc: 12.0,
-    cps: 600,
-    ecr: 0.020,
-    crPct: 0.016,
-    sessions: 96,
-    orders: 2,
-    aov: 843,
-    ncac: 800,
-  },
-// 20% delta buffer thresholds
-export const DELTA_OK   = 0.80   // within 20% = ok
-export const DELTA_WARN = 0.60   // 40–60% off = warn
-
-  // ── Rest ───────────────────────────────────────────────────
-  "Rest Collection": {
-    alias: "Rest",
-    category: "Rest",
-    ga4Revenue: 10381,
-    spend: 4760,
-    ga4ROAS: 2.18,
-    cpc: 12.5,
-    cps: 625,
-    ecr: 0.020,
-    crPct: 0.016,
-    sessions: 590,
-    orders: 9,
-    aov: 1153,
-    ncac: 1050,
-  },
-
-  // ── Pareto ─────────────────────────────────────────────────
-  "Pareto Collection": {
-    alias: "Pareto",
-    category: "Pareto",
-    ga4Revenue: 5449,
-    spend: 2500,
-    ga4ROAS: 2.18,
-    cpc: 12.0,
-    cps: 600,
-    ecr: 0.020,
-    crPct: 0.017,
-    sessions: 300,
-    orders: 5,
-    aov: 1090,
-    ncac: 1000,
-  },
-
-  // ── Outerwear ──────────────────────────────────────────────
-  "Outerwear Collection": {
-    alias: "Outerwear",
-    category: "Outerwear",
-    ga4Revenue: 754,
-    spend: 345,
-    ga4ROAS: 2.18,
-    cpc: 13.0,
-    cps: 650,
-    ecr: 0.018,
-    crPct: 0.015,
-    sessions: 42,
-    orders: 1,
-    aov: 754,
-    ncac: 700,
-  },
-
-  // ── Innerwear ──────────────────────────────────────────────
-  "Innerwear Collection": {
-    alias: "Innerwear",
-    category: "Innerwear",
-    ga4Revenue: 747,
-    spend: 343,
-    ga4ROAS: 2.18,
-    cpc: 10.0,
-    cps: 500,
-    ecr: 0.024,
-    crPct: 0.020,
-    sessions: 45,
-    orders: 1,
-    aov: 747,
-    ncac: 700,
-  },
-
-  // ── Bliss Terry ────────────────────────────────────────────
-  "Bliss Terry Collection": {
-    alias: "BlissTerry",
-    category: "Bliss Terry",
-    ga4Revenue: 318,
-    spend: 146,
-    ga4ROAS: 2.18,
-    cpc: 12.0,
-    cps: 600,
-    ecr: 0.019,
-    crPct: 0.015,
-    sessions: 19,
-    orders: 0.3,
-    aov: 1060,
-    ncac: 950,
-// ── CATEGORY TARGETS (daily) ──────────────────────────────────────────────────
-// Monthly totals ÷ 30 days
-// ga4Revenue = monthly GA4 tracked / 30
-// NR = monthly NR / 30
-// Spends, CPC, CPS, ROAS, ECR = direct daily benchmarks from media plan
+// ── Category targets (daily) ──────────────────────────────────────────────────
 export const CATEGORY_TARGETS = {
   '5*5 Products': {
-    ga4Revenue: 8157,   // 244712 / 30
-    nr:         14831,  // 444931 / 30
-    spends:     4635,   // 139041 / 30
+    ga4Revenue: 8157,
+    nr:         14831,
+    spends:     4635,
     ga4ROAS:    1.76,
     cpc:        14.14,
     cps:        17,
@@ -552,7 +26,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.213,
   },
   'Pareto': {
-    ga4Revenue: 2997,   // 89905 / 30
+    ga4Revenue: 2997,
     nr:         5449,
     spends:     1620,
     ga4ROAS:    1.85,
@@ -562,7 +36,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.074,
   },
   'Airmelt': {
-    ga4Revenue: 2751,   // 82539 / 30
+    ga4Revenue: 2751,
     nr:         5002,
     spends:     1448,
     ga4ROAS:    1.90,
@@ -572,7 +46,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.066,
   },
   'Outerwear': {
-    ga4Revenue: 415,    // 12442 / 30
+    ga4Revenue: 415,
     nr:         754,
     spends:     224,
     ga4ROAS:    1.85,
@@ -582,7 +56,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.010,
   },
   'Rest': {
-    ga4Revenue: 5709,   // 171285 / 30
+    ga4Revenue: 5709,
     nr:         10381,
     spends:     3086,
     ga4ROAS:    1.85,
@@ -592,7 +66,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.142,
   },
   'Sports Bra': {
-    ga4Revenue: 694,    // 20830 / 30
+    ga4Revenue: 694,
     nr:         1262,
     spends:     463,
     ga4ROAS:    1.50,
@@ -602,7 +76,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.021,
   },
   'BB/RS': {
-    ga4Revenue: 6417,   // 192500 / 30
+    ga4Revenue: 6417,
     nr:         11667,
     spends:     3469,
     ga4ROAS:    1.85,
@@ -612,7 +86,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.159,
   },
   'Swimwear': {
-    ga4Revenue: 927,    // 27812 / 30
+    ga4Revenue: 927,
     nr:         1686,
     spends:     618,
     ga4ROAS:    1.50,
@@ -622,7 +96,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.028,
   },
   'Topwear': {
-    ga4Revenue: 1322,   // 39655 / 30
+    ga4Revenue: 1322,
     nr:         2403,
     spends:     881,
     ga4ROAS:    1.50,
@@ -632,7 +106,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.040,
   },
   'PetalRib': {
-    ga4Revenue: 1868,   // 56033 / 30
+    ga4Revenue: 1868,
     nr:         3396,
     spends:     1245,
     ga4ROAS:    1.50,
@@ -642,7 +116,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.057,
   },
   'Innerwear': {
-    ga4Revenue: 411,    // 12325 / 30
+    ga4Revenue: 411,
     nr:         747,
     spends:     274,
     ga4ROAS:    1.50,
@@ -652,7 +126,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.013,
   },
   'Bliss Terry': {
-    ga4Revenue: 175,    // 5250 / 30
+    ga4Revenue: 175,
     nr:         318,
     spends:     97,
     ga4ROAS:    1.80,
@@ -662,7 +136,7 @@ export const CATEGORY_TARGETS = {
     spendMix:   0.004,
   },
   'Menswear': {
-    ga4Revenue: 4662,   // 139868 / 30
+    ga4Revenue: 4662,
     nr:         8477,
     spends:     3730,
     ga4ROAS:    1.25,
@@ -670,30 +144,17 @@ export const CATEGORY_TARGETS = {
     cps:        22,
     ecr:        0.020,
     spendMix:   0.171,
-},
+  },
 }
 
-// Breakpoint chain order — if GA4 revenue is off, check in this order:
-// GA4 Revenue → Spend pacing → CPC → CPLPV (CPS) → Sessions → CR% → Orders
-export const BREAKPOINT_CHAIN = ['spend', 'cpc', 'cps', 'sessions', 'crPct', 'orders']
-// ── PRODUCT TARGETS (daily) ────────────────────────────────────────────────────
-// Key = EXACT product name as assigned by parser.js
-// alias = display name
-// category = must match CATEGORY_TARGETS key exactly
-// ga4Revenue, spends = daily targets
-// ROAS, CPC, CPS, ECR = daily benchmarks
-
-// Delta buffer — targets are considered "at risk" at 80% of target, "breaking" below 60%
-export const DELTA_OK = 0.90      // ≥90% of target = green
-export const DELTA_WARN = 0.75    // 75–90% = amber
-// below 75% = red
+// ── Product targets (daily) ───────────────────────────────────────────────────
 export const PRODUCT_TARGETS = {
-  // ─── 5*5 Products ────────────────────────────────────────────────────────────
+  // ─── 5*5 Products ─────────────────────────────────────────────────────────
   'LTC Flare': {
     alias: 'Ultimate Flare Pants-Lite',
     category: '5*5 Products',
-    ga4Revenue: 3269,   // final_nr 98054 / 30
-    spends:     2414,   // proportional
+    ga4Revenue: 3269,
+    spends:     2414,
     ga4ROAS:    2.18,
     cpc:        10,
     cps:        12,
@@ -728,7 +189,6 @@ export const PRODUCT_TARGETS = {
     ncac:       700,
     minOrders:  5,
   },
-  // map alternate parser names
   'LTC': {
     alias: 'LTC (generic)',
     category: '5*5 Products',
@@ -742,7 +202,20 @@ export const PRODUCT_TARGETS = {
     ncac:       500,
     minOrders:  3,
   },
-  // ─── Airmelt ─────────────────────────────────────────────────────────────────
+  'LTC 2@1799': {
+    alias: '2 at 1799',
+    category: '5*5 Products',
+    ga4Revenue: 1200,
+    spends:     649,
+    ga4ROAS:    2.5,
+    cpc:        18,
+    cps:        20,
+    ecr:        0.022,
+    aov:        1799,
+    ncac:       600,
+    minOrders:  6,
+  },
+  // ─── Airmelt ──────────────────────────────────────────────────────────────
   'Airmelt': {
     alias: 'AirMelt (all)',
     category: 'Airmelt',
@@ -759,7 +232,7 @@ export const PRODUCT_TARGETS = {
   'AirmeltFLP': {
     alias: 'AirMelt Flare Pants-Lite',
     category: 'Airmelt',
-    ga4Revenue: 1743,   // 52290 / 30
+    ga4Revenue: 1743,
     spends:     914,
     ga4ROAS:    2.0,
     cpc:        15,
@@ -769,11 +242,11 @@ export const PRODUCT_TARGETS = {
     ncac:       700,
     minOrders:  5,
   },
-  // ─── BB/RS ───────────────────────────────────────────────────────────────────
+  // ─── BB/RS ────────────────────────────────────────────────────────────────
   'RS': {
     alias: 'RibSupreme / Bare Butter',
     category: 'BB/RS',
-    ga4Revenue: 3208,   // 96250 / 30
+    ga4Revenue: 3208,
     spends:     1735,
     ga4ROAS:    1.85,
     cpc:        23,
@@ -809,7 +282,72 @@ export const PRODUCT_TARGETS = {
     ncac:       800,
     minOrders:  4,
   },
-  // ─── Menswear ────────────────────────────────────────────────────────────────
+  'RS Col': {
+    alias: 'RS Collection',
+    category: 'BB/RS',
+    ga4Revenue: 2000,
+    spends:     1081,
+    ga4ROAS:    1.85,
+    cpc:        23,
+    cps:        29,
+    ecr:        0.015,
+    aov:        2299,
+    ncac:       800,
+    minOrders:  4,
+  },
+  'RS FLP': {
+    alias: 'RS Flare',
+    category: 'BB/RS',
+    ga4Revenue: 2500,
+    spends:     1351,
+    ga4ROAS:    1.85,
+    cpc:        23,
+    cps:        29,
+    ecr:        0.015,
+    aov:        2299,
+    ncac:       800,
+    minOrders:  5,
+  },
+  'BB Zip': {
+    alias: 'BB Zip',
+    category: 'BB/RS',
+    ga4Revenue: 1500,
+    spends:     811,
+    ga4ROAS:    1.85,
+    cpc:        23,
+    cps:        29,
+    ecr:        0.015,
+    aov:        2299,
+    ncac:       800,
+    minOrders:  3,
+  },
+  'Travel Collection': {
+    alias: 'Travel Collection',
+    category: 'BB/RS',
+    ga4Revenue: 3000,
+    spends:     1621,
+    ga4ROAS:    1.85,
+    cpc:        23,
+    cps:        29,
+    ecr:        0.015,
+    aov:        2500,
+    ncac:       850,
+    minOrders:  4,
+  },
+  'Summer Travel': {
+    alias: 'Summer Travel',
+    category: 'BB/RS',
+    ga4Revenue: 2800,
+    spends:     1513,
+    ga4ROAS:    1.85,
+    cpc:        23,
+    cps:        29,
+    ecr:        0.015,
+    aov:        2299,
+    ncac:       800,
+    minOrders:  4,
+  },
+  // ─── Menswear ─────────────────────────────────────────────────────────────
   'Men': {
     alias: 'Menswear (all)',
     category: 'Menswear',
@@ -823,7 +361,7 @@ export const PRODUCT_TARGETS = {
     ncac:       800,
     minOrders:  5,
   },
-  // ─── PetalRib ────────────────────────────────────────────────────────────────
+  // ─── PetalRib ─────────────────────────────────────────────────────────────
   'Petal': {
     alias: 'PetalRib (all)',
     category: 'PetalRib',
@@ -837,7 +375,7 @@ export const PRODUCT_TARGETS = {
     ncac:       1500,
     minOrders:  3,
   },
-  // ─── Topwear ─────────────────────────────────────────────────────────────────
+  // ─── Topwear ──────────────────────────────────────────────────────────────
   'Bra Top': {
     alias: 'Bra Top Collection',
     category: 'Topwear',
@@ -851,7 +389,7 @@ export const PRODUCT_TARGETS = {
     ncac:       500,
     minOrders:  3,
   },
-  // ─── Sports Bra ──────────────────────────────────────────────────────────────
+  // ─── Sports Bra ───────────────────────────────────────────────────────────
   'Sports Bra': {
     alias: 'Sports Bra (all)',
     category: 'Sports Bra',
@@ -865,7 +403,7 @@ export const PRODUCT_TARGETS = {
     ncac:       500,
     minOrders:  3,
   },
-  // ─── Swimwear ────────────────────────────────────────────────────────────────
+  // ─── Swimwear ─────────────────────────────────────────────────────────────
   'SWIM': {
     alias: 'Swimwear',
     category: 'Swimwear',
@@ -879,7 +417,7 @@ export const PRODUCT_TARGETS = {
     ncac:       800,
     minOrders:  3,
   },
-  // ─── Outerwear ───────────────────────────────────────────────────────────────
+  // ─── Outerwear ────────────────────────────────────────────────────────────
   'Outerwear': {
     alias: 'Outerwear (all)',
     category: 'Outerwear',
@@ -893,7 +431,7 @@ export const PRODUCT_TARGETS = {
     ncac:       800,
     minOrders:  2,
   },
-  // ─── Innerwear ───────────────────────────────────────────────────────────────
+  // ─── Innerwear ────────────────────────────────────────────────────────────
   'IWR': {
     alias: 'Innerwear',
     category: 'Innerwear',
@@ -907,7 +445,7 @@ export const PRODUCT_TARGETS = {
     ncac:       500,
     minOrders:  2,
   },
-  // ─── Bliss Terry ─────────────────────────────────────────────────────────────
+  // ─── Bliss Terry ──────────────────────────────────────────────────────────
   'Bliss Terry': {
     alias: 'Bliss Terry',
     category: 'Bliss Terry',
@@ -921,50 +459,41 @@ export const PRODUCT_TARGETS = {
     ncac:       600,
     minOrders:  2,
   },
-  // ─── Common "catch-all" products parsed from creatives ────────────────────────
-  'Cloud Korean Pants': { alias: 'Cloud Korean Pants', category: 'Pareto', ga4Revenue: 1491, spends: 806, ga4ROAS: 1.85, cpc: 17, cps: 19, ecr: 0.02, aov: 1299, ncac: 600, minOrders: 5 },
-  'Maharani': { alias: 'Maharani Collection', category: 'Rest', ga4Revenue: 570, spends: 308, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 3 },
-  'Everflow': { alias: 'Everflow', category: 'Rest', ga4Revenue: 500, spends: 270, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 2 },
-  'Everflow Tank': { alias: 'Everflow Tank', category: 'Rest', ga4Revenue: 500, spends: 270, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 2 },
-  'Shop All': { alias: 'Shop All', category: 'Rest', ga4Revenue: 800, spends: 432, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 3 },
-  'New Launches': { alias: 'New Launches', category: 'Rest', ga4Revenue: 600, spends: 324, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 2 },
-  'OTG': { alias: 'OTG Straight', category: 'Rest', ga4Revenue: 400, spends: 216, ga4ROAS: 1.85, cpc: 14, cps: 17, ecr: 0.02, aov: 1499, ncac: 800, minOrders: 2 },
-  'Travel Collection': { alias: 'Travel Collection', category: 'BB/RS', ga4Revenue: 3000, spends: 1621, ga4ROAS: 1.85, cpc: 23, cps: 29, ecr: 0.015, aov: 2500, ncac: 850, minOrders: 4 },
-  'Summer Travel': { alias: 'Summer Travel', category: 'BB/RS', ga4Revenue: 2800, spends: 1513, ga4ROAS: 1.85, cpc: 23, cps: 29, ecr: 0.015, aov: 2299, ncac: 800, minOrders: 4 },
-  'Kick Flare Lite': { alias: 'Kick Flare Lite', category: 'Rest', ga4Revenue: 600, spends: 324, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 3 },
-  'LTC 2@1799': { alias: '2 at 1799', category: '5*5 Products', ga4Revenue: 1200, spends: 649, ga4ROAS: 2.5, cpc: 18, cps: 20, ecr: 0.022, aov: 1799, ncac: 600, minOrders: 6 },
-  'Color Jan26': { alias: 'Color Jan 26', category: 'Rest', ga4Revenue: 400, spends: 216, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 2 },
-  'AMPM': { alias: 'AMPM Collection', category: 'Pareto', ga4Revenue: 1000, spends: 541, ga4ROAS: 1.85, cpc: 17, cps: 19, ecr: 0.02, aov: 999, ncac: 500, minOrders: 3 },
-  'Bestseller': { alias: 'Bestseller', category: 'Rest', ga4Revenue: 500, spends: 270, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 2 },
-  'Blissentials': { alias: 'Blissentials', category: 'Rest', ga4Revenue: 300, spends: 162, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 2 },
-  'RS Col': { alias: 'RS Collection', category: 'BB/RS', ga4Revenue: 2000, spends: 1081, ga4ROAS: 1.85, cpc: 23, cps: 29, ecr: 0.015, aov: 2299, ncac: 800, minOrders: 4 },
-  'Everflow Knot': { alias: 'Everflow Knot', category: 'Rest', ga4Revenue: 400, spends: 216, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 2 },
-  'BB Zip': { alias: 'BB Zip', category: 'BB/RS', ga4Revenue: 1500, spends: 811, ga4ROAS: 1.85, cpc: 23, cps: 29, ecr: 0.015, aov: 2299, ncac: 800, minOrders: 3 },
-  'Everflow Cape': { alias: 'Everflow Cape', category: 'Rest', ga4Revenue: 300, spends: 162, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 2 },
-  'RS FLP': { alias: 'RS Flare', category: 'BB/RS', ga4Revenue: 2500, spends: 1351, ga4ROAS: 1.85, cpc: 23, cps: 29, ecr: 0.015, aov: 2299, ncac: 800, minOrders: 5 },
-  'Shopall': { alias: 'Shop All', category: 'Rest', ga4Revenue: 800, spends: 432, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999, ncac: 500, minOrders: 3 },
+  // ─── Pareto products ──────────────────────────────────────────────────────
+  'Cloud Korean Pants': { alias: 'Cloud Korean Pants', category: 'Pareto',    ga4Revenue: 1491, spends: 806,  ga4ROAS: 1.85, cpc: 17, cps: 19, ecr: 0.02, aov: 1299, ncac: 600, minOrders: 5 },
+  'AMPM':               { alias: 'AMPM Collection',    category: 'Pareto',    ga4Revenue: 1000, spends: 541,  ga4ROAS: 1.85, cpc: 17, cps: 19, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 3 },
+  // ─── Rest products ────────────────────────────────────────────────────────
+  'Maharani':       { alias: 'Maharani Collection', category: 'Rest', ga4Revenue: 570, spends: 308, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 3 },
+  'Everflow':       { alias: 'Everflow',            category: 'Rest', ga4Revenue: 500, spends: 270, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 2 },
+  'Everflow Tank':  { alias: 'Everflow Tank',       category: 'Rest', ga4Revenue: 500, spends: 270, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 2 },
+  'Everflow Knot':  { alias: 'Everflow Knot',       category: 'Rest', ga4Revenue: 400, spends: 216, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 2 },
+  'Everflow Cape':  { alias: 'Everflow Cape',       category: 'Rest', ga4Revenue: 300, spends: 162, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 2 },
+  'Shop All':       { alias: 'Shop All',            category: 'Rest', ga4Revenue: 800, spends: 432, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 3 },
+  'Shopall':        { alias: 'Shop All',            category: 'Rest', ga4Revenue: 800, spends: 432, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 3 },
+  'New Launches':   { alias: 'New Launches',        category: 'Rest', ga4Revenue: 600, spends: 324, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 2 },
+  'OTG':            { alias: 'OTG Straight',        category: 'Rest', ga4Revenue: 400, spends: 216, ga4ROAS: 1.85, cpc: 14, cps: 17, ecr: 0.02, aov: 1499, ncac: 800, minOrders: 2 },
+  'Kick Flare Lite':{ alias: 'Kick Flare Lite',     category: 'Rest', ga4Revenue: 600, spends: 324, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 3 },
+  'Color Jan26':    { alias: 'Color Jan 26',        category: 'Rest', ga4Revenue: 400, spends: 216, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 2 },
+  'Bestseller':     { alias: 'Bestseller',          category: 'Rest', ga4Revenue: 500, spends: 270, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 2 },
+  'Blissentials':   { alias: 'Blissentials',        category: 'Rest', ga4Revenue: 300, spends: 162, ga4ROAS: 1.85, cpc: 15, cps: 17, ecr: 0.02, aov: 999,  ncac: 500, minOrders: 2 },
 }
 
-// April 2026 pacing config
-export const PACING_CONFIG = {
-  month: 'April 2026',
-  totalDays: 30,
-  startDate: '2026-04-01',
-  endDate: '2026-04-30',
-// Lookup: given a parser product name → category name
+// ── Breakpoint chain ──────────────────────────────────────────────────────────
+export const BREAKPOINT_CHAIN = ['spend', 'cpc', 'cps', 'sessions', 'crPct', 'orders']
+
+// ── Helper: get category for a product name ───────────────────────────────────
 export function getCategoryForProduct(parserProductName) {
   const t = PRODUCT_TARGETS[parserProductName]
   if (t) return t.category
-  // fallback fuzzy match
   const lower = parserProductName.toLowerCase()
   if (lower.includes('ltc') || lower.includes('legging') || lower.includes('flare')) return '5*5 Products'
-  if (lower.includes('men') || lower.includes('polo') || lower.includes('legend')) return 'Menswear'
-  if (lower.includes('airmelt') || lower.includes('air melt')) return 'Airmelt'
+  if (lower.includes('men') || lower.includes('polo') || lower.includes('legend'))   return 'Menswear'
+  if (lower.includes('airmelt') || lower.includes('air melt'))                       return 'Airmelt'
   if (lower.includes('bb') || lower.includes('butter') || lower.includes('ribsupreme') || lower.includes('rs')) return 'BB/RS'
-  if (lower.includes('petal') || lower.includes('rib')) return 'PetalRib'
-  if (lower.includes('bra') || lower.includes('sports bra')) return 'Sports Bra'
-  if (lower.includes('swim')) return 'Swimwear'
-  if (lower.includes('terry')) return 'Bliss Terry'
+  if (lower.includes('petal') || lower.includes('rib'))                              return 'PetalRib'
+  if (lower.includes('bra') || lower.includes('sports bra'))                         return 'Sports Bra'
+  if (lower.includes('swim'))                                                         return 'Swimwear'
+  if (lower.includes('terry'))                                                        return 'Bliss Terry'
   if (lower.includes('inner') || lower.includes('freedame') || lower.includes('iwr')) return 'Innerwear'
   if (lower.includes('jacket') || lower.includes('hoodie') || lower.includes('outerwear')) return 'Outerwear'
   return 'Rest'
