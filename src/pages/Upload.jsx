@@ -26,7 +26,7 @@ const DATA_SOURCES = [
   { key: 'metaDB', label: 'Meta daily', color: 'var(--pink)' },
   { key: 'metaHourly', label: 'Meta hourly', color: 'var(--pink)' },
   { key: 'google', label: 'Google campaigns', color: 'var(--blue)' },
-  { key: 'ga4', label: 'GA4', color: 'var(--purple)' },
+
 ]
 
 const SYNC_PRESETS = [
