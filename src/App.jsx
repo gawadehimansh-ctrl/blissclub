@@ -15,6 +15,7 @@ import GoogleDemandGen  from './pages/GoogleDemandGen.jsx'
 import Hourly           from './pages/Hourly.jsx'
 import BlendedHealth    from './pages/BlendedHealth.jsx'
 import Upload           from './pages/Upload.jsx'
+import SKUBuckets       from './pages/SKUBuckets.jsx'
 import CoPilotPage     from './pages/CoPilotPage.jsx'
 import CoPilot         from './components/CoPilot.jsx'
 
@@ -32,6 +33,7 @@ const Icons = {
   awareness:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>,
   products: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>,
   demandgen:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>,
+  buckets:  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="3" width="6" height="5" rx="1"/><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="16" y="3" width="6" height="5" rx="1"/><rect x="2" y="11" width="6" height="5" rx="1"/><rect x="9" y="11" width="6" height="5" rx="1"/><rect x="2" y="19" width="6" height="2" rx="1"/></svg>,
   copilot:  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2a8 8 0 0 1 8 8c0 5-8 12-8 12S4 15 4 10a8 8 0 0 1 8-8z"/><circle cx="12" cy="10" r="3"/></svg>,
   upload:   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
 }
@@ -39,6 +41,7 @@ const Icons = {
 const NAV = [
   { path: '/',                  label: 'Pacing Tracker',    icon: Icons.pacing,    group: 'Overview' },
   { path: '/weekly',            label: 'Weekly',            icon: Icons.weekly,    group: 'Overview' },
+  { path: '/sku-buckets',        label: 'SKU Buckets',       icon: Icons.buckets,   group: 'Overview' },
   { path: '/blended',           label: 'Blended health',    icon: Icons.blended,   group: 'Overview' },
   { path: '/hourly',            label: 'Hourly pulse',      icon: Icons.hourly,    group: 'Meta' },
   { path: '/meta/campaigns',    label: 'Campaigns',         icon: Icons.campaigns, group: 'Meta' },
@@ -83,7 +86,7 @@ function Sidebar() {
               <rect x="14" y="14" width="7" height="7" rx="1"/>
             </svg>
           </div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>BlissClub</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>Rubans</span>
         </div>
       </div>
 
@@ -141,7 +144,7 @@ function Sidebar() {
           {[
             { label: 'M',   count: state.metaDB.length,    color: '#e8457a' },
             { label: 'G',   count: state.googleDump.length, color: '#6366f1' },
-            { label: 'GA4', count: state.ga4Dump.length,    color: '#a78bfa' },
+            { label: 'Shopify', count: state.ga4Dump.length,    color: '#a78bfa' },
           ].map(s => (
             <span key={s.label} style={{ fontSize: 11, fontWeight: 600, color: s.count > 0 ? s.color : 'rgba(255,255,255,0.2)' }}>
               {s.label} {s.count > 0 ? `${(s.count / 1000).toFixed(0)}K` : '—'}
@@ -163,6 +166,7 @@ function Layout() {
         <Routes>
           <Route path="/"                 element={<PacingTracker />} />
           <Route path="/weekly"           element={<Weekly />} />
+          <Route path="/sku-buckets"      element={<SKUBuckets />} />
           <Route path="/blended"          element={<BlendedHealth />} />
           <Route path="/hourly"           element={<Hourly />} />
           <Route path="/meta/campaigns"   element={<MetaCampaigns />} />
