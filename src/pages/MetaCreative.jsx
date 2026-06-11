@@ -34,13 +34,13 @@ function groupAndAggregate(rows, dim) {
     const agg = aggregateRows(rs)
     return {
       [dim]: key, ...agg,
-      roasGA4:       calcROAS(agg.gaRevenue, agg.spend),
+      metaRoas:      agg.spend > 0 ? (agg.fbRevenue || 0) / agg.spend : 0,
       spendMix:      spendTotal > 0 ? (agg.spend / spendTotal) * 100 : 0,
       ctr:           agg.impressions > 0 ? agg.clicks / agg.impressions : 0,
       cpm:           agg.impressions > 0 ? (agg.spend / agg.impressions) * 1000 : 0,
       cpc:           agg.clicks > 0 ? agg.spend / agg.clicks : 0,
-      cpa:           agg.gaOrders > 0 ? agg.spend / agg.gaOrders : 0,
-      ecr:           agg.sessions > 0 ? agg.gaOrders / agg.sessions : 0,
+      cpa:           agg.fbOrders > 0 ? agg.spend / agg.fbOrders : 0,
+      
       creativeCount: [...new Set(rs.map(r => r.adId || r.adName || r.creativeName))].filter(Boolean).length,
     }
   }).sort((a, b) => b.spend - a.spend)
@@ -82,7 +82,7 @@ export default function MetaCreative() {
   const [pivotDim, setPivotDim]     = useState('product')
   const [drillCreator, setDrillCreator] = useState(null)
   const [cpSearch, setCpSearch]     = useState('')
-  const [cpSort, setCpSort]         = useState({ key: 'gaRevenue', dir: 'desc' })
+  const [cpSort, setCpSort]         = useState({ key: 'fbRevenue', dir: 'desc' })
   const drillRef = React.useRef(null)
 
   const rows    = useMemo(() => filterRows(state.metaDB || []), [state.metaDB, filters])
@@ -118,12 +118,12 @@ export default function MetaCreative() {
         ...agg,
         adsetCount:    adsetNames.length,
         campaignCount: campaignNames.length,
-        roasGA4:  calcROAS(agg.gaRevenue, agg.spend),
+        metaRoas:  agg.spend > 0 ? (agg.fbRevenue || 0) / agg.spend : 0,
         ctr:      agg.impressions > 0 ? agg.clicks / agg.impressions : 0,
         cpm:      agg.impressions > 0 ? (agg.spend / agg.impressions) * 1000 : 0,
-        cpa:      agg.gaOrders > 0 ? agg.spend / agg.gaOrders : 0,
+        cpa:      agg.fbOrders > 0 ? agg.spend / agg.fbOrders : 0,
       }
-    }).filter(c => c.spend > 1000).sort((a, b) => b.gaRevenue - a.gaRevenue)
+    }).filter(c => c.spend > 1000).sort((a, b) => b.fbRevenue - a.fbRevenue)
   }, [rows])
 
   // ── Creator → product drill-down ──────────────────────────────────────────
@@ -158,9 +158,9 @@ export default function MetaCreative() {
     { key: 'ctr',           label: 'CTR',        render: v => fmtPct(v), color: v => v>0.02?'var(--green)':v>0.01?'var(--amber)':'var(--red)' },
     { key: 'cpm',           label: 'CPM',        render: v => fmtINRCompact(v) },
     { key: 'cpc',           label: 'CPC',        render: v => fmtINRCompact(v) },
-    { key: 'gaRevenue',     label: 'GA4 Rev',    render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
-    { key: 'roasGA4',       label: 'GA4 ROAS',   render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
-    { key: 'gaOrders',      label: 'Orders',     render: v => fmtNum(v) },
+    { key: 'fbRevenue',     label: 'Meta Rev',   render: v => fmtINRCompact(v), color: () => 'var(--pink)' },
+    { key: 'metaRoas',      label: 'ROAS',       render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
+    { key: 'fbOrders',      label: 'Purchases',  render: v => fmtNum(v) },
     { key: 'cpa',           label: 'CPA',        render: v => fmtINRCompact(v) },
   ]
 
@@ -172,9 +172,9 @@ export default function MetaCreative() {
     { key: 'impressions', label: 'Impr.',    render: v => fmtNum(v) },
     { key: 'ctr',         label: 'CTR',      render: v => fmtPct(v), color: v => v>0.02?'var(--green)':v>0.01?'var(--amber)':'var(--red)' },
     { key: 'cpm',         label: 'CPM',      render: v => fmtINRCompact(v) },
-    { key: 'gaRevenue',   label: 'GA4 Rev',  render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
-    { key: 'roasGA4',     label: 'GA4 ROAS', render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
-    { key: 'gaOrders',    label: 'Orders',   render: v => fmtNum(v) },
+    { key: 'fbRevenue',   label: 'Meta Rev', render: v => fmtINRCompact(v), color: () => 'var(--pink)' },
+    { key: 'metaRoas',    label: 'ROAS',     render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
+    { key: 'fbOrders',    label: 'Purchases',render: v => fmtNum(v) },
     { key: 'cpa',         label: 'CPA',      render: v => fmtINRCompact(v) },
   ]
 
@@ -192,9 +192,9 @@ export default function MetaCreative() {
     { key: 'impressions',   label: 'Impr.',    render: v => fmtNum(v) },
     { key: 'ctr',           label: 'CTR',      render: v => fmtPct(v), color: v => v>0.02?'var(--green)':v>0.01?'var(--amber)':'var(--red)' },
     { key: 'cpm',           label: 'CPM',      render: v => fmtINRCompact(v) },
-    { key: 'gaRevenue',     label: 'GA4 Rev',  render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
-    { key: 'roasGA4',       label: 'GA4 ROAS', render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
-    { key: 'gaOrders',      label: 'Orders',   render: v => fmtNum(v) },
+    { key: 'fbRevenue',     label: 'Meta Rev', render: v => fmtINRCompact(v), color: () => 'var(--pink)' },
+    { key: 'metaRoas',      label: 'ROAS',     render: v => fmtX(v), color: v => v>=4?'var(--green)':v>=2?'var(--amber)':'var(--red)' },
+    { key: 'fbOrders',      label: 'Purchases',render: v => fmtNum(v) },
     { key: 'cpa',           label: 'CPA',      render: v => fmtINRCompact(v) },
   ]
 
@@ -216,8 +216,8 @@ export default function MetaCreative() {
       {/* KPI cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 16 }}>
         <MetricCard label="Total spend"           value={fmtINRCompact(totals.spend)}     accent="var(--pink)" />
-        <MetricCard label="GA4 revenue"           value={fmtINRCompact(totals.gaRevenue)} accent="var(--purple)" />
-        <MetricCard label="GA4 ROAS"              value={fmtX(calcROAS(totals.gaRevenue, totals.spend))} accent="var(--purple)" />
+        <MetricCard label="Meta Revenue"           value={fmtINRCompact(totals.fbRevenue || 0)} accent="var(--purple)" />
+        <MetricCard label="Meta ROAS"              value={fmtX((totals.spend > 0 ? (totals.fbRevenue||0)/totals.spend : 0))} accent="var(--purple)" />
         <MetricCard label="Unique creatives"      value={fmtNum(uniqueCreativeCount)} sublabel="across all adsets" />
       </div>
 
@@ -252,13 +252,13 @@ export default function MetaCreative() {
           {/* Bar chart */}
           {pivoted.length > 0 && pivoted.length <= 12 && (
             <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
-              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>GA4 ROAS by {PIVOT_LABELS[pivotDim].toLowerCase()}</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>ROAS by {PIVOT_LABELS[pivotDim].toLowerCase()}</div>
               <ResponsiveContainer width="100%" height={160}>
                 <BarChart data={pivoted} barSize={28}>
                   <XAxis dataKey={pivotDim} tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} unit="x" />
-                  <Tooltip contentStyle={{ background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12 }} formatter={v => [`${v.toFixed(2)}x`, 'GA4 ROAS']} />
-                  <Bar dataKey="roasGA4" radius={[4,4,0,0]}>
+                  <Tooltip contentStyle={{ background: 'var(--bg3)', border: '0.5px solid var(--border2)', fontSize: 12 }} formatter={v => [`${v.toFixed(2)}x`, 'Meta ROAS']} />
+                  <Bar dataKey="metaRoas" radius={[4,4,0,0]}>
                     {pivoted.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Bar>
                 </BarChart>
@@ -307,7 +307,7 @@ export default function MetaCreative() {
               {uniqueCreativeCount.toLocaleString()} unique creatives
             </div>
             <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-              Aggregated across all adsets · min ₹1K spend · sorted by GA4 revenue
+              Aggregated across all adsets · min ₹1K spend · sorted by Meta Revenue
             </div>
           </div>
 
@@ -319,7 +319,7 @@ export default function MetaCreative() {
           <DrillTable
             columns={cpCols}
             data={creativePerf}
-            defaultSort={{ key: 'gaRevenue', dir: 'desc' }}
+            defaultSort={{ key: 'fbRevenue', dir: 'desc' }}
             filename="creative-performance"
           />
         </div>
