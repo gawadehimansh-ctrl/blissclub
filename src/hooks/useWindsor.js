@@ -14,136 +14,80 @@ export function useWindsor() {
     return json.data || []
   }, [])
 
-  const syncAll = useCallback(async () => {
+  const syncAll = useCallback(async (preset = 'last_90d') => {
     const results = { success: [], errors: [] }
 
-    // Meta daily + GA4 join
+    // Meta + Shopify — split by datasource field
     try {
-      const raw    = await fetchEndpoint(`/api/meta-daily`)
+      const raw = await fetchEndpoint(`/api/meta-daily?preset=${preset}`)
       const parsed = parseWindsorPayload(raw, 'windsor_meta_ga4')
-
+      // datasource field tells us which platform each row is from
       const metaRows = parsed.filter(r =>
         r.datasource === 'facebook' ||
         (r.datasource !== 'googleanalytics4' && r.spend > 0)
       )
       const ga4Rows = parsed.filter(r =>
         r.datasource === 'googleanalytics4' ||
-        (r.datasource !== 'facebook' && !r.spend && (r.gaRevenue > 0 || r.sessions > 0))
+        (r.datasource !== 'facebook' && !r.spend && (r.revenue > 0 || r.sessions > 0))
       )
-
-      // Build GA4 lookup keyed by date + adName to avoid over-attribution
-      const ga4Map = {}
-      for (const r of ga4Rows) {
-        const adKey  = (r.adName || r.adsetName || '').trim()
-        const dateKey = r.date instanceof Date
-          ? r.date.toISOString().split('T')[0]
-          : String(r.date || '').split('T')[0]
-        const key = dateKey + '__' + adKey
-        if (!adKey || !dateKey) continue
-        if (!ga4Map[key]) ga4Map[key] = { gaRevenue: 0, gaOrders: 0 }
-        ga4Map[key].gaRevenue += r.gaRevenue || 0
-        ga4Map[key].gaOrders  += r.gaOrders  || 0
-      }
-
-      // Join GA4 onto Meta rows by date + adName
-      const joinedMeta = metaRows.map(r => {
-        const dateKey = r.date instanceof Date
-          ? r.date.toISOString().split('T')[0]
-          : String(r.date || '').split('T')[0]
-        const key = dateKey + '__' + (r.adName || '').trim()
-        const ga4 = ga4Map[key]
-        if (ga4) return { ...r, gaRevenue: ga4.gaRevenue, gaOrders: ga4.gaOrders }
-        return r
-      })
-
-      if (joinedMeta.length > 0) loadData(joinedMeta, 'META_DB', true)
-      if (ga4Rows.length > 0)    loadData(ga4Rows, 'GA4_DUMP', false)
-      results.success.push(`Meta (${joinedMeta.length}) + GA4 (${ga4Rows.length})`)
+      if (metaRows.length > 0) loadData(metaRows, 'META_DB', true)
+      if (ga4Rows.length > 0)  loadData(ga4Rows, 'Shopify_DUMP', false) // append
+      results.success.push(`Meta (${metaRows.length}) + Shopify (${ga4Rows.length})`)
     } catch (e) { results.errors.push(`Meta: ${e.message}`) }
 
-    // Meta Catalog / DPA — product_id breakdown
+    // Shopify standalone
     try {
-      const raw  = await fetchEndpoint(`/api/meta-catalog`)
-      loadData(raw, 'META_CATALOG', true)
-      results.success.push(`Catalog (${raw.length})`)
-    } catch (e) { results.errors.push(`Catalog: ${e.message}`) }
-
-    // GA4 item-level (joins with Meta catalog via variant_id)
-    try {
-      const raw = await fetchEndpoint('/api/ga4-items')
-      loadData(raw, 'GA4_ITEMS', true)
-      results.success.push('GA4 items (' + raw.length + ')')
-    } catch (e) { results.errors.push('GA4 items: ' + e.message) }
-
-    // GA4 standalone
-    try {
-      const data   = await fetchEndpoint(`/api/ga4`)
+      const data = await fetchEndpoint(`/api/ga4?preset=${preset}`)
       const parsed = parseWindsorPayload(data, 'ga4')
-      if (parsed.length > 0) loadData(parsed, 'GA4_DUMP', false)
-      results.success.push(`GA4 (${parsed.length})`)
-    } catch (e) { results.errors.push(`GA4: ${e.message}`) }
+      if (parsed.length > 0) loadData(parsed, 'Shopify_DUMP', false) // append not replace
+      results.success.push(`Shopify (${parsed.length})`)
+    } catch (e) { results.errors.push(`Shopify: ${e.message}`) }
 
     // Google campaigns
     try {
-      const data = await fetchEndpoint(`/api/google-campaigns`)
+      const data = await fetchEndpoint(`/api/google-campaigns?preset=${preset}`)
       loadData(parseWindsorPayload(data, 'windsor_google'), 'WINDSOR_GOOGLE_DAILY', true)
       results.success.push('Google campaigns')
     } catch (e) { results.errors.push(`Google: ${e.message}`) }
 
-    // Google search terms
+    // Search terms
     try {
-      const data   = await fetchEndpoint(`/api/google-search-terms`)
-      const parsed = parseWindsorPayload(data, 'windsor_search_terms')
-      if (parsed.length > 0) loadData(parsed, 'WINDSOR_SEARCH_TERMS', true)
-      results.success.push(`Search terms (${parsed.length})`)
+      const data = await fetchEndpoint(`/api/google-search-terms?preset=${preset}`)
+      const parsedSt = parseWindsorPayload(data, 'windsor_search_terms')
+      console.log('SearchTerms raw rows:', data?.length, 'parsed:', parsedSt?.length, 'sample:', data?.[0])
+      if (parsedSt.length > 0) loadData(parsedSt, 'WINDSOR_SEARCH_TERMS', true)
+      results.success.push('Search terms')
     } catch (e) { results.errors.push(`Search terms: ${e.message}`) }
 
-    // GA4 items (for Weekly page — category + product level)
+    // Keywords
     try {
-      const raw    = await fetchEndpoint('/api/ga4-items')
-      const parsed = raw.map(r => ({
-        date:          parseDate(r.date),
-        itemCategory:  r.item_category || '',
-        itemName:      r.item_name || '',
-        itemRevenue:   num(r.item_revenue || 0),
-        itemsPurchased:num(r.items_purchased || 0),
-        grossRevenue:  num(r.gross_item_revenue || 0),
-      })).filter(r => r.date && r.itemName)
-      if (parsed.length > 0) loadData(parsed, 'GA4_ITEMS', true)
-      results.success.push(`GA4 items (${parsed.length})`)
-    } catch (e) { results.errors.push(`GA4 items: ${e.message}`) }
-
-    // Google keywords
-    try {
-      const data   = await fetchEndpoint(`/api/google-keywords`)
-      const parsed = parseWindsorPayload(data, 'windsor_keywords')
-      if (parsed.length > 0) loadData(parsed, 'GOOGLE_KEYWORDS', true)
-      results.success.push(`Keywords (${parsed.length})`)
+      const data = await fetchEndpoint(`/api/google-keywords?preset=${preset}`)
+      const parsedKw = parseWindsorPayload(data, 'windsor_keywords')
+      console.log('Keywords raw rows:', data?.length, 'parsed:', parsedKw?.length, 'sample:', data?.[0])
+      if (parsedKw.length > 0) loadData(parsedKw, 'WINDSOR_KEYWORDS', true)
+      results.success.push('Keywords')
     } catch (e) { results.errors.push(`Keywords: ${e.message}`) }
 
-    // Google awareness
+    // Google products (Shopping + PMax)
     try {
-      const data   = await fetchEndpoint(`/api/google-awareness`)
-      const parsed = parseWindsorPayload(data, 'windsor_google')
-      if (parsed.length > 0) loadData(parsed, 'GOOGLE_AWARENESS', true)
-      results.success.push(`Awareness (${parsed.length})`)
-    } catch (e) { results.errors.push(`Awareness: ${e.message}`) }
-
-    // Google products
-    try {
-      const data   = await fetchEndpoint(`/api/google-products`)
-      const parsed = parseWindsorPayload(data, 'windsor_products')
-      if (parsed.length > 0) loadData(parsed, 'GOOGLE_PRODUCTS', true)
-      results.success.push(`Google products (${parsed.length})`)
+      const data = await fetchEndpoint(`/api/google-products?preset=${preset}`)
+      loadData(parseWindsorPayload(data, 'windsor_products'), 'GOOGLE_PRODUCTS', true)
+      results.success.push('Google products')
     } catch (e) { results.errors.push(`Google products: ${e.message}`) }
 
-    // Google demand gen
+    // Demand Gen
     try {
-      const data   = await fetchEndpoint(`/api/google-demandgen`)
-      const parsed = parseWindsorPayload(data, 'windsor_demandgen')
-      if (parsed.length > 0) loadData(parsed, 'GOOGLE_DEMANDGEN', true)
-      results.success.push(`Demand Gen (${parsed.length})`)
+      const data = await fetchEndpoint(`/api/google-demandgen?preset=${preset}`)
+      loadData(parseWindsorPayload(data, 'windsor_demandgen'), 'GOOGLE_DEMANDGEN', true)
+      results.success.push('Demand Gen')
     } catch (e) { results.errors.push(`Demand Gen: ${e.message}`) }
+
+    // Awareness — always pull last 30d for fuller picture
+    try {
+      const data = await fetchEndpoint(`/api/google-awareness?preset=last_30d`)
+      loadData(parseWindsorPayload(data, 'windsor_awareness'), 'GOOGLE_AWARENESS', true)
+      results.success.push('Awareness')
+    } catch (e) { results.errors.push(`Awareness: ${e.message}`) }
 
     return results
   }, [fetchEndpoint, loadData])
