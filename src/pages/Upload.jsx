@@ -153,8 +153,8 @@ export default function Upload() {
   return (
     <div style={{ padding: '24px 28px', width: '100%' }}>
 
-      {/* Windsor Auto-Sync */}
-      <div style={{ background: PROXY_URL ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${PROXY_URL ? 'rgba(34,197,94,0.25)' : 'var(--border)'}`, borderRadius: 10, padding: '24px 28px', marginBottom: 20 }}>
+      {/* Windsor Auto-Sync — hidden for now */}
+      {false && <div style={{ background: PROXY_URL ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${PROXY_URL ? 'rgba(34,197,94,0.25)' : 'var(--border)'}`, borderRadius: 10, padding: '24px 28px', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>
@@ -184,7 +184,7 @@ export default function Upload() {
             {syncResult.errors?.length > 0 && <div style={{ color: 'var(--red)' }}>❌ Failed: {syncResult.errors.join(', ')}</div>}
           </div>
         )}
-      </div>
+      </div>}
 
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Data upload</h1>
