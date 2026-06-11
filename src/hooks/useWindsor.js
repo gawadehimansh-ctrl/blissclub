@@ -76,6 +76,13 @@ export function useWindsor() {
       results.success.push('Awareness')
     } catch (e) { results.errors.push(`Awareness: ${e.message}`) }
 
+    // Meta catalog (product-level)
+    try {
+      const data = await fetchEndpoint(`/api/meta-catalog?preset=${preset}`)
+      if (data.length > 0) loadData(data, 'META_CATALOG', true)
+      results.success.push(`Catalog (${data.length})`)
+    } catch (e) { results.errors.push(`Catalog: ${e.message}`) }
+
     return results
   }, [fetchEndpoint, loadData])
 
