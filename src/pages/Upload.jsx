@@ -44,7 +44,7 @@ export default function Upload() {
   const [syncResult, setSyncResult] = React.useState(null)
   const [syncPreset, setSyncPreset] = React.useState('last_90d')
 
-  const PROXY_URL = import.meta.env.VITE_WINDSOR_PROXY_URL
+  const PROXY_URL = import.meta.env.VITE_WINDSOR_PROXY_URL || 'https://blissclub-proxy-mgua.onrender.com'
 
   async function handleSync() {
     setSyncing(true)
