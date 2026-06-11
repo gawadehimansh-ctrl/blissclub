@@ -158,8 +158,6 @@ export default function Weekly() {
   const compTo   = new Date(dateFrom - 1)
   const compFrom = new Date(compTo - spanMs)
 
-  // Fetch GA4 channel data (all sessions incl organic/google/direct)
-  const [ga4Full, setGa4Full] = useState([])
   useEffect(() => {
     fetch(`${PROXY}/api/ga4`)
       .then(r => r.json())
@@ -167,7 +165,6 @@ export default function Weekly() {
       .catch(() => {})
   }, [])
 
-  // Fetch GA4 items for categories/products
   useEffect(() => {
     setItemsLoading(true)
     fetch(`${PROXY}/api/ga4-items`)
@@ -184,8 +181,8 @@ export default function Weekly() {
   }
 
   // ── Data sources ─────────────────────────────────────────────────────────────
-  // Use full GA4 (all sessions) for channel split, ga4Dump for KPIs (has revenue)
-  const ga4All  = state.ga4Dump  || []
+  // Use full GA4 (all sessions) for channel split, metaDB for KPIs (has revenue)
+  const ga4All  = []
   const metaAll = state.metaDB   || []
   const gAdsAll = state.googleDump || []
 
@@ -201,10 +198,10 @@ export default function Weekly() {
   const metaSpend  = useMemo(()=> metaWeek.reduce((s,r)=>s+(r.spend||0),0), [metaWeek])
   const gadsSpend  = useMemo(()=> gadsWeek.reduce((s,r)=>s+(r.cost||0),0), [gadsWeek])
 
-  const revenue  = useMemo(()=> ga4Week.reduce((s,r)=>s+(r.totalrevenue||r.gaRevenue||0),0), [ga4Week])
-  const revPrev  = useMemo(()=> ga4Prev.reduce((s,r)=>s+(r.totalrevenue||r.gaRevenue||0),0), [ga4Prev])
-  const orders   = useMemo(()=> ga4Week.reduce((s,r)=>s+(r.transactions||r.gaOrders||0),0), [ga4Week])
-  const ordersPrev=useMemo(()=> ga4Prev.reduce((s,r)=>s+(r.transactions||r.gaOrders||0),0), [ga4Prev])
+  const revenue  = useMemo(()=> ga4Week.reduce((s,r)=>s+(r.totalrevenue||r.fbRevenue||0),0), [ga4Week])
+  const revPrev  = useMemo(()=> ga4Prev.reduce((s,r)=>s+(r.totalrevenue||r.fbRevenue||0),0), [ga4Prev])
+  const orders   = useMemo(()=> ga4Week.reduce((s,r)=>s+(r.transactions||r.fbOrders||0),0), [ga4Week])
+  const ordersPrev=useMemo(()=> ga4Prev.reduce((s,r)=>s+(r.transactions||r.fbOrders||0),0), [ga4Prev])
   const sessions = useMemo(()=> ga4Week.reduce((s,r)=>s+(r.sessions||0),0), [ga4Week])
   const sessPrev = useMemo(()=> ga4Prev.reduce((s,r)=>s+(r.sessions||0),0), [ga4Prev])
 
@@ -223,21 +220,21 @@ export default function Weekly() {
     for (const r of ga4FullWeek) {
       const ch = getChannel(r.source||'', r.medium||'', r.campaign||'')
       if (!map[ch]) map[ch] = { channel:ch, revenue:0, sessions:0, orders:0, sources:{} }
-      map[ch].revenue  += r.totalrevenue||r.gaRevenue||0
+      map[ch].revenue  += r.totalrevenue||r.fbRevenue||0
       map[ch].sessions += r.sessions||0
-      map[ch].orders   += r.transactions||r.gaOrders||0
+      map[ch].orders   += r.transactions||r.fbOrders||0
       // Track source breakdown for drill
       const src = r.source||'(unknown)'
       if (!map[ch].sources[src]) map[ch].sources[src] = { source:src, revenue:0, sessions:0, orders:0, campaigns:{} }
-      map[ch].sources[src].revenue  += r.totalrevenue||r.gaRevenue||0
+      map[ch].sources[src].revenue  += r.totalrevenue||r.fbRevenue||0
       map[ch].sources[src].sessions += r.sessions||0
-      map[ch].sources[src].orders   += r.transactions||r.gaOrders||0
+      map[ch].sources[src].orders   += r.transactions||r.fbOrders||0
       // Track campaign breakdown
       const camp = r.campaign||'(unknown)'
       if (!map[ch].sources[src].campaigns[camp]) map[ch].sources[src].campaigns[camp] = { campaign:camp, revenue:0, sessions:0, orders:0 }
-      map[ch].sources[src].campaigns[camp].revenue  += r.totalrevenue||r.gaRevenue||0
+      map[ch].sources[src].campaigns[camp].revenue  += r.totalrevenue||r.fbRevenue||0
       map[ch].sources[src].campaigns[camp].sessions += r.sessions||0
-      map[ch].sources[src].campaigns[camp].orders   += r.transactions||r.gaOrders||0
+      map[ch].sources[src].campaigns[camp].orders   += r.transactions||r.fbOrders||0
     }
     return Object.values(map).map(c=>({...c,revShare:revenue>0?(c.revenue/revenue)*100:0,sourcesArr:Object.values(c.sources).sort((a,b)=>b.revenue-a.revenue)})).sort((a,b)=>b.revenue-a.revenue)
   }, [ga4Full, dateFrom, dateTo, revenue])
@@ -250,9 +247,9 @@ export default function Weekly() {
       const wGA4  = ga4All.filter(r=>inRange(r.date,wS,wE))
       const wMeta = metaAll.filter(r=>inRange(r.date,wS,wE))
       const wGads = gAdsAll.filter(r=>inRange(r.date,wS,wE))
-      const wRev  = wGA4.reduce((s,r)=>s+(r.totalrevenue||r.gaRevenue||0),0)
+      const wRev  = wGA4.reduce((s,r)=>s+(r.totalrevenue||r.fbRevenue||0),0)
       const wSpend= wMeta.reduce((s,r)=>s+(r.spend||0),0)+wGads.reduce((s,r)=>s+(r.cost||0),0)
-      const wOrd  = wGA4.reduce((s,r)=>s+(r.transactions||r.gaOrders||0),0)
+      const wOrd  = wGA4.reduce((s,r)=>s+(r.transactions||r.fbOrders||0),0)
       return { label:format(wS,'dd MMM'), revenue:Math.round(wRev), spend:Math.round(wSpend), roas:wSpend>0?parseFloat((wRev/wSpend).toFixed(2)):0, orders:Math.round(wOrd) }
     })
   }, [ga4All,metaAll,gAdsAll])
