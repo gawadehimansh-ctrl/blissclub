@@ -25,8 +25,8 @@ const METRICS = [
   { key: 'cpm',        label: 'CPM',       fmt: v => v > 0 ? fmtINRCompact(v) : '—' },
   { key: 'ctr',        label: 'CTR',       fmt: v => v > 0 ? fmtPct(v) : '—' },
   { key: 'cpc',        label: 'CPC',       fmt: v => v > 0 ? fmtINRCompact(v) : '—' },
-  { key: 'roasGA4',    label: 'GA4 ROAS',  fmt: v => v > 0 ? fmtX(v) : '—' },
-  { key: 'gaRevenue',  label: 'GA4 Rev',   fmt: v => v > 0 ? fmtINRCompact(v) : '—' },
+  { key: 'metaRoas',   label: 'ROAS',      fmt: v => v > 0 ? fmtX(v) : '—' },
+  { key: 'fbRevenue',  label: 'Meta Rev',  fmt: v => v > 0 ? fmtINRCompact(v) : '—' },
   { key: 'orders',     label: 'Orders',    fmt: v => v > 0 ? fmtNum(v) : '—' },
   { key: 'cpa',        label: 'CPA',       fmt: v => v > 0 ? fmtINRCompact(v) : '—' },
   { key: 'ecr',        label: 'ECR',       fmt: v => v > 0 ? fmtPct(v) : '—' },
@@ -43,11 +43,11 @@ function buildMetrics(rows, totalSpend) {
     cpm:       agg.impressions > 0 ? (spend / agg.impressions) * 1000 : 0,
     ctr:       agg.impressions > 0 ? (agg.clicks || 0) / agg.impressions : 0,
     cpc:       (agg.clicks || 0) > 0 ? spend / agg.clicks : 0,
-    roasGA4:   calcROAS(agg.gaRevenue, spend),
-    gaRevenue: agg.gaRevenue || 0,
-    orders:    agg.gaOrders  || 0,
-    cpa:       (agg.gaOrders || 0) > 0 ? spend / agg.gaOrders : 0,
-    ecr:       (agg.sessions || 0) > 0 ? (agg.gaOrders || 0) / agg.sessions : 0,
+    metaRoas:   spend > 0 ? (agg.fbRevenue||0)/spend : 0,
+    fbRevenue: agg.fbRevenue || 0,
+    orders:    agg.fbOrders  || 0,
+    cpa:       (agg.fbOrders || 0) > 0 ? spend / agg.fbOrders : 0,
+    
     creatives: [...new Set(rows.map(r => r.creativeName || r.adName))].filter(Boolean).length,
   }
 }
@@ -71,7 +71,7 @@ function CohortCard({ cohort, data, totalSpend }) {
         {[
           { label: 'Spend',    val: fmtINRCompact(data.spend) },
           { label: 'Spend %',  val: data.spendPct > 0 ? `${data.spendPct.toFixed(1)}%` : '—' },
-          { label: 'GA4 ROAS', val: data.roasGA4 > 0 ? fmtX(data.roasGA4) : '—' },
+          { label: 'ROAS', val: data.metaRoas > 0 ? fmtX(data.metaRoas) : '—' },
           { label: 'CPC',      val: data.cpc > 0 ? fmtINRCompact(data.cpc) : '—' },
           { label: 'CPA',      val: data.cpa > 0 ? fmtINRCompact(data.cpa) : '—' },
           { label: 'Orders',   val: data.orders > 0 ? fmtNum(data.orders) : '—' },
@@ -177,9 +177,9 @@ const TD = {
 
 function metricColor(key, val) {
   if (!val || val === 0) return '#475569'
-  if (key === 'roasGA4' || key === 'roas1dc') return val >= 3 ? '#22c55e' : val >= 1.5 ? '#fbbf24' : '#ef4444'
+  if (key === 'metaRoas' || key === 'roas1dc') return val >= 3 ? '#22c55e' : val >= 1.5 ? '#fbbf24' : '#ef4444'
   if (key === 'ctr') return val >= 0.02 ? '#22c55e' : val >= 0.01 ? '#fbbf24' : '#ef4444'
-  if (key === 'gaRevenue') return '#a78bfa'
+  if (key === 'fbRevenue') return 'var(--pink)'
   if (key === 'spend') return '#e2e8f0'
   return '#94a3b8'
 }
