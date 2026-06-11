@@ -26,22 +26,9 @@ export function useWindsor() {
         r.datasource === 'facebook' ||
         (r.datasource !== 'googleanalytics4' && r.spend > 0)
       )
-      const ga4Rows = parsed.filter(r =>
-        r.datasource === 'googleanalytics4' ||
-        (r.datasource !== 'facebook' && !r.spend && (r.revenue > 0 || r.sessions > 0))
-      )
       if (metaRows.length > 0) loadData(metaRows, 'META_DB', true)
-      if (ga4Rows.length > 0)  loadData(ga4Rows, 'Shopify_DUMP', false) // append
-      results.success.push(`Meta (${metaRows.length}) + Shopify (${ga4Rows.length})`)
+      results.success.push(`Meta (${metaRows.length})`)
     } catch (e) { results.errors.push(`Meta: ${e.message}`) }
-
-    // Shopify standalone
-    try {
-      const data = await fetchEndpoint(`/api/ga4?preset=${preset}`)
-      const parsed = parseWindsorPayload(data, 'ga4')
-      if (parsed.length > 0) loadData(parsed, 'Shopify_DUMP', false) // append not replace
-      results.success.push(`Shopify (${parsed.length})`)
-    } catch (e) { results.errors.push(`Shopify: ${e.message}`) }
 
     // Google campaigns
     try {
