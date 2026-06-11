@@ -1,4 +1,4 @@
-// All core metric calculations for BlissClub dashboard
+// All core metric calculations for Rubans dashboard
 
 export function calcROAS(revenue, spend) {
   if (!spend || spend === 0) return 0
@@ -40,20 +40,20 @@ export function calcHoldRate(thruPlays, threeSecViews) {
   return thruPlays / threeSecViews
 }
 
-// 1DC vs GA4 gap — how much Meta is over-reporting
+// 1DC vs Shopify gap — how much Meta is over-reporting
 export function calcROASGap(metaReported, ga4Tracked) {
   if (!ga4Tracked || ga4Tracked === 0) return null
   return ((metaReported - ga4Tracked) / ga4Tracked) * 100
 }
 
-// Blended ROAS: GA4 revenue / total paid spend (configurable channels)
+// Blended ROAS: Revenue / total paid spend (configurable channels)
 export function calcBlendedROAS({ ga4Revenue, metaSpend = 0, googleSpend = 0, clmSpend = 0, retentionSpend = 0 }) {
   const totalSpend = metaSpend + googleSpend + clmSpend + retentionSpend
   if (totalSpend === 0) return 0
   return ga4Revenue / totalSpend
 }
 
-// Blended CAC: total spend / GA4 orders
+// Blended CAC: total spend / Shopify orders
 export function calcBlendedCAC({ totalSpend, ga4Orders }) {
   if (!ga4Orders || ga4Orders === 0) return 0
   return totalSpend / ga4Orders
@@ -62,7 +62,7 @@ export function calcBlendedCAC({ totalSpend, ga4Orders }) {
 // Aggregate rows - sum numeric fields, recompute derived metrics
 export function aggregateRows(rows, fields = {}) {
   const sums = {}
-  const numFields = fields.sum || ['spend', 'impressions', 'clicks', 'sessions', 'fbOrders', 'fbRevenue', 'gaOrders', 'gaRevenue', 'transactions', 'revenue', 'cost', 'reach']
+  const numFields = fields.sum || ['spend', 'impressions', 'clicks', 'sessions', 'fbOrders', 'fbRevenue', 'orders', 'revenue', 'transactions', 'revenue', 'cost', 'reach']
 
   for (const f of numFields) {
     sums[f] = rows.reduce((acc, r) => acc + (Number(r[f]) || 0), 0)
@@ -70,15 +70,15 @@ export function aggregateRows(rows, fields = {}) {
 
   // Recompute rates from sums
   sums.roas1dc = calcROAS(sums.fbRevenue, sums.spend)
-  sums.roasGA4 = calcROAS(sums.gaRevenue, sums.spend)
-  sums.roasGap = calcROASGap(sums.roas1dc, sums.roasGA4)
+  sums.roas = calcROAS(sums.revenue, sums.spend)
+  sums.roasGap = calcROASGap(sums.roas1dc, sums.roas)
   sums.ctr = calcCTR(sums.clicks, sums.impressions)
   sums.cpm = calcCPM(sums.spend, sums.impressions)
   sums.cpc = sums.clicks > 0 ? sums.spend / sums.clicks : 0
-  sums.cvr = calcCVR(sums.gaOrders, sums.sessions)
-  sums.aov = calcAOV(sums.gaRevenue, sums.gaOrders)
-  sums.cpa = calcCAC(sums.spend, sums.gaOrders)
-  sums.ecr = sums.sessions > 0 ? sums.gaOrders / sums.sessions : 0
+  sums.cvr = calcCVR(sums.orders, sums.sessions)
+  sums.aov = calcAOV(sums.revenue, sums.orders)
+  sums.cpa = calcCAC(sums.spend, sums.orders)
+  sums.ecr = sums.sessions > 0 ? sums.orders / sums.sessions : 0
 
   return sums
 }
