@@ -62,11 +62,11 @@ export default function MetaCampaigns() {
     const source = drillKey && level === 'Ad' ? rows.filter(r => r.adsetName === drillKey) : rows
     return source.map(r => ({
       ...r,
-      roasGA4: calcROAS(r.gaRevenue, r.spend),
+      metaRoas: r.spend > 0 ? (r.fbRevenue || 0) / r.spend : 0,
       ctr: r.impressions > 0 ? r.clicks / r.impressions : 0,
       cpm: r.impressions > 0 ? (r.spend / r.impressions) * 1000 : 0,
       cpc: r.clicks > 0 ? r.spend / r.clicks : 0,
-      cpa: r.gaOrders > 0 ? r.spend / r.gaOrders : 0,
+      cpa: r.fbOrders > 0 ? r.spend / r.fbOrders : 0,
     })).sort((a, b) => b.spend - a.spend)
   }, [rows, drillKey, level])
 
@@ -78,10 +78,10 @@ export default function MetaCampaigns() {
     { key: 'clicks', label: 'Clicks', render: v => fmtNum(v) },
     { key: 'ctr', label: 'CTR', render: v => fmtPct(v) },
     { key: 'cpm', label: 'CPM', render: v => fmtINRCompact(v) },
-    { key: 'gaRevenue', label: 'GA4 Rev', render: v => fmtINRCompact(v), color: () => 'var(--purple)' },
-    { key: 'roasGA4', label: 'GA4 ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
+    { key: 'fbRevenue', label: 'Meta Rev', render: v => fmtINRCompact(v), color: () => 'var(--pink)' },
+    { key: 'metaRoas', label: 'ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
     { key: 'roasGap', label: 'Gap %', render: v => v != null ? `+${v?.toFixed(1)}%` : '—', color: v => v > 30 ? 'var(--red)' : v > 15 ? 'var(--amber)' : 'var(--text2)' },
-    { key: 'gaOrders', label: 'Orders', render: v => fmtNum(v) },
+    { key: 'fbOrders', label: 'Purchases', render: v => fmtNum(v) },
     { key: 'cpa', label: 'CPA', render: v => fmtINRCompact(v) },
   ]
 
@@ -103,11 +103,11 @@ export default function MetaCampaigns() {
     { key: 'ctr', label: 'CTR', render: v => fmtPct(v), color: v => v > 0.02 ? 'var(--green)' : v > 0.01 ? 'var(--amber)' : 'var(--red)' },
     { key: 'cpc', label: 'CPC', render: v => fmtINRCompact(v) },
     { key: 'cpm', label: 'CPM', render: v => fmtINRCompact(v) },
-    { key: 'roasGA4', label: 'GA4 ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
+    { key: 'metaRoas', label: 'ROAS', render: v => fmtX(v), color: v => v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)' },
     { key: 'roasGap', label: 'Gap %', render: v => v != null ? `+${v?.toFixed(1)}%` : '—', color: v => v > 30 ? 'var(--red)' : v > 15 ? 'var(--amber)' : 'var(--text2)' },
     { key: 'reach',     label: 'Reach',   render: v => v > 0 ? fmtNum(v) : '—' },
-    { key: 'gaRevenue', label: 'GA4 Rev', render: v => fmtINRCompact(v) },
-    { key: 'gaOrders', label: 'Orders', render: v => fmtNum(v) },
+    { key: 'fbRevenue', label: 'Meta Rev', render: v => fmtINRCompact(v) },
+    { key: 'fbOrders', label: 'Purchases', render: v => fmtNum(v) },
     { key: 'cpa', label: 'CPA', render: v => fmtINRCompact(v) },
     { key: 'saleTag', label: 'Tag' },
   ]
@@ -120,15 +120,15 @@ export default function MetaCampaigns() {
     <div style={{ padding: '24px 28px', width: '100%' }}>
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Meta campaigns</h1>
-        <div style={{ fontSize: 12, color: 'var(--text3)' }}>GA4 ROAS — source of truth</div>
+        <div style={{ fontSize: 12, color: 'var(--text3)' }}>Meta ROAS — 1-day click</div>
       </div>
       <FilterBar filters={filters} showAdvanced />
 
       {/* Totals */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 10, marginBottom: 16 }}>
         <MetricCard label="Spend" value={fmtINRCompact(totals.spend)} accent="var(--pink)" />
-        <MetricCard label="GA4 ROAS" value={fmtX(totals.roasGA4)} accent="var(--purple)" sublabel="Source of truth" />
-        <MetricCard label="CPA (GA4)" value={fmtINRCompact(totals.cpa)} accent="var(--pink)" />
+        <MetricCard label="Meta ROAS" value={fmtX(totals.metaRoas)} accent="var(--purple)" sublabel="1-day click" />
+        <MetricCard label="CPA" value={fmtINRCompact(totals.cpa)} accent="var(--pink)" />
       </div>
 
       {/* Level switcher */}
@@ -173,17 +173,17 @@ export default function MetaCampaigns() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: 'var(--bg3)', borderBottom: '0.5px solid var(--border2)' }}>
-                {['Ad', 'Delivery', 'Budget', 'Reach', 'Impr.', 'Spend', 'CTR', 'CPM', 'GA4 Rev', 'ROAS', 'Orders', 'CPA'].map((h, i) => (
+                {['Ad', 'Delivery', 'Budget', 'Reach', 'Impr.', 'Spend', 'CTR', 'CPM', 'Meta Rev', 'ROAS', 'Orders', 'CPA'].map((h, i) => (
                   <th key={h} style={{ padding: '8px 10px', fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: i <= 1 ? 'left' : 'right', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {tableData.map((r, i) => {
-                const roas = r.gaRevenue > 0 && r.spend > 0 ? r.gaRevenue / r.spend : 0
+                const roas = r.fbRevenue > 0 && r.spend > 0 ? (r.fbRevenue || 0) / r.spend : 0
                 const ctr = r.impressions > 0 ? r.clicks / r.impressions : 0
                 const cpm = r.impressions > 0 ? (r.spend / r.impressions) * 1000 : 0
-                const cpa = r.gaOrders > 0 ? r.spend / r.gaOrders : 0
+                const cpa = r.fbOrders > 0 ? r.spend / r.fbOrders : 0
                 return (
                   <tr key={i} style={{ borderBottom: '0.5px solid var(--border)' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
@@ -211,9 +211,9 @@ export default function MetaCampaigns() {
                     <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600 }}>₹{Math.round(r.spend).toLocaleString('en-IN')}</td>
                     <td style={{ padding: '8px 10px', textAlign: 'right', color: ctr>=0.02?'var(--green)':ctr>=0.01?'var(--amber)':'var(--red)' }}>{fmtPct(ctr)}</td>
                     <td style={{ padding: '8px 10px', textAlign: 'right' }}>{fmtINRCompact(cpm)}</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--purple)' }}>{fmtINRCompact(r.gaRevenue)}</td>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--pink)' }}>{fmtINRCompact(r.fbRevenue || 0)}</td>
                     <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, color: roas>=4?'var(--green)':roas>=2?'var(--amber)':'var(--red)' }}>{roas > 0 ? `${roas.toFixed(2)}x` : '—'}</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right' }}>{r.gaOrders > 0 ? Math.round(r.gaOrders) : '—'}</td>
+                    <td style={{ padding: '8px 10px', textAlign: 'right' }}>{r.fbOrders > 0 ? Math.round(r.fbOrders) : '—'}</td>
                     <td style={{ padding: '8px 10px', textAlign: 'right' }}>{cpa > 0 ? fmtINRCompact(cpa) : '—'}</td>
                   </tr>
                 )
