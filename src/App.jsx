@@ -17,6 +17,7 @@ import BlendedHealth    from './pages/BlendedHealth.jsx'
 import Upload           from './pages/Upload.jsx'
 import CoPilotPage     from './pages/CoPilotPage.jsx'
 import MetaCatalog     from './pages/MetaCatalog.jsx'
+import SKUAnalysis     from './pages/SKUAnalysis.jsx'
 import CoPilot         from './components/CoPilot.jsx'
 
 // SVG Icons matching Figma sidebar exactly
@@ -51,6 +52,7 @@ const NAV = [
   { path: '/google/awareness',  label: 'Awareness',         icon: Icons.awareness, group: 'Google' },
   { path: '/google/products',   label: 'Products',          icon: Icons.products,  group: 'Google' },
   { path: '/google/demandgen',  label: 'Demand Gen',        icon: Icons.demandgen, group: 'Google' },
+  { path: '/sku',               label: 'SKU Analysis',      icon: Icons.upload,    group: 'Data' },
   { path: '/copilot',           label: 'Co-pilot',          icon: Icons.copilot,   group: 'Data' },
   { path: '/upload',            label: 'Upload data',       icon: Icons.upload,    group: 'Data' },
 ]
@@ -176,6 +178,7 @@ function Layout() {
           <Route path="/google/awareness" element={<GoogleAwareness />} />
           <Route path="/google/products"  element={<GoogleProducts />} />
           <Route path="/google/demandgen" element={<GoogleDemandGen />} />
+          <Route path="/sku"             element={<SKUAnalysis />} />
           <Route path="/copilot"          element={<CoPilotPage />} />
           <Route path="/upload"           element={<Upload />} />
         </Routes>
