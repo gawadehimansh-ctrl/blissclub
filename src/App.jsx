@@ -18,6 +18,7 @@ import Upload           from './pages/Upload.jsx'
 import CoPilotPage     from './pages/CoPilotPage.jsx'
 import MetaCatalog     from './pages/MetaCatalog.jsx'
 import SKUAnalysis     from './pages/SKUAnalysis.jsx'
+import AudienceSegments from './pages/AudienceSegments.jsx'
 import CoPilot         from './components/CoPilot.jsx'
 
 // SVG Icons matching Figma sidebar exactly
@@ -47,6 +48,7 @@ const NAV = [
   { path: '/meta/creative',     label: 'Creative lookback', icon: Icons.creative,  group: 'Meta' },
   { path: '/meta/cohort',       label: 'Cohort matrix',     icon: Icons.cohort,    group: 'Meta' },
   { path: '/meta/catalog',      label: 'Meta catalog',      icon: Icons.creative,  group: 'Meta' },
+  { path: '/meta/audience',     label: 'Audience segments', icon: Icons.cohort,    group: 'Meta' },
   { path: '/google/campaigns',  label: 'Campaigns',         icon: Icons.gcampaign, group: 'Google' },
   { path: '/google/keywords',   label: 'Brand vs NB',       icon: Icons.keywords,  group: 'Google' },
   { path: '/google/awareness',  label: 'Awareness',         icon: Icons.awareness, group: 'Google' },
@@ -173,6 +175,7 @@ function Layout() {
           <Route path="/meta/creative"    element={<MetaCreative />} />
           <Route path="/meta/cohort"      element={<MetaCohortMatrix />} />
           <Route path="/meta/catalog"     element={<MetaCatalog />} />
+          <Route path="/meta/audience"    element={<AudienceSegments />} />
           <Route path="/google/campaigns" element={<GoogleCampaigns />} />
           <Route path="/google/keywords"  element={<GoogleKeywords />} />
           <Route path="/google/awareness" element={<GoogleAwareness />} />
