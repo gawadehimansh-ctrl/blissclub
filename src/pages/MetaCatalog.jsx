@@ -1,329 +1,235 @@
-import React, { useMemo, useState } from 'react'
-import { useData } from '../data/store.jsx'
-import { useFilters, PRESET_RANGES } from '../hooks/useFilters.js'
-import { format } from 'date-fns'
-import { CATALOG_MAP } from '../data/catalogMap.js'
+import React, { useMemo, useState, useCallback } from 'react'
+import { fmtINR, fmtINRCompact, fmtX, fmtNum } from '../utils/formatters.js'
 
-// CATALOG_MAP: { contentId → { g: groupId, n: productName } }
-// Used ONLY for grouping — all performance data comes from Windsor API (state.metaCatalog)
-
-const fmtC = n => !n ? '—' : n >= 10000000 ? '₹'+(n/10000000).toFixed(2)+'Cr' : n >= 100000 ? '₹'+(n/100000).toFixed(1)+'L' : n >= 1000 ? '₹'+(n/1000).toFixed(1)+'K' : '₹'+Math.round(n).toLocaleString('en-IN')
-const fmtN = n => !n ? '—' : Number(n).toLocaleString('en-IN')
-const fmtR = n => !n ? '—' : Number(n).toFixed(2)+'x'
-const fmtP = n => Number(n||0).toFixed(2)+'%'
-
-const TH  = { padding:'9px 12px', fontSize:10, fontWeight:600, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.05em', background:'var(--bg3)', borderBottom:'0.5px solid var(--border2)', whiteSpace:'nowrap', cursor:'pointer', userSelect:'none' }
-const TD  = { padding:'9px 12px', fontSize:12, borderBottom:'0.5px solid var(--border)', color:'var(--text)', whiteSpace:'nowrap' }
-const TDr = { ...TD, textAlign:'right' }
-const TDs = { ...TDr, color:'var(--text3)' }
-
-function RoasBadge({ roas }) {
-  const r = Number(roas||0)
-  if (!r) return <span style={{ color:'var(--text3)' }}>—</span>
-  const color = r>=3?'#22c55e':r>=2?'#86efac':r>=1?'#f59e0b':'#ef4444'
-  return <span style={{ color, fontWeight:600 }}>{fmtR(r)}</span>
+let _XLSX = null
+async function loadXLSX() {
+  if (_XLSX) return _XLSX
+  return new Promise((resolve) => {
+    if (window.XLSX) { _XLSX = window.XLSX; return resolve(window.XLSX) }
+    const s = document.createElement('script')
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+    s.onload = () => { _XLSX = window.XLSX; resolve(window.XLSX) }
+    document.head.appendChild(s)
+  })
 }
 
-function SortTh({ col, label, sort, onSort, title }) {
-  const active = sort.col === col
-  return (
-    <th style={{ ...TH, color: active?'var(--text)':undefined }} title={title} onClick={() => onSort(col)}>
-      {label}{active?(sort.dir==='asc'?' ↑':' ↓'):''}
-    </th>
-  )
+// Parse Meta Ads Manager export — "Product ID" col = "47198888067246, Product Name"
+function parseCatalog(ws, XLSX) {
+  const rows = XLSX.utils.sheet_to_json(ws, { defval: null })
+  return rows.map(r => {
+    const raw = String(r['Product ID'] || '')
+    const commaIdx = raw.indexOf(',')
+    const product_id   = commaIdx > -1 ? raw.slice(0, commaIdx).trim() : raw.trim()
+    const product_name = commaIdx > -1 ? raw.slice(commaIdx + 1).trim() : raw.trim()
+    const spend   = Number(r['Amount spent (INR)']) || 0
+    const revenue = Number(r['Purchases conversion value']) || 0
+    const roas    = Number(r['ROAS']) || (spend > 0 ? revenue / spend : 0)
+    return {
+      date: r['Day'],
+      product_id, product_name,
+      spend, revenue, roas,
+      purchases: Number(r['Purchases']) || 0,
+      addToCart:  Number(r['Adds to cart']) || 0,
+      lpv:        Number(r['Website landing page views']) || 0,
+      clicks:     Number(r['Link clicks']) || 0,
+      impressions:Number(r['Impressions']) || 0,
+      ctr:        Number(r['CTR (link click-through rate)']) || 0,
+      cpm:        Number(r['CPM (cost per 1,000 impressions)']) || 0,
+      aov:        Number(r['AOV']) || 0,
+    }
+  })
 }
 
-// ── Variant drill panel ───────────────────────────────────────────────────────
-function VariantDrill({ variants }) {
-  const [sort, setSort] = useState({ col:'spend', dir:'desc' })
-  function onSort(col) { setSort(s => ({ col, dir: s.col===col&&s.dir==='desc'?'asc':'desc' })) }
+function roasCol(v) {
+  if (!v || v <= 0) return 'var(--text3)'
+  return v >= 4 ? 'var(--green)' : v >= 2 ? 'var(--amber)' : 'var(--red)'
+}
 
-  const sorted = useMemo(() =>
-    [...variants].sort((a,b) => sort.dir==='desc' ? b[sort.col]-a[sort.col] : a[sort.col]-b[sort.col])
-  , [variants, sort])
+const S = {
+  th: { padding:'8px 12px', fontSize:10, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.05em', whiteSpace:'nowrap', background:'var(--bg3)' },
+  td: { padding:'8px 12px', borderBottom:'0.5px solid var(--border)', fontSize:12 },
+}
+
+export default function MetaCatalog() {
+  const [rows, setRows]       = useState(null)
+  const [file, setFile]       = useState('')
+  const [loading, setLoading] = useState(false)
+  const [q, setQ]             = useState('')
+  const [sortKey, setSortKey] = useState('spend')
+
+  const handleFile = useCallback(async (f) => {
+    if (!f) return
+    setLoading(true)
+    setFile(f.name)
+    const XLSX = await loadXLSX()
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'binary' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        setRows(parseCatalog(ws, XLSX))
+      } catch(err) { console.error(err) }
+      setLoading(false)
+    }
+    reader.readAsBinaryString(f)
+  }, [])
+
+  // Group by product_id, aggregate across dates
+  const products = useMemo(() => {
+    if (!rows) return []
+    const map = {}
+    for (const r of rows) {
+      if (!r.product_id || r.product_id === 'unknown') continue
+      if (!map[r.product_id]) {
+        map[r.product_id] = {
+          product_id: r.product_id, product_name: r.product_name,
+          spend: 0, revenue: 0, purchases: 0, addToCart: 0, lpv: 0, clicks: 0, impressions: 0,
+        }
+      }
+      const p = map[r.product_id]
+      p.spend       += r.spend
+      p.revenue     += r.revenue
+      p.purchases   += r.purchases
+      p.addToCart   += r.addToCart
+      p.lpv         += r.lpv
+      p.clicks      += r.clicks
+      p.impressions += r.impressions
+    }
+    return Object.values(map).map(p => ({
+      ...p,
+      roas: p.spend > 0 ? p.revenue / p.spend : 0,
+      cpa:  p.purchases > 0 ? p.spend / p.purchases : 0,
+      ctr:  p.impressions > 0 ? (p.clicks / p.impressions) * 100 : 0,
+    }))
+  }, [rows])
+
+  const totals = useMemo(() => {
+    const t = products.reduce((acc, p) => ({
+      spend: acc.spend + p.spend,
+      revenue: acc.revenue + p.revenue,
+      purchases: acc.purchases + p.purchases,
+    }), { spend: 0, revenue: 0, purchases: 0 })
+    return { ...t, roas: t.spend > 0 ? t.revenue / t.spend : 0 }
+  }, [products])
+
+  const filtered = useMemo(() => {
+    return products
+      .filter(p => !q || p.product_name.toLowerCase().includes(q.toLowerCase()) || p.product_id.includes(q))
+      .sort((a, b) => b[sortKey] - a[sortKey])
+      .slice(0, 500)
+  }, [products, q, sortKey])
+
+  const dateRange = useMemo(() => {
+    if (!rows || rows.length === 0) return ''
+    const dates = [...new Set(rows.map(r => r.date))].sort()
+    return dates.length > 1 ? `${dates[0]} → ${dates[dates.length-1]}` : dates[0]
+  }, [rows])
 
   return (
-    <tr>
-      <td colSpan={12} style={{ padding:0, background:'rgba(127,119,221,0.04)', borderBottom:'1px solid var(--border2)' }}>
-        <div style={{ padding:'10px 12px 14px 44px' }}>
-          <div style={{ fontSize:10, fontWeight:600, color:'var(--text3)', letterSpacing:'0.08em', marginBottom:8 }}>
-            VARIANT BREAKDOWN — {sorted.length} variants (Content ID level) · all data from Windsor API
+    <div style={{padding:'24px 28px'}}>
+      {/* Header */}
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20}}>
+        <div>
+          <h1 style={{fontSize:22, fontWeight:700, marginBottom:4}}>Meta Catalog</h1>
+          <div style={{fontSize:12, color:'var(--text3)'}}>
+            {products.length > 0
+              ? `${products.length} products · ${file}${dateRange ? ` · ${dateRange}` : ''}`
+              : 'Upload Meta Ads Manager catalog export (Breakdown by Product ID)'}
           </div>
-          <div style={{ overflowX:'auto', borderRadius:7, border:'0.5px solid var(--border)' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+        </div>
+        {products.length > 0 && (
+          <div style={{display:'flex', gap:8, alignItems:'center'}}>
+            <select value={sortKey} onChange={e=>setSortKey(e.target.value)}
+              style={{fontSize:11, padding:'5px 8px', borderRadius:6, background:'var(--bg3)', border:'0.5px solid var(--border2)', color:'var(--text)', cursor:'pointer'}}>
+              <option value="spend">Sort by Spend</option>
+              <option value="revenue">Sort by Revenue</option>
+              <option value="roas">Sort by ROAS</option>
+              <option value="purchases">Sort by Purchases</option>
+            </select>
+            <label style={{fontSize:11, padding:'6px 12px', borderRadius:6, background:'var(--bg3)', border:'0.5px solid var(--border2)', color:'var(--text2)', cursor:'pointer', whiteSpace:'nowrap'}}>
+              Replace file
+              <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e=>handleFile(e.target.files?.[0])} />
+            </label>
+          </div>
+        )}
+      </div>
+
+      {/* Upload prompt */}
+      {!rows && !loading && (
+        <label style={{display:'block', border:'1.5px dashed var(--border2)', borderRadius:12, padding:'48px 24px', textAlign:'center', cursor:'pointer', background:'var(--bg2)', marginBottom:20}}>
+          <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e=>handleFile(e.target.files?.[0])} />
+          <div style={{fontSize:32, marginBottom:8}}>🛍️</div>
+          <div style={{fontSize:14, fontWeight:600, marginBottom:4}}>Drop Meta Catalog export here</div>
+          <div style={{fontSize:11, color:'var(--text3)'}}>Ads Manager → Breakdown → By Delivery → Product ID → Export</div>
+          <div style={{fontSize:11, color:'var(--blue)', marginTop:8}}>or click to browse</div>
+        </label>
+      )}
+      {loading && <div style={{textAlign:'center', padding:40, color:'var(--text3)', fontSize:13}}>Parsing Excel… ({rows ? rows.length : 'thousands of'} rows)</div>}
+
+      {products.length > 0 && (
+        <>
+          {/* Summary cards */}
+          <div style={{display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:10, marginBottom:20}}>
+            {[
+              { label: 'Products', value: fmtNum(products.length), color: 'var(--text)' },
+              { label: 'Total Spend', value: fmtINR(totals.spend), color: 'var(--text)' },
+              { label: 'Total Revenue', value: fmtINR(totals.revenue), color: 'var(--pink)' },
+              { label: 'Blended ROAS', value: fmtX(totals.roas), color: roasCol(totals.roas) },
+            ].map(c => (
+              <div key={c.label} style={{background:'var(--bg2)', border:'0.5px solid var(--border)', borderRadius:10, padding:'14px 16px'}}>
+                <div style={{fontSize:10, color:'var(--text3)', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.05em'}}>{c.label}</div>
+                <div style={{fontSize:20, fontWeight:700, color:c.color}}>{c.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div style={{marginBottom:12}}>
+            <input placeholder="Search product name or ID…" value={q} onChange={e=>setQ(e.target.value)}
+              style={{width:'100%', maxWidth:400, padding:'7px 12px', borderRadius:8, background:'var(--bg3)', border:'0.5px solid var(--border2)', color:'var(--text)', fontSize:12}}/>
+          </div>
+
+          {/* Table */}
+          <div style={{overflowX:'auto', borderRadius:8, border:'0.5px solid var(--border)'}}>
+            <table style={{width:'100%', borderCollapse:'collapse', fontSize:12}}>
               <thead>
                 <tr>
-                  <SortTh col="contentId"   label="Content ID"  sort={sort} onSort={onSort} />
-                  <SortTh col="spend"       label="Spend"       sort={sort} onSort={onSort} />
-                  <SortTh col="impressions" label="Impr."       sort={sort} onSort={onSort} />
-                  <SortTh col="clicks"      label="Clicks"      sort={sort} onSort={onSort} />
-                  <SortTh col="ctr"         label="CTR%"        sort={sort} onSort={onSort} />
-                  <SortTh col="atc"         label="ATC"         sort={sort} onSort={onSort} />
-                  <SortTh col="atcRate"     label="ATC%"        sort={sort} onSort={onSort} title="ATC / Views" />
-                  <SortTh col="views"       label="Views"       sort={sort} onSort={onSort} />
-                  <SortTh col="purchases"   label="Purchases"   sort={sort} onSort={onSort} />
-                  <SortTh col="revenue"     label="Revenue"     sort={sort} onSort={onSort} />
-                  <SortTh col="roas"        label="ROAS"        sort={sort} onSort={onSort} />
-                  <SortTh col="cpa"         label="CPA"         sort={sort} onSort={onSort} />
+                  <th style={{...S.th, textAlign:'left'}}>Product</th>
+                  <th style={{...S.th, textAlign:'right'}}>Spend</th>
+                  <th style={{...S.th, textAlign:'right'}}>Revenue</th>
+                  <th style={{...S.th, textAlign:'right'}}>ROAS</th>
+                  <th style={{...S.th, textAlign:'right'}}>Purchases</th>
+                  <th style={{...S.th, textAlign:'right'}}>CPA</th>
+                  <th style={{...S.th, textAlign:'right'}}>ATC</th>
+                  <th style={{...S.th, textAlign:'right'}}>LPV</th>
+                  <th style={{...S.th, textAlign:'right'}}>CTR</th>
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((v, i) => (
-                  <tr key={v.contentId}
-                    style={{ background: i%2===0?'transparent':'rgba(255,255,255,0.01)' }}
-                    onMouseEnter={e => e.currentTarget.style.background='var(--bg3)'}
-                    onMouseLeave={e => e.currentTarget.style.background=i%2===0?'transparent':'rgba(255,255,255,0.01)'}>
-                    <td style={{ ...TD, fontSize:11, fontFamily:'monospace', color:'var(--text3)' }}>{v.contentId}</td>
-                    <td style={TD}>{fmtC(v.spend)}</td>
-                    <td style={TDs}>{fmtN(Math.round(v.impressions))}</td>
-                    <td style={TDs}>{fmtN(Math.round(v.clicks))}</td>
-                    <td style={{ ...TD, color:v.ctr>=2?'#22c55e':v.ctr>=1?'#f59e0b':undefined }}>{fmtP(v.ctr)}</td>
-                    <td style={TDs}>{v.atc>0?fmtN(Math.round(v.atc)):'—'}</td>
-                    <td style={{ ...TD, color:v.atcRate>10?'#22c55e':v.atcRate>5?'#f59e0b':undefined }}>{v.atcRate>0?fmtP(v.atcRate):'—'}</td>
-                    <td style={TDs}>{fmtN(Math.round(v.views))}</td>
-                    <td style={TDs}>{v.purchases>0?fmtN(Math.round(v.purchases)):'—'}</td>
-                    <td style={{ ...TD, color:v.revenue>0?'#22c55e':undefined }}>{fmtC(v.revenue)}</td>
-                    <td style={TD}><RoasBadge roas={v.roas} /></td>
-                    <td style={TDs}>{v.cpa>0?fmtC(v.cpa):'—'}</td>
+                {filtered.map((p,i) => (
+                  <tr key={p.product_id+i}
+                    onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <td style={{...S.td, maxWidth:320, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                      <div>{p.product_name}</div>
+                      <div style={{fontSize:10, color:'var(--text3)'}}>{p.product_id}</div>
+                    </td>
+                    <td style={{...S.td, textAlign:'right'}}>{fmtINR(p.spend)}</td>
+                    <td style={{...S.td, textAlign:'right', color:'var(--pink)'}}>{fmtINR(p.revenue)}</td>
+                    <td style={{...S.td, textAlign:'right', fontWeight:600, color:roasCol(p.roas)}}>{fmtX(p.roas)}</td>
+                    <td style={{...S.td, textAlign:'right'}}>{fmtNum(p.purchases)}</td>
+                    <td style={{...S.td, textAlign:'right'}}>{p.cpa > 0 ? fmtINR(p.cpa) : '—'}</td>
+                    <td style={{...S.td, textAlign:'right', color:'var(--text2)'}}>{fmtNum(p.addToCart)}</td>
+                    <td style={{...S.td, textAlign:'right', color:'var(--text2)'}}>{fmtNum(p.lpv)}</td>
+                    <td style={{...S.td, textAlign:'right', color:'var(--text2)'}}>{p.ctr.toFixed(2)}%</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {filtered.length === 500 && <div style={{textAlign:'center', padding:10, fontSize:11, color:'var(--text3)'}}>Showing top 500 · use search to narrow</div>}
           </div>
-        </div>
-      </td>
-    </tr>
-  )
-}
-
-// ── Main page ─────────────────────────────────────────────────────────────────
-export default function MetaCatalog() {
-  const { state }   = useData()
-  const filters = useFilters('last30')
-  const { dateFrom, dateTo, dateLabel, applyPreset } = filters
-  const [showDateMenu, setShowDateMenu] = useState(false)
-  const [search, setSearch] = useState('')
-  const [sort, setSort]     = useState({ col:'spend', dir:'desc' })
-  const [expanded, setExpanded] = useState(null)
-
-  const raw = useMemo(() => {
-    const all = state.metaCatalog || []
-    if (!dateFrom || !dateTo) return all
-    return all.filter(r => {
-      const d = r.date instanceof Date ? r.date : new Date(r.date)
-      return d >= dateFrom && d <= dateTo
-    })
-  }, [state.metaCatalog, dateFrom, dateTo])
-
-  // ── Aggregate Windsor data by Content ID ──────────────────────────────────
-  const byContentId = useMemo(() => {
-    const map = {}
-    for (const r of raw) {
-      const contentId = (r.product_id || '').split(',')[0].trim()
-      if (!contentId) continue
-      if (!map[contentId]) map[contentId] = {
-        contentId,
-        spend:0, impressions:0, clicks:0,
-        atc:0, views:0, purchases:0, revenue:0,
-      }
-      const g = map[contentId]
-      g.spend       += Number(r.spend||0)
-      g.impressions += Number(r.impressions||0)
-      g.clicks      += Number(r.clicks||0)
-      g.atc         += Number(r.actions_add_to_cart||0)
-      g.views       += Number(r.actions_view_content||0)
-      g.purchases   += Number(r.actions_purchase||0)
-      g.revenue     += Number(r.action_values_purchase||0)
-    }
-    return Object.values(map).map(v => ({
-      ...v,
-      ctr:     v.impressions>0 ? v.clicks/v.impressions*100 : 0,
-      roas:    v.spend>0 ? v.revenue/v.spend : 0,
-      atcRate: v.views>0 ? v.atc/v.views*100 : 0,
-      cpa:     v.purchases>0 ? v.spend/v.purchases : 0,
-    }))
-  }, [raw])
-
-  // ── Group by Product (via CATALOG_MAP Group ID) ───────────────────────────
-  const products = useMemo(() => {
-    const map = {}
-    for (const v of byContentId) {
-      const entry = CATALOG_MAP[v.contentId]
-      // If not in map, use product name from Windsor product_id field
-      const groupId = entry?.g || v.contentId
-      const productName = entry?.n ||
-        (raw.find(r => (r.product_id||'').startsWith(v.contentId))?.product_id||'').split(',').slice(1).join(',').trim() ||
-        'Unknown'
-
-      if (!map[groupId]) map[groupId] = {
-        groupId, productName, variants:[],
-        spend:0, impressions:0, clicks:0,
-        atc:0, views:0, purchases:0, revenue:0,
-      }
-      const g = map[groupId]
-      g.variants.push(v)
-      g.spend       += v.spend
-      g.impressions += v.impressions
-      g.clicks      += v.clicks
-      g.atc         += v.atc
-      g.views       += v.views
-      g.purchases   += v.purchases
-      g.revenue     += v.revenue
-    }
-    return Object.values(map).map(g => ({
-      ...g,
-      variantCount: g.variants.length,
-      ctr:     g.impressions>0 ? g.clicks/g.impressions*100 : 0,
-      roas:    g.spend>0 ? g.revenue/g.spend : 0,
-      atcRate: g.views>0 ? g.atc/g.views*100 : 0,
-      cpa:     g.purchases>0 ? g.spend/g.purchases : 0,
-    }))
-  }, [byContentId, raw])
-
-  // ── KPIs ──────────────────────────────────────────────────────────────────
-  const totalSpend    = products.reduce((s,p)=>s+p.spend,0)
-  const totalRevenue  = products.reduce((s,p)=>s+p.revenue,0)
-  const totalPurchases= products.reduce((s,p)=>s+p.purchases,0)
-  const totalAtc      = products.reduce((s,p)=>s+p.atc,0)
-  const totalViews    = products.reduce((s,p)=>s+p.views,0)
-  const blendedRoas   = totalSpend>0 ? totalRevenue/totalSpend : 0
-
-  function onSort(col) { setSort(s=>({ col, dir:s.col===col&&s.dir==='desc'?'asc':'desc' })) }
-
-  const filtered = useMemo(() => {
-    let out = products
-    if (search) { const q=search.toLowerCase(); out=out.filter(p=>p.productName.toLowerCase().includes(q)) }
-    return [...out].sort((a,b)=>sort.dir==='desc'?b[sort.col]-a[sort.col]:a[sort.col]-b[sort.col])
-  }, [products, search, sort])
-
-  const CARD = { background:'var(--bg2)', borderRadius:10, padding:'16px 20px', border:'0.5px solid var(--border)' }
-
-  if (raw.length===0) return (
-    <div style={{ padding:40, color:'var(--text3)', fontSize:14 }}>
-      No catalog data — click <strong>Sync everything</strong> on the Upload page.
-    </div>
-  )
-
-  return (
-    <div style={{ padding:'28px 32px', maxWidth:1400 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24 }}>
-        <div>
-        <h1 style={{ fontSize:22, fontWeight:700, marginBottom:4 }}>Meta Catalog / DPA — Product Intelligence</h1>
-        <div style={{ fontSize:13, color:'var(--text3)' }}>
-          {products.length} products · {byContentId.length} variants · all data via Windsor API · click row → variant drill
-        </div>
-      </div>
-      {/* Date picker */}
-      <div style={{ position:'relative' }}>
-        <button onClick={()=>setShowDateMenu(m=>!m)} style={{
-          display:'flex', alignItems:'center', gap:8, padding:'7px 14px', borderRadius:8,
-          background:'var(--bg2)', border:'0.5px solid var(--border2)', cursor:'pointer',
-          fontSize:12, color:'var(--text)', fontWeight:500,
-        }}>
-          📅 {dateLabel || (dateFrom && dateTo ? `${format(dateFrom,'d MMM')} – ${format(dateTo,'d MMM yy')}` : 'Last 30 days')}
-          <span style={{ fontSize:10, opacity:0.5 }}>▼</span>
-        </button>
-        {showDateMenu && (
-          <div style={{
-            position:'absolute', right:0, top:'calc(100% + 6px)', zIndex:100,
-            background:'var(--bg2)', border:'0.5px solid var(--border2)', borderRadius:10,
-            padding:'8px', minWidth:160, boxShadow:'0 8px 32px rgba(0,0,0,0.4)',
-          }}>
-            {['last7','last14','last30','last60','thisMonth','lastMonth'].map(key => (
-              <button key={key} onClick={()=>{ applyPreset(key); setShowDateMenu(false) }} style={{
-                display:'block', width:'100%', textAlign:'left', padding:'7px 12px',
-                fontSize:12, borderRadius:6, cursor:'pointer', border:'none',
-                background: dateLabel===PRESET_RANGES[key]().label ? 'var(--bg3)' : 'transparent',
-                color: dateLabel===PRESET_RANGES[key]().label ? 'var(--text)' : 'var(--text2)',
-              }}>{PRESET_RANGES[key]().label}</button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-
-      {/* KPIs */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:12, marginBottom:28 }}>
-        {[
-          { label:'Total Spend',    value:fmtC(totalSpend) },
-          { label:'Revenue',        value:fmtC(totalRevenue) },
-          { label:'Blended ROAS',   value:fmtR(blendedRoas), color:blendedRoas>=2?'#22c55e':blendedRoas>=1?'#f59e0b':'#ef4444' },
-          { label:'Purchases',      value:fmtN(Math.round(totalPurchases)) },
-          { label:'Add to Cart',    value:fmtN(Math.round(totalAtc)), sub:totalViews>0?fmtP(totalAtc/totalViews*100)+' ATC rate':null },
-          { label:'Products',       value:fmtN(products.length) },
-        ].map(k => (
-          <div key={k.label} style={CARD}>
-            <div style={{ fontSize:11, color:'var(--text3)', marginBottom:6 }}>{k.label}</div>
-            <div style={{ fontSize:22, fontWeight:700, color:k.color||'var(--text)' }}>{k.value}</div>
-            {k.sub && <div style={{ fontSize:11, color:'var(--text3)', marginTop:4 }}>{k.sub}</div>}
-          </div>
-        ))}
-      </div>
-
-      {/* Controls */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-        <div style={{ fontSize:13, fontWeight:600 }}>{filtered.length} products</div>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search product…"
-          style={{ padding:'6px 12px', borderRadius:6, border:'0.5px solid var(--border)', background:'var(--bg2)', color:'var(--text)', fontSize:12, width:220 }} />
-      </div>
-
-      {/* Product table */}
-      <div style={{ overflowX:'auto', borderRadius:10, border:'0.5px solid var(--border)' }}>
-        <table style={{ width:'100%', borderCollapse:'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ ...TH, minWidth:220, textAlign:'left' }}>Product</th>
-              <SortTh col="variantCount" label="Variants"  sort={sort} onSort={onSort} />
-              <SortTh col="spend"        label="Spend"     sort={sort} onSort={onSort} />
-              <SortTh col="impressions"  label="Impr."     sort={sort} onSort={onSort} />
-              <SortTh col="clicks"       label="Clicks"    sort={sort} onSort={onSort} />
-              <SortTh col="ctr"          label="CTR%"      sort={sort} onSort={onSort} />
-              <SortTh col="atc"          label="ATC"       sort={sort} onSort={onSort} />
-              <SortTh col="atcRate"      label="ATC%"      sort={sort} onSort={onSort} title="ATC / Views" />
-              <SortTh col="purchases"    label="Purchases" sort={sort} onSort={onSort} />
-              <SortTh col="revenue"      label="Revenue"   sort={sort} onSort={onSort} />
-              <SortTh col="roas"         label="ROAS"      sort={sort} onSort={onSort} />
-              <SortTh col="cpa"          label="CPA"       sort={sort} onSort={onSort} />
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p, i) => {
-              const isExpanded = expanded===p.groupId
-              return (
-                <React.Fragment key={p.groupId}>
-                  <tr onClick={()=>setExpanded(isExpanded?null:p.groupId)}
-                    style={{ cursor:'pointer', background:isExpanded?'var(--bg3)':i%2===0?'transparent':'rgba(255,255,255,0.01)' }}
-                    onMouseEnter={e=>{ if(!isExpanded) e.currentTarget.style.background='var(--bg3)' }}
-                    onMouseLeave={e=>{ if(!isExpanded) e.currentTarget.style.background=i%2===0?'transparent':'rgba(255,255,255,0.01)' }}>
-                    <td style={{ ...TD, textAlign:'left', fontWeight:600 }}>
-                      <span style={{ display:'inline-flex', alignItems:'center', gap:8 }}>
-                        <span style={{ fontSize:9, color:'var(--text3)', display:'inline-block', transform:isExpanded?'rotate(90deg)':'rotate(0)', transition:'transform .15s' }}>▶</span>
-                        {p.productName}
-                      </span>
-                    </td>
-                    <td style={TDs}>{p.variantCount}</td>
-                    <td style={TD}>{fmtC(p.spend)}</td>
-                    <td style={TDs}>{fmtN(Math.round(p.impressions))}</td>
-                    <td style={TDs}>{fmtN(Math.round(p.clicks))}</td>
-                    <td style={{ ...TD, color:p.ctr>=2?'#22c55e':p.ctr>=1?'#f59e0b':undefined }}>{fmtP(p.ctr)}</td>
-                    <td style={TDs}>{p.atc>0?fmtN(Math.round(p.atc)):'—'}</td>
-                    <td style={{ ...TD, color:p.atcRate>10?'#22c55e':p.atcRate>5?'#f59e0b':undefined }}>{p.atcRate>0?fmtP(p.atcRate):'—'}</td>
-                    <td style={TDs}>{p.purchases>0?fmtN(Math.round(p.purchases)):'—'}</td>
-                    <td style={{ ...TD, color:p.revenue>0?'#22c55e':undefined }}>{fmtC(p.revenue)}</td>
-                    <td style={TD}><RoasBadge roas={p.roas} /></td>
-                    <td style={TDs}>{p.cpa>0?fmtC(p.cpa):'—'}</td>
-                  </tr>
-                  {isExpanded && <VariantDrill variants={p.variants} />}
-                </React.Fragment>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div style={{ marginTop:10, fontSize:11, color:'var(--text3)' }}>
-        All metrics from Windsor API · product grouping via Meta Commerce Manager ID mapping · ROAS = Meta-attributed
-      </div>
+        </>
+      )}
     </div>
   )
 }
