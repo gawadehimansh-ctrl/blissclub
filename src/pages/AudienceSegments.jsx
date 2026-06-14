@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState, useCallback, useEffect } from 'react'
+import { useData } from '../data/store.jsx'
 import { fmtINR, fmtINRCompact, fmtX, fmtNum, fmtPct } from '../utils/formatters.js'
 
 let _XLSX = null
@@ -107,6 +108,32 @@ export default function AudienceSegments() {
   const [loading, setLoading] = useState(false)
   const [activeSeg, setActiveSeg] = useState('NEW (Prospecting)')
   const [dateRange, setDateRange] = useState('')
+
+  const { state } = useData()
+
+  useEffect(() => {
+    const stored = state.audienceExcel
+    if (stored && stored.wb && !summary) {
+      loadXLSX().then(XLSX => {
+        const wb = stored.wb
+        const summaryWs = wb.Sheets['60-Day Summary']
+        if (summaryWs) {
+          const raw = XLSX.utils.sheet_to_json(summaryWs, { header: 1, defval: null })
+          const title = raw[0]?.[0] || ''
+          const match = title.match(/\((.*?)\)/)
+          if (match) setDateRange(match[1])
+          setSummary(parseSummarySheet(summaryWs, XLSX))
+        }
+        const segData = {}
+        for (const seg of SEGMENTS) {
+          const ws = wb.Sheets[seg.key]
+          if (ws) segData[seg.key] = parseSegmentSheet(ws, XLSX)
+        }
+        setSegments(segData)
+        setFile(stored.fileName)
+      })
+    }
+  }, [state.audienceExcel])
 
   const handleFile = useCallback(async (f) => {
     if (!f) return
