@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState, useCallback, useEffect } from 'react'
+import { useData } from '../data/store.jsx'
 import { fmtINR, fmtINRCompact, fmtX } from '../utils/formatters.js'
 
 const BUCKETS = [
@@ -96,6 +97,20 @@ export default function SKUAnalysis() {
   const [bucket, setBucket]   = useState(null)
   const [month, setMonth]     = useState('total')
   const [q, setQ]             = useState('')
+
+  const { state } = useData()
+
+  useEffect(() => {
+    const stored = state.skuExcel
+    if (stored && stored.wb && !skus) {
+      loadXLSX().then(XLSX => {
+        const wb = stored.wb
+        if (wb.Sheets['Master'])    setSkus(parseMaster(wb.Sheets['Master'], XLSX))
+        if (wb.Sheets['Bucketing']) setBkt(parseBucketing(wb.Sheets['Bucketing'], XLSX))
+        setFile(stored.fileName)
+      })
+    }
+  }, [state.skuExcel])
 
   const handleFile = useCallback(async (f) => {
     if (!f) return
