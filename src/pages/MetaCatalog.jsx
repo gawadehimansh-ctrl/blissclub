@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState, useCallback, useEffect } from 'react'
+import { useData } from '../data/store.jsx'
 import { fmtINR, fmtINRCompact, fmtX, fmtNum } from '../utils/formatters.js'
 
 let _XLSX = null
@@ -56,6 +57,20 @@ export default function MetaCatalog() {
   const [loading, setLoading] = useState(false)
   const [q, setQ]             = useState('')
   const [sortKey, setSortKey] = useState('spend')
+
+  const { state } = useData()
+
+  // Auto-load from store if uploaded via Upload page
+  useEffect(() => {
+    const stored = state.catalogExcel
+    if (stored && stored.wb && !rows) {
+      const ws = stored.wb.Sheets[stored.wb.SheetNames[0]]
+      loadXLSX().then(XLSX => {
+        setRows(parseCatalog(ws, XLSX))
+        setFile(stored.fileName)
+      })
+    }
+  }, [state.catalogExcel])
 
   const handleFile = useCallback(async (f) => {
     if (!f) return
