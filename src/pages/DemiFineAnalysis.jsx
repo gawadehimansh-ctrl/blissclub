@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState, useCallback, useEffect } from 'react'
+import { useData } from '../data/store.jsx'
 import { fmtINR, fmtINRCompact, fmtX, fmtNum, fmtPct } from '../utils/formatters.js'
 
 let _XLSX = null
@@ -210,6 +211,32 @@ export default function DemiFineAnalysis() {
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(null)
   const [dateFilter, setDateFilter] = useState('all')
+
+  const { state } = useData()
+
+  const STORE_MAP = {
+    audience:  'dfAudience',
+    device:    'dfDevice',
+    platform:  'dfPlatform',
+    placement: 'dfPlacement',
+    product:   'dfProduct',
+    creative:  'dfCreative',
+    gokwik:    'gokwik',
+  }
+
+  // Auto-load from store when Upload page pushes data
+  useEffect(() => {
+    loadXLSX().then(XLSX => {
+      Object.entries(STORE_MAP).forEach(([tabKey, storeKey]) => {
+        const stored = state[storeKey]
+        if (stored && stored.wb && !data[tabKey]) {
+          const ws = stored.wb.Sheets[stored.wb.SheetNames[0]]
+          const parsed = parseExport(ws, XLSX)
+          setData(prev => ({ ...prev, [tabKey]: { parsed, fileName: stored.fileName, prevParsed: null } }))
+        }
+      })
+    })
+  }, [state.dfAudience, state.dfDevice, state.dfPlatform, state.dfPlacement, state.dfProduct, state.dfCreative, state.gokwik])
 
   const handleFile = useCallback(async (key, f) => {
     if (!f) return
