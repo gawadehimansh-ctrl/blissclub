@@ -1,85 +1,130 @@
-import React, { useState } from 'react'
-import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
+import React from 'react'
+import { Routes, Route, NavLink } from 'react-router-dom'
 import { DataProvider, useData } from './data/store.jsx'
 
-import PacingTracker from './pages/PacingTracker.jsx'
-import Weekly from './pages/Weekly.jsx'
-import MetaCampaigns from './pages/MetaCampaigns.jsx'
-import MetaCreative from './pages/MetaCreative.jsx'
+import PacingTracker    from './pages/PacingTracker.jsx'
+import Weekly           from './pages/Weekly.jsx'
+import MetaCampaigns    from './pages/MetaCampaigns.jsx'
+import MetaCreative     from './pages/MetaCreative.jsx'
 import MetaCohortMatrix from './pages/MetaCohortMatrix.jsx'
-import GoogleCampaigns from './pages/GoogleCampaigns.jsx'
-import GoogleKeywords from './pages/GoogleKeywords.jsx'
-import GoogleAwareness from './pages/GoogleAwareness.jsx'
-import GoogleProducts from './pages/GoogleProducts.jsx'
-import GoogleDemandGen from './pages/GoogleDemandGen.jsx'
-import Hourly from './pages/Hourly.jsx'
-import BlendedHealth from './pages/BlendedHealth.jsx'
-import Upload from './pages/Upload.jsx'
+import GoogleCampaigns  from './pages/GoogleCampaigns.jsx'
+import GoogleKeywords   from './pages/GoogleKeywords.jsx'
+import GoogleAwareness  from './pages/GoogleAwareness.jsx'
+import GoogleProducts   from './pages/GoogleProducts.jsx'
+import GoogleDemandGen  from './pages/GoogleDemandGen.jsx'
+import Hourly           from './pages/Hourly.jsx'
+import BlendedHealth    from './pages/BlendedHealth.jsx'
+import Upload           from './pages/Upload.jsx'
+import CoPilotPage     from './pages/CoPilotPage.jsx'
+import MetaCatalog     from './pages/MetaCatalog.jsx'
+import SKUAnalysis     from './pages/SKUAnalysis.jsx'
+import AudienceSegments from './pages/AudienceSegments.jsx'
+import DemiFineAnalysis from './pages/DemiFineAnalysis.jsx'
+import CoPilot         from './components/CoPilot.jsx'
+
+// SVG Icons matching Figma sidebar exactly
+const Icons = {
+  pacing:   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+  weekly:   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  blended:  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+  hourly:   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  campaigns:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+  creative: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>,
+  cohort:   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+  gcampaign:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+  keywords: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>,
+  awareness:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>,
+  products: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>,
+  demandgen:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>,
+  copilot:  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2a8 8 0 0 1 8 8c0 5-8 12-8 12S4 15 4 10a8 8 0 0 1 8-8z"/><circle cx="12" cy="10" r="3"/></svg>,
+  upload:   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+}
 
 const NAV = [
-  { path: '/',                  label: 'Pacing Tracker',    icon: '◎', group: 'Overview' },
-  { path: '/weekly',            label: 'Weekly',            icon: '⬛', group: 'Overview' },
-  { path: '/blended',           label: 'Blended health',    icon: '◈', group: 'Overview' },
-  { path: '/hourly',            label: 'Hourly pulse',      icon: '⏱', group: 'Meta' },
-  { path: '/meta/campaigns',    label: 'Campaigns',         icon: '▤', group: 'Meta' },
-  { path: '/meta/creative',     label: 'Creative lookback', icon: '◧', group: 'Meta' },
-  { path: '/meta/cohort',       label: 'Cohort matrix',     icon: '⊞', group: 'Meta' },
-  { path: '/google/campaigns',  label: 'Campaigns',         icon: '▤', group: 'Google' },
-  { path: '/google/keywords',   label: 'Brand vs NB',       icon: '⌕', group: 'Google' },
-  { path: '/google/awareness',  label: 'Awareness',         icon: '▶', group: 'Google' },
-  { path: '/google/products',   label: 'Products',          icon: '◫', group: 'Google' },
-  { path: '/google/demandgen',  label: 'Demand Gen',        icon: '▣', group: 'Google' },
-  { path: '/upload',            label: 'Upload data',       icon: '⬆', group: 'Data' },
+  { path: '/',                  label: 'Pacing Tracker',    icon: Icons.pacing,    group: 'Overview' },
+  { path: '/weekly',            label: 'Weekly',            icon: Icons.weekly,    group: 'Overview' },
+  { path: '/blended',           label: 'Blended health',    icon: Icons.blended,   group: 'Overview' },
+  { path: '/hourly',            label: 'Hourly pulse',      icon: Icons.hourly,    group: 'Meta' },
+  { path: '/meta/campaigns',    label: 'Campaigns',         icon: Icons.campaigns, group: 'Meta' },
+  { path: '/meta/creative',     label: 'Creative lookback', icon: Icons.creative,  group: 'Meta' },
+  { path: '/meta/cohort',       label: 'Cohort matrix',     icon: Icons.cohort,    group: 'Meta' },
+  { path: '/meta/catalog',      label: 'Meta catalog',      icon: Icons.creative,  group: 'Meta' },
+  { path: '/meta/audience',     label: 'Audience segments', icon: Icons.cohort,    group: 'Meta' },
+  { path: '/meta/demifine',     label: 'Demi-Fine analysis',icon: Icons.products,  group: 'Meta' },
+  { path: '/google/campaigns',  label: 'Campaigns',         icon: Icons.gcampaign, group: 'Google' },
+  { path: '/google/keywords',   label: 'Brand vs NB',       icon: Icons.keywords,  group: 'Google' },
+  { path: '/google/awareness',  label: 'Awareness',         icon: Icons.awareness, group: 'Google' },
+  { path: '/google/products',   label: 'Products',          icon: Icons.products,  group: 'Google' },
+  { path: '/google/demandgen',  label: 'Demand Gen',        icon: Icons.demandgen, group: 'Google' },
+  { path: '/sku',               label: 'SKU Analysis',      icon: Icons.upload,    group: 'Data' },
+  { path: '/copilot',           label: 'Co-pilot',          icon: Icons.copilot,   group: 'Data' },
+  { path: '/upload',            label: 'Upload data',       icon: Icons.upload,    group: 'Data' },
 ]
 
 function Sidebar() {
   const { state } = useData()
-  const location = useLocation()
-
   const groups = [...new Set(NAV.map(n => n.group))]
-
   const hasData = state.metaDB.length > 0 || state.googleDump.length > 0
   const lastSync = Object.values(state.lastUpdated).filter(Boolean).sort((a, b) => b - a)[0]
 
   return (
     <aside style={{
-      width: 200, flexShrink: 0, background: 'var(--bg2)',
-      borderRight: '0.5px solid var(--border)',
+      width: 220, flexShrink: 0,
+      background: '#111111',
+      borderRight: '0.5px solid rgba(255,255,255,0.06)',
       display: 'flex', flexDirection: 'column',
       height: '100vh', position: 'sticky', top: 0,
     }}>
       {/* Brand */}
-      <div style={{ padding: '16px 16px 12px', borderBottom: '0.5px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--pink)' }} />
-          <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.02em' }}>BlissClub</span>
+      <div style={{ padding: '20px 16px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </div>
+          <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>Rubans</span>
         </div>
-        <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>Performance dashboard</div>
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-        {groups.map(group => (
-          <div key={group} style={{ marginBottom: 4 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '8px 16px 4px' }}>
-              {group === 'Meta' ? (
-                <span style={{ color: 'var(--pink)' }}>● {group}</span>
-              ) : group === 'Google' ? (
-                <span style={{ color: 'var(--blue)' }}>● {group}</span>
-              ) : group}
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
+        {groups.map((group, gi) => (
+          <div key={group} style={{ marginBottom: 24 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 600,
+              color: 'rgba(255,255,255,0.3)',
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+              padding: '0 8px', marginBottom: 4,
+            }}>
+              {group}
             </div>
             {NAV.filter(n => n.group === group).map(item => (
               <NavLink key={item.path} to={item.path} end={item.path === '/'}
                 style={({ isActive }) => ({
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '7px 16px', fontSize: 13,
-                  color: isActive ? 'var(--text)' : 'var(--text2)',
-                  background: isActive ? 'var(--bg3)' : 'transparent',
-                  borderLeft: `2px solid ${isActive ? (group === 'Meta' ? 'var(--pink)' : group === 'Google' ? 'var(--blue)' : 'var(--text3)') : 'transparent'}`,
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 10px',
+                  marginBottom: 2,
+                  borderRadius: 8,
+                  fontSize: 14,
+                  color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
+                  background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
                   textDecoration: 'none',
-                  transition: 'all .1s',
+                  fontWeight: isActive ? 600 : 400,
+                  transition: 'all .12s',
+                  '--icon-color': isActive ? (group === 'Google' ? '#6366f1' : group === 'Meta' ? '#e8457a' : '#fff') : 'rgba(255,255,255,0.45)',
                 })}>
-                <span style={{ fontSize: 11 }}>{item.icon}</span>
+                <span style={{ color: 'var(--icon-color)', flexShrink: 0, display: 'flex' }}>
+                  {item.icon}
+                </span>
                 {item.label}
               </NavLink>
             ))}
@@ -88,27 +133,27 @@ function Sidebar() {
       </nav>
 
       {/* Status */}
-      <div style={{ padding: '10px 16px', borderTop: '0.5px solid var(--border)', fontSize: 11 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: hasData ? 'var(--green)' : 'var(--text3)' }} />
-          <span style={{ color: hasData ? 'var(--green)' : 'var(--text3)' }}>
-            {hasData ? 'Data loaded' : 'No data'}
-          </span>
+      <div style={{ padding: '12px 16px 20px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: hasData ? '#fff' : 'rgba(255,255,255,0.3)', marginBottom: 4 }}>
+          {hasData ? 'Data loaded' : 'No data'}
         </div>
         {lastSync && (
-          <div style={{ color: 'var(--text3)', fontSize: 10 }}>
-            Last sync: {lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 8 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1db954', display: 'inline-block' }} />
+              Last sync: {lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+            </span>
           </div>
         )}
-        <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 12 }}>
           {[
-            { label: 'M',   count: state.metaDB.length,     color: 'var(--pink)'   },
-            { label: 'G',   count: state.googleDump.length,  color: 'var(--blue)'   },
-            { label: 'GA4', count: state.ga4Dump.length,     color: 'var(--purple)' },
+            { label: 'M',   count: state.metaDB.length,    color: '#e8457a' },
+            { label: 'G',   count: state.googleDump.length, color: '#6366f1' },
+            { label: 'Shopify', count: state.ga4Dump.length,    color: '#a78bfa' },
           ].map(s => (
-            <div key={s.label} style={{ fontSize: 10, color: s.count > 0 ? s.color : 'var(--text3)' }}>
-              {s.label} {s.count > 0 ? `${Math.round(s.count / 1000)}K` : '—'}
-            </div>
+            <span key={s.label} style={{ fontSize: 11, fontWeight: 600, color: s.count > 0 ? s.color : 'rgba(255,255,255,0.2)' }}>
+              {s.label} {s.count > 0 ? `${(s.count / 1000).toFixed(0)}K` : '—'}
+            </span>
           ))}
         </div>
       </div>
@@ -117,6 +162,8 @@ function Sidebar() {
 }
 
 function Layout() {
+  const location = window.location.pathname
+  const showCoPilot = !location.includes('/upload') && !location.includes('/copilot')
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar />
@@ -129,14 +176,20 @@ function Layout() {
           <Route path="/meta/campaigns"   element={<MetaCampaigns />} />
           <Route path="/meta/creative"    element={<MetaCreative />} />
           <Route path="/meta/cohort"      element={<MetaCohortMatrix />} />
+          <Route path="/meta/catalog"     element={<MetaCatalog />} />
+          <Route path="/meta/audience"    element={<AudienceSegments />} />
+          <Route path="/meta/demifine"    element={<DemiFineAnalysis />} />
           <Route path="/google/campaigns" element={<GoogleCampaigns />} />
           <Route path="/google/keywords"  element={<GoogleKeywords />} />
           <Route path="/google/awareness" element={<GoogleAwareness />} />
           <Route path="/google/products"  element={<GoogleProducts />} />
           <Route path="/google/demandgen" element={<GoogleDemandGen />} />
+          <Route path="/sku"             element={<SKUAnalysis />} />
+          <Route path="/copilot"          element={<CoPilotPage />} />
           <Route path="/upload"           element={<Upload />} />
         </Routes>
       </main>
+      {showCoPilot && <CoPilot />}
     </div>
   )
 }
