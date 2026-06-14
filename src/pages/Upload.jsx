@@ -48,7 +48,7 @@ const EXCEL_SLOTS = [
     icon: '💎',
     color: '#a78bfa',
     hint: 'Breakdown by Age / Audience · must include Ad set name column',
-    storeKey: 'DF_AUDIENCE_EXCEL',
+    storeKey: 'DF_AUDIENCE',
   },
   {
     key: 'df_device',
@@ -56,7 +56,7 @@ const EXCEL_SLOTS = [
     icon: '💎',
     color: '#a78bfa',
     hint: 'Breakdown by Device Platform',
-    storeKey: 'DF_DEVICE_EXCEL',
+    storeKey: 'DF_DEVICE',
   },
   {
     key: 'df_platform',
@@ -64,7 +64,7 @@ const EXCEL_SLOTS = [
     icon: '💎',
     color: '#a78bfa',
     hint: 'Breakdown by Platform (Facebook / Instagram / etc)',
-    storeKey: 'DF_PLATFORM_EXCEL',
+    storeKey: 'DF_PLATFORM',
   },
   {
     key: 'df_placement',
@@ -72,7 +72,7 @@ const EXCEL_SLOTS = [
     icon: '💎',
     color: '#a78bfa',
     hint: 'Breakdown by Placement',
-    storeKey: 'DF_PLACEMENT_EXCEL',
+    storeKey: 'DF_PLACEMENT',
   },
   {
     key: 'df_product',
@@ -80,7 +80,7 @@ const EXCEL_SLOTS = [
     icon: '💎',
     color: '#a78bfa',
     hint: 'Breakdown by Product ID (catalog / DPA)',
-    storeKey: 'DF_PRODUCT_EXCEL',
+    storeKey: 'DF_PRODUCT',
   },
   {
     key: 'df_creative',
@@ -88,7 +88,7 @@ const EXCEL_SLOTS = [
     icon: '💎',
     color: '#a78bfa',
     hint: 'Breakdown by Ad name / Creative level',
-    storeKey: 'DF_CREATIVE_EXCEL',
+    storeKey: 'DF_CREATIVE',
   },
   {
     key: 'gokwik',
@@ -96,7 +96,7 @@ const EXCEL_SLOTS = [
     icon: '🔁',
     color: '#f59e0b',
     hint: 'Product, Subcategory, Revenue (last-click attribution)',
-    storeKey: 'GOKWIK_EXCEL',
+    storeKey: 'GOKWIK',
   },
 ]
 
@@ -134,7 +134,7 @@ const ROUTINE = [
 ]
 
 export default function Upload() {
-  const { state, dispatch } = useData()
+  const { state, dispatch, loadData } = useData()
   const { syncAll } = useWindsor()
   const [syncing, setSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState(null)
@@ -167,15 +167,8 @@ export default function Upload() {
         const wb = XLSX.read(e.target.result, { type: 'binary' })
         const ws = wb.Sheets[wb.SheetNames[0]]
         const rows = XLSX.utils.sheet_to_json(ws, { defval: null })
-        // Store parsed data in sessionStorage keyed by storeKey for pages to pick up
-        try {
-          sessionStorage.setItem(slot.storeKey, JSON.stringify({
-            fileName: file.name,
-            sheetNames: wb.SheetNames,
-            rowCount: rows.length,
-            uploadedAt: new Date().toISOString(),
-          }))
-        } catch(_) {}
+        // Dispatch to global store so analysis pages can read it immediately
+        loadData({ wb, fileName: file.name, sheetNames: wb.SheetNames, rowCount: rows.length }, slot.storeKey)
         setExcelFiles(prev => ({ ...prev, [slot.key]: { name: file.name, rowCount: rows.length, sheets: wb.SheetNames } }))
       } catch(err) { console.error(err) }
       setParsing(null)
