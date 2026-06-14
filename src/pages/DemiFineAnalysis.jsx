@@ -212,6 +212,98 @@ const TABS = [
   { key: 'gokwik',    label: 'Gokwik (Last-Click)', hint: 'Gokwik export — product, subcategory, last-click revenue' },
 ]
 
+
+// ── Sub-components to avoid IIFE-in-JSX syntax issues ────────────────────────
+
+function GenericTab({ tab, tabs, data, loading, handleFile, filterRows }) {
+  const tc = tabs.find(t => t.key === tab)
+  const parsed = data[tab] ? filterRows(data[tab].parsed) : null
+  return (
+    <div>
+      <UploadBox label={`Upload ${tc.label} export`} hint={tc.hint}
+        onFile={f => handleFile(tab, f)} fileName={data[tab]?.fileName} loading={loading === tab} />
+      {parsed && (
+        parsed.dimCols.length === 0
+          ? <div style={{fontSize:12, color:'var(--text3)'}}>Couldn't detect a breakdown column in this file.</div>
+          : <>
+              <div style={{marginBottom:14}}><MetricCards data={agg(parsed.rows)} title="Total (filtered)" /></div>
+              <BreakdownTable parsed={parsed} />
+            </>
+      )}
+    </div>
+  )
+}
+
+function FunnelTab({ data, filterRows }) {
+  const primary = Object.entries(data).find(([, d]) => d.parsed.hasAdset)
+  if (!primary) return (
+    <div style={{fontSize:12, color:'var(--text3)'}}>
+      Upload an export with "Ad set name" (e.g. Audience Segments tab) to see the Catalog vs Assets funnel.
+    </div>
+  )
+  const [, d] = primary
+  const parsed = filterRows(d.parsed)
+  const catalog = agg(parsed.rows.filter(r => r.bucket === 'catalog'))
+  const assets  = agg(parsed.rows.filter(r => r.bucket === 'assets'))
+  const steps = [
+    ['Impressions', assets.impressions, catalog.impressions],
+    ['Link Clicks', assets.clicks, catalog.clicks],
+    ['Landing Page Views', assets.lpv, catalog.lpv],
+    ['Add to Cart', assets.addToCart, catalog.addToCart],
+    ['Checkouts', assets.checkouts, catalog.checkouts],
+    ['Purchases', assets.purchases, catalog.purchases],
+  ]
+  const S = {
+    th: { padding:'8px 12px', fontSize:10, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.05em', whiteSpace:'nowrap', background:'var(--bg3)' },
+    td: { padding:'8px 12px', borderBottom:'0.5px solid var(--border)', fontSize:12 },
+  }
+  return (
+    <>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12, marginBottom:20}}>
+        <MetricCards data={assets} title="Assets — Prospecting / Engagement / Existing" accent="#1db954" />
+        <MetricCards data={catalog} title="Catalog (DPA / Advantage+ Catalog)" accent="#a78bfa" />
+      </div>
+      <div style={{overflowX:'auto', borderRadius:8, border:'0.5px solid var(--border)'}}>
+        <table style={{width:'100%', borderCollapse:'collapse', fontSize:12}}>
+          <thead>
+            <tr>
+              <th style={{...S.th, textAlign:'left'}}>Funnel Step</th>
+              <th style={{...S.th, textAlign:'right'}}>Assets</th>
+              <th style={{...S.th, textAlign:'right'}}>Catalog</th>
+            </tr>
+          </thead>
+          <tbody>
+            {steps.map(([label, a, c]) => (
+              <tr key={label}>
+                <td style={{...S.td, fontWeight:600}}>{label}</td>
+                <td style={{...S.td, textAlign:'right'}}>{fmtNum(a)}</td>
+                <td style={{...S.td, textAlign:'right'}}>{fmtNum(c)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  )
+}
+
+function GokwikTab({ data, loading, handleFile, filterRows }) {
+  const parsed = data.gokwik ? filterRows(data.gokwik.parsed) : null
+  return (
+    <div>
+      <UploadBox label="Upload Gokwik last-click export"
+        hint="Columns: Product, Subcategory, Revenue (last-click) — mapped against Meta product IDs"
+        onFile={f => handleFile('gokwik', f)} fileName={data.gokwik?.fileName} loading={loading === 'gokwik'} />
+      {parsed && (
+        <>
+          <div style={{marginBottom:14}}><MetricCards data={agg(parsed.rows)} title="Gokwik Last-Click Total" accent="#f59e0b" /></div>
+          <BreakdownTable parsed={parsed} splitByBucket={false} />
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function DemiFineAnalysis() {
   const [tab, setTab] = useState('overview')
   const [data, setData] = useState({}) // { [tabKey]: { parsed, fileName, prevParsed? } }
@@ -330,67 +422,4 @@ export default function DemiFineAnalysis() {
                   const totals = agg(parsed.rows)
                   return (
                     <div key={t.key} style={S.card}>
-                      <div style={{fontSize:11, fontWeight:700, marginBottom:8}}>{t.label}</div>
-                      <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}>
-                        <span style={{fontSize:10, color:'var(--text3)'}}>Spend</span>
-                        <span style={{fontSize:12, fontWeight:600}}>{fmtINRCompact(totals.spend)}</span>
-                      </div>
-                      <div style={{display:'flex', justifyContent:'space-between'}}>
-                        <span style={{fontSize:10, color:'var(--text3)'}}>ROAS</span>
-                        <span style={{fontSize:13, fontWeight:700, color:roasCol(totals.roas)}}>{fmtX(totals.roas)}</span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Day vs Day comparison if any tab has 2 uploads */}
-              {Object.entries(data).some(([,d]) => d.prevParsed) && (
-                <div style={{marginTop:24}}>
-                  <div style={{fontSize:13, fontWeight:700, marginBottom:12}}>Day vs Day Comparison</div>
-                  <div style={{overflowX:'auto', borderRadius:8, border:'0.5px solid var(--border)'}}>
-                    <table style={{width:'100%', borderCollapse:'collapse', fontSize:12}}>
-                      <thead>
-                        <tr>
-                          <th style={{...S.th, textAlign:'left'}}>Dataset</th>
-                          <th style={{...S.th, textAlign:'right'}}>Prev Spend</th>
-                          <th style={{...S.th, textAlign:'right'}}>New Spend</th>
-                          <th style={{...S.th, textAlign:'right'}}>Δ Spend</th>
-                          <th style={{...S.th, textAlign:'right'}}>Prev ROAS</th>
-                          <th style={{...S.th, textAlign:'right'}}>New ROAS</th>
-                          <th style={{...S.th, textAlign:'right'}}>Δ ROAS</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {TABS.filter(t => data[t.key]?.prevParsed).map(t => {
-                          const prev = agg(data[t.key].prevParsed.rows)
-                          const curr = agg(data[t.key].parsed.rows)
-                          const dSpend = curr.spend - prev.spend
-                          const dRoas  = curr.roas - prev.roas
-                          return (
-                            <tr key={t.key}>
-                              <td style={{...S.td, fontWeight:600}}>{t.label}</td>
-                              <td style={{...S.td, textAlign:'right', color:'var(--text3)'}}>{fmtINRCompact(prev.spend)}</td>
-                              <td style={{...S.td, textAlign:'right'}}>{fmtINRCompact(curr.spend)}</td>
-                              <td style={{...S.td, textAlign:'right', color: dSpend>=0?'var(--green)':'var(--red)'}}>{dSpend>=0?'+':''}{fmtINRCompact(dSpend)}</td>
-                              <td style={{...S.td, textAlign:'right', color:'var(--text3)'}}>{fmtX(prev.roas)}</td>
-                              <td style={{...S.td, textAlign:'right', color:roasCol(curr.roas)}}>{fmtX(curr.roas)}</td>
-                              <td style={{...S.td, textAlign:'right', color: dRoas>=0?'var(--green)':'var(--red)'}}>{dRoas>=0?'+':''}{fmtX(dRoas)}</td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </>
-      )}
-
-      {/* ── AUDIENCE / DEVICE / PLATFORM / PLACEMENT / PRODUCT / CREATIVE (generic) ── */}
-      {['audience','device','platform','placement','product','creative'].includes(tab) && (
-        <>
-          {(() => { const tc = TABS.find(t=>t.key===tab); return (
-            <UploadBox label={`Upload ${tc.label} export`} hin
+     
