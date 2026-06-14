@@ -14,6 +14,16 @@ const initialState = {
   googleKeywords:      [],
   ga4Dump:             [],
   ga4Items:            [],
+  skuExcel:            null,
+  catalogExcel:        null,
+  audienceExcel:       null,
+  dfAudience:          null,
+  dfDevice:            null,
+  dfPlatform:          null,
+  dfPlacement:         null,
+  dfProduct:           null,
+  dfCreative:          null,
+  gokwik:              null,
   lastUpdated:         {},
   uploadLog:           [],
   clmSpend:            0,
@@ -140,6 +150,16 @@ function reducer(state, action) {
     case 'SET_INCLUDE_UAC':
       return { ...state, includeUAC: action.value }
 
+    case 'LOAD_SKU_EXCEL':       return { ...state, skuExcel:      action.data, lastUpdated: { ...state.lastUpdated, skuExcel: new Date() } }
+    case 'LOAD_CATALOG_EXCEL':   return { ...state, catalogExcel:   action.data, lastUpdated: { ...state.lastUpdated, catalogExcel: new Date() } }
+    case 'LOAD_AUDIENCE_EXCEL':  return { ...state, audienceExcel:  action.data, lastUpdated: { ...state.lastUpdated, audienceExcel: new Date() } }
+    case 'LOAD_DF_AUDIENCE':     return { ...state, dfAudience:     action.data, lastUpdated: { ...state.lastUpdated, dfAudience: new Date() } }
+    case 'LOAD_DF_DEVICE':       return { ...state, dfDevice:       action.data, lastUpdated: { ...state.lastUpdated, dfDevice: new Date() } }
+    case 'LOAD_DF_PLATFORM':     return { ...state, dfPlatform:     action.data, lastUpdated: { ...state.lastUpdated, dfPlatform: new Date() } }
+    case 'LOAD_DF_PLACEMENT':    return { ...state, dfPlacement:    action.data, lastUpdated: { ...state.lastUpdated, dfPlacement: new Date() } }
+    case 'LOAD_DF_PRODUCT':      return { ...state, dfProduct:      action.data, lastUpdated: { ...state.lastUpdated, dfProduct: new Date() } }
+    case 'LOAD_DF_CREATIVE':     return { ...state, dfCreative:     action.data, lastUpdated: { ...state.lastUpdated, dfCreative: new Date() } }
+    case 'LOAD_GOKWIK':          return { ...state, gokwik:         action.data, lastUpdated: { ...state.lastUpdated, gokwik: new Date() } }
     case 'CLEAR_ALL':
       return { ...initialState }
 
@@ -166,6 +186,16 @@ export function DataProvider({ children }) {
     else if (fileType === 'WINDSOR_GOOGLE_DAILY')dispatch({ type: 'WINDSOR_GOOGLE_DAILY',    data, replace })
     else if (fileType === 'GA4_ITEMS')        dispatch({ type: 'GA4_ITEMS', data, replace })
     else if (fileType === 'WINDSOR_SEARCH_TERMS')dispatch({ type: 'WINDSOR_SEARCH_TERMS',    data, replace })
+    else if (fileType === 'SKU_EXCEL')           dispatch({ type: 'LOAD_SKU_EXCEL',      data })
+    else if (fileType === 'CATALOG_EXCEL')       dispatch({ type: 'LOAD_CATALOG_EXCEL',  data })
+    else if (fileType === 'AUDIENCE_EXCEL')      dispatch({ type: 'LOAD_AUDIENCE_EXCEL', data })
+    else if (fileType === 'DF_AUDIENCE')         dispatch({ type: 'LOAD_DF_AUDIENCE',    data })
+    else if (fileType === 'DF_DEVICE')           dispatch({ type: 'LOAD_DF_DEVICE',      data })
+    else if (fileType === 'DF_PLATFORM')         dispatch({ type: 'LOAD_DF_PLATFORM',    data })
+    else if (fileType === 'DF_PLACEMENT')        dispatch({ type: 'LOAD_DF_PLACEMENT',   data })
+    else if (fileType === 'DF_PRODUCT')          dispatch({ type: 'LOAD_DF_PRODUCT',     data })
+    else if (fileType === 'DF_CREATIVE')         dispatch({ type: 'LOAD_DF_CREATIVE',    data })
+    else if (fileType === 'GOKWIK')              dispatch({ type: 'LOAD_GOKWIK',         data })
   }, [])
 
   return (
